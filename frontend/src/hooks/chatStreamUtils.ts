@@ -3,6 +3,7 @@ import type { ChatMessage } from "@/types/message";
 import type { StepType } from "@/types/flow";
 import type { MockConfig } from "@/types/mock";
 import type { EditBaseSnapshot } from "@/lib/changeContract";
+import type { RepairRequestContext } from "@/lib/validationReport";
 import { useChatStore } from "@/store/chatStore";
 import { NODE_TO_STEP_MAP, STEP_DEFINITIONS } from "@/constants/chat";
 
@@ -11,6 +12,7 @@ export interface ActiveRequest {
   controller: AbortController;
   assistantMessageId?: string;
   startedAt: number;
+  repair?: RepairRequestContext;
 }
 
 export type RequestOperation = "generate" | "edit";
@@ -25,6 +27,8 @@ export interface RetryableRequest {
   projectId: string;
   operation: RequestOperation;
   base: EditBaseSnapshot;
+  runId?: string;
+  repair?: RepairRequestContext;
 }
 
 export function isAbortError(error: unknown): boolean {

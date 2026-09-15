@@ -199,7 +199,11 @@ body {
 .candidate-panel-title span { background: #e9edff; border-radius: 999px; color: #5c6bb0; font-size: 9px; padding: 2px 6px; }
 .candidate-panel-conflict .candidate-panel-title span { background: #ffe8cf; color: #9a672e; }
 .candidate-panel-head > button { align-items: center; background: transparent; border: 0; color: #7c88a4; cursor: pointer; display: inline-flex; font-size: 10px; gap: 3px; padding: 3px; }
-.candidate-summary,.candidate-validation,.candidate-conflict { color: #64708a; font-size: 10px; line-height: 1.45; margin: 7px 0 0; overflow-wrap: anywhere; }
+.candidate-summary,.candidate-conflict { color: #64708a; font-size: 10px; line-height: 1.45; margin: 7px 0 0; overflow-wrap: anywhere; }
+.candidate-validation-layers { color: #64708a; display: grid; font-size: 9px; gap: 4px; list-style: none; margin: 7px 0 0; padding: 0; }
+.candidate-validation-layers li { align-items: baseline; display: grid; grid-template-columns: 82px 34px minmax(0, 1fr); gap: 4px; }
+.candidate-validation-layers strong { color: #7a6f45; font-weight: 600; }
+.candidate-validation-layers small { overflow-wrap: anywhere; }
 .candidate-meta { color: #8993a8; display: flex; flex-wrap: wrap; font-size: 9px; gap: 9px; margin-top: 6px; }
 .candidate-diff { color: #6674a8; }
 .candidate-validation { color: #7a6f45; }
@@ -210,6 +214,8 @@ body {
 .candidate-paths code { overflow-wrap: anywhere; }
 .candidate-conflict { color: #aa5a30; }
 .candidate-apply { align-items: center; background: #586ec9; border: 0; border-radius: 6px; color: #fff; cursor: pointer; display: inline-flex; font-size: 10px; gap: 4px; margin-top: 8px; padding: 6px 9px; }
+.candidate-repair { align-items: center; background: #fff; border: 1px solid #cbd4f3; border-radius: 6px; color: #586ec9; cursor: pointer; display: inline-flex; font-size: 10px; gap: 4px; margin: 8px 6px 0 0; padding: 5px 8px; }
+.candidate-repair:hover { background: #f1f4ff; }
 .candidate-apply:hover { background: #485cae; }
 .candidate-apply:disabled,.candidate-panel-head > button:disabled { cursor: wait; opacity: .55; }
 .chat-operation-toggle { display: flex; gap: 5px; margin: 6px 0; }

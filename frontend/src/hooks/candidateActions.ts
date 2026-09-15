@@ -2,6 +2,7 @@ import { toast } from "sonner";
 import { useChatStore } from "@/store/chatStore";
 import { useSandpackStore } from "@/store/sandpackStore";
 import { hashEditBase, toPlainFiles, validatePlainFiles } from "@/lib/changeContract";
+import { canApplyValidation } from "@/lib/validationReport";
 
 /** Apply only a candidate whose validation and frozen workspace base still match. */
 export async function applyStagedCandidate(): Promise<void> {
@@ -11,11 +12,7 @@ export async function applyStagedCandidate(): Promise<void> {
     toast.error(candidate.conflictReason ?? "候选基线已冲突，不能应用");
     return;
   }
-  if (
-    candidate.validation.protocol !== "pass" ||
-    candidate.validation.files !== "pass" ||
-    candidate.validation.preview !== "pass"
-  ) {
+  if (!canApplyValidation(candidate.validation)) {
     toast.error("候选尚未完成结构和预览校验，暂不能应用");
     return;
   }

@@ -5,14 +5,16 @@ import { toast } from "sonner";
 import { useChatStore } from "@/store/chatStore";
 import { useSandpackStore } from "@/store/sandpackStore";
 import type { MockConfig } from "@/types/mock";
-import { createBaseSnapshot } from "@/lib/changeContract";
+import { createBaseSnapshot, hashEditBase, hashResourceReferences } from "@/lib/changeContract";
+import { canAttemptRepair, repairErrorSignature } from "@/lib/validationReport";
+import type { RepairRequestContext } from "@/lib/validationReport";
 import { applyStagedCandidate } from "./candidateActions";
 import { runChatRequest } from "./chatRequestRunner";
 import type { ActiveRequest, Attachment, RequestOperation, RetryableRequest } from "./chatStreamUtils";
 
 export function useChat() {
   const {
-    messages, isLoading, markPendingThoughts, setGeneration, setLoading, candidate,
+    messages, isLoading, markPendingThoughts, setGeneration, setLoading, candidate, finishCandidateRepair,
   } = useChatStore();
   const { setIsAssembling } = useSandpackStore();
   const activeRequestRef = useRef<ActiveRequest | null>(null);
@@ -24,6 +26,9 @@ export function useChat() {
     if (activeRequest === null) return;
     activeRequestRef.current = null;
     activeRequest.controller.abort();
+    if (activeRequest.repair !== undefined) {
+      finishCandidateRepair(activeRequest.repair.candidateId, "skipped", Date.now() - activeRequest.startedAt);
+    }
     if (activeRequest.assistantMessageId) {
       markPendingThoughts(activeRequest.assistantMessageId, "已停止接收后续结果");
     }
@@ -34,7 +39,7 @@ export function useChat() {
     });
     setLoading(false);
     setIsAssembling(false);
-  }, [markPendingThoughts, setGeneration, setIsAssembling, setLoading]);
+  }, [finishCandidateRepair, markPendingThoughts, setGeneration, setIsAssembling, setLoading]);
 
   const runRequest = useCallback((request: RetryableRequest) => runChatRequest(request, {
     activeRequestRef, lastRequestRef, requestIdRef,
@@ -74,7 +79,65 @@ export function useChat() {
       toast.error("没有可重新执行的请求");
       return;
     }
-    await runRequest({ ...request, history: [...request.history] });
+    await runRequest({ ...request, runId: undefined, history: [...request.history] });
+  }, [runRequest]);
+
+  const repairCandidate = useCallback(async () => {
+    const state = useChatStore.getState();
+    const currentCandidate = state.candidate;
+    if (currentCandidate === null) {
+      toast.error("当前没有可修复的候选");
+      return;
+    }
+    if (!canAttemptRepair(currentCandidate.validation)) {
+      toast.error("该候选不满足有限修复条件，保留候选并请人工处理");
+      return;
+    }
+    const errorSignature = repairErrorSignature(currentCandidate.validation);
+    if (errorSignature === null) {
+      toast.error("当前候选没有可自动修复的代码或运行错误");
+      return;
+    }
+    try {
+      const resources = await hashResourceReferences(currentCandidate.files, currentCandidate.resources);
+      const runId = `run-${crypto.randomUUID()}`;
+      const repair: RepairRequestContext = {
+        candidateId: currentCandidate.candidateId,
+        attempt: currentCandidate.validation.report.repairAttempts + 1,
+        startedAt: Date.now(),
+        errorSignature,
+        previousHistory: [...currentCandidate.validation.report.repairHistory],
+      };
+      const base = {
+        projectId: currentCandidate.projectId,
+        versionId: currentCandidate.baseVersionId,
+        hash: await hashEditBase(currentCandidate.files, resources),
+        files: { ...currentCandidate.files },
+        resources,
+        sourceCandidateId: currentCandidate.candidateId,
+        sourceBaseHash: currentCandidate.baseHash,
+      };
+      state.beginCandidateRepair(currentCandidate.candidateId, {
+        attempt: repair.attempt,
+        runId,
+        status: "not-verified",
+        durationMs: 0,
+        errorSignature,
+      });
+      await runRequest({
+        content: `请修复当前候选中的代码或运行问题，仅保留现有功能并返回最小结构化文件变更。诊断签名：${errorSignature}`,
+        attachments: undefined,
+        mockConfig: { global: false },
+        history: [...state.messages],
+        projectId: currentCandidate.projectId,
+        operation: "edit",
+        runId,
+        base,
+        repair,
+      });
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "无法准备候选修复");
+    }
   }, [runRequest]);
 
   const applyCandidate = useCallback(async (): Promise<void> => {
@@ -88,6 +151,9 @@ export function useChat() {
     if (activeRequest === null) return;
     activeRequestRef.current = null;
     activeRequest.controller.abort();
+    if (activeRequest.repair !== undefined) {
+      finishCandidateRepair(activeRequest.repair.candidateId, "skipped", Date.now() - activeRequest.startedAt);
+    }
     if (activeRequest.assistantMessageId) {
       markPendingThoughts(activeRequest.assistantMessageId, "已停止接收后续结果");
     }
@@ -98,7 +164,7 @@ export function useChat() {
     });
     setLoading(false);
     setIsAssembling(false);
-  }, [markPendingThoughts, setGeneration, setIsAssembling, setLoading]);
+  }, [finishCandidateRepair, markPendingThoughts, setGeneration, setIsAssembling, setLoading]);
 
   return {
     messages,
@@ -108,7 +174,8 @@ export function useChat() {
     retryLastMessage,
     candidate,
     applyCandidate,
+    repairCandidate,
     discardCandidate,
-    canRetry: lastRequestRef.current !== null,
+    canRetry: lastRequestRef.current !== null && lastRequestRef.current.repair === undefined,
   };
 }

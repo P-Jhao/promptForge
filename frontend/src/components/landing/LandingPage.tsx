@@ -64,7 +64,7 @@ export function LandingPage() {
 
         <section className="boundary-section">
           <div><span className="section-kicker">现在适合什么</span><h2>从明确的小范围场景开始。</h2></div>
-          <div className="boundary-columns"><div><h3>适合</h3><p>后台列表、表单、详情、仪表盘和产品流程原型。需求越具体，生成结果越容易评估。</p></div><div><h3>需要知道</h3><p>示例体验展示固定成果；真实生成调用模型，可能耗时或失败。每次继续提问都会重新生成，并可能覆盖当前预览，编辑器改动不会自动带入。</p></div></div>
+          <div className="boundary-columns"><div><h3>适合</h3><p>后台列表、表单、详情、仪表盘和产品流程原型。需求越具体，生成结果越容易评估。</p></div><div><h3>需要知道</h3><p>示例体验展示固定成果；普通首次生成会调用模型，可能耗时或失败，结果会先进入候选，确认应用后才更新预览。需要调整现有页面时，请选择“基于当前代码修改”：系统会冻结当前编辑文件作为基线，生成隔离候选，校验通过后再由你确认应用；生成期间的编辑会触发基线冲突。</p></div></div>
         </section>
 
         <section className="landing-cta"><div><span className="section-kicker">READY TO BUILD</span><h2>带着一个具体页面，进入工作台。</h2></div><Link className="button-primary" href="/workspace">开始生成 <ArrowRight size={16} /></Link></section>

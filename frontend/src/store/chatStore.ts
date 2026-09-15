@@ -8,6 +8,8 @@ import type {
   GenerationState,
 } from "@/types/store";
 import type { CandidateState } from "@/types/candidate";
+import { updateValidationLayer } from "@/lib/validationReport";
+import type { RepairAttempt, ValidationErrorCategory, ValidationStatus } from "@/types/validation";
 
 // Re-export types for backward compatibility
 export type { ThoughtItem, ProjectVersion, VersionChanges };
@@ -101,17 +103,124 @@ export const useChatStore = create<ChatState>((set, get) => ({
       candidate: null,
     }),
 
-  stageCandidate: (candidate: CandidateState) => set({ candidate }),
+  stageCandidate: (candidate: CandidateState) => set((state) => ({
+    candidate,
+    generation: {
+      ...state.generation,
+      runId: candidate.runId,
+      validationReport: candidate.validation.report,
+    },
+  })),
 
-  setCandidatePreviewStatus: (candidateId: string, status: CandidateState["validation"]["preview"]) =>
-    set((state) => state.candidate === null || state.candidate.candidateId !== candidateId || state.candidate.validation.preview === status
-      ? state
-      : { candidate: { ...state.candidate, validation: { ...state.candidate.validation, preview: status } } }),
+  setCandidatePreviewStatus: (
+    candidateId: string,
+    status: CandidateState["validation"]["preview"],
+    errorCategory?: ValidationErrorCategory,
+    summary?: string,
+    evidence?: string,
+  ) => set((state) => {
+    if (state.candidate === null || state.candidate.candidateId !== candidateId) return state;
+    const nextValidation = updateValidationLayer(
+      state.candidate.validation,
+      "L2",
+      status,
+      summary ?? (status === "pass" ? "真实预览已构建并完成应用挂载" : "等待真实预览证据"),
+      evidence,
+      errorCategory,
+    );
+    return {
+      candidate: { ...state.candidate, validation: nextValidation },
+      generation: {
+        ...state.generation,
+        runId: state.candidate.runId,
+        validationReport: nextValidation.report,
+      },
+    };
+  }),
 
-  setCandidateConflict: (reason: string) =>
-    set((state) => state.candidate === null
-      ? state
-      : { candidate: { ...state.candidate, status: "conflict", conflictReason: reason } }),
+  beginCandidateRepair: (candidateId: string, attempt: RepairAttempt) => set((state) => {
+    if (state.candidate === null || state.candidate.candidateId !== candidateId) return state;
+    const report = state.candidate.validation.report;
+    const repairHistory = [...report.repairHistory, { ...attempt, status: "not-verified" as const }];
+    const layers = report.layers.map((layer) => layer.id === "L5"
+      ? { ...layer, status: "not-verified" as const, summary: "修复请求进行中", updatedAt: Date.now() }
+      : layer);
+    const validation = {
+      ...state.candidate.validation,
+      report: {
+        ...report,
+        layers,
+        overall: report.overall,
+        repairAttempts: repairHistory.length,
+        repairDurationMs: repairHistory.reduce((total, item) => total + item.durationMs, 0),
+        repairHistory,
+        updatedAt: Date.now(),
+      },
+    };
+    return {
+      candidate: { ...state.candidate, validation },
+      generation: {
+        ...state.generation,
+        runId: state.candidate.runId,
+        validationReport: validation.report,
+      },
+    };
+  }),
+
+  finishCandidateRepair: (candidateId: string, status: ValidationStatus, durationMs: number) => set((state) => {
+    if (state.candidate === null || state.candidate.candidateId !== candidateId) return state;
+    const report = state.candidate.validation.report;
+    if (report.repairHistory.length === 0) return state;
+    const lastIndex = report.repairHistory.length - 1;
+    const repairHistory = report.repairHistory.map((attempt, index) => index === lastIndex
+      ? { ...attempt, status, durationMs: Math.max(attempt.durationMs, durationMs) }
+      : attempt);
+    const validation = {
+      ...state.candidate.validation,
+      report: {
+        ...report,
+        layers: report.layers.map((layer) => layer.id === "L5"
+          ? { ...layer, status, summary: status === "skipped" ? "修复已取消或被环境阻断" : "修复请求未产生可应用候选", updatedAt: Date.now() }
+          : layer),
+        repairDurationMs: repairHistory.reduce((total, item) => total + item.durationMs, 0),
+        repairHistory,
+        updatedAt: Date.now(),
+      },
+    };
+    return {
+      candidate: { ...state.candidate, validation },
+      generation: {
+        ...state.generation,
+        runId: state.candidate.runId,
+        validationReport: validation.report,
+      },
+    };
+  }),
+
+  setCandidateConflict: (reason: string) => set((state) => {
+    if (state.candidate === null) return state;
+    const validation = updateValidationLayer(
+      state.candidate.validation,
+      "L0",
+      "fail",
+      reason,
+      undefined,
+      "conflict",
+    );
+    return {
+      candidate: {
+        ...state.candidate,
+        status: "conflict",
+        conflictReason: reason,
+        validation,
+      },
+      generation: {
+        ...state.generation,
+        runId: state.candidate.runId,
+        validationReport: validation.report,
+      },
+    };
+  }),
 
   clearCandidate: () => set({ candidate: null }),
 

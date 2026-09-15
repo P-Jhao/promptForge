@@ -11,6 +11,7 @@ import type {
   SerializableFileMap,
   SerializableMessage,
 } from "@/types/project";
+import type { ValidationReport } from "@/types/validation";
 
 export interface ProjectDraftInput {
   projectId: string;
@@ -192,7 +193,7 @@ function serializeVersion(version: ProjectVersion, projectId: string): ProjectVe
 function serializeRun(generation: GenerationState, projectId: string): ProjectRunDraft | null {
   if (generation.startedAt === undefined) return null;
   const run: ProjectRunDraft = {
-    runId: `${projectId}:generation:${generation.startedAt}`,
+    runId: generation.runId ?? `${projectId}:generation:${generation.startedAt}`,
     projectId,
     kind: "generation",
     status: generation.status,
@@ -202,12 +203,23 @@ function serializeRun(generation: GenerationState, projectId: string): ProjectRu
     failedNode: generation.failedNode,
     error: generation.error,
   };
+  if (generation.validationReport !== undefined) {
+    run.validationReport = cloneValidationReport(generation.validationReport);
+  }
   if (generation.mode !== undefined) run.mode = generation.mode;
   if (generation.modeForced !== undefined) run.modeForced = generation.modeForced;
   if (generation.elapsedMs !== undefined && generation.status !== "running") {
     run.endedAt = generation.startedAt + generation.elapsedMs;
   }
   return run;
+}
+
+function cloneValidationReport(report: ValidationReport): ValidationReport {
+  return {
+    ...report,
+    layers: report.layers.map((layer) => ({ ...layer })),
+    repairHistory: report.repairHistory.map((attempt) => ({ ...attempt })),
+  };
 }
 
 function serializeResources(

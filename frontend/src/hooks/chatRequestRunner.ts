@@ -13,6 +13,7 @@ import {
   validatePlainFiles,
   type CandidateEventPayload,
 } from "@/lib/changeContract";
+import { createCandidateValidation } from "@/lib/validationReport";
 import { FLOW_CONFIG, NEXT_STEP_MAP, getPhaseByNode } from "@/constants/chat";
 import {
   findPendingThoughtKey,
@@ -40,7 +41,7 @@ export async function runChatRequest(
   context: ChatRequestRunnerContext,
 ): Promise<void> {
   const chatState = useChatStore.getState();
-  if (chatState.isLoading || context.activeRequestRef.current !== null || chatState.candidate !== null) return;
+  if (chatState.isLoading || context.activeRequestRef.current !== null || (chatState.candidate !== null && request.repair === undefined)) return;
 
   const requestId = context.requestIdRef.current + 1;
   context.requestIdRef.current = requestId;
@@ -54,14 +55,15 @@ export async function runChatRequest(
     id: crypto.randomUUID(), role: "assistant", content: "",
   };
   const assistantId = assistantMessage.id;
-  context.activeRequestRef.current = { id: requestId, controller, assistantMessageId: assistantId, startedAt };
+  context.activeRequestRef.current = { id: requestId, controller, assistantMessageId: assistantId, startedAt, repair: request.repair };
   context.lastRequestRef.current = { ...request, history: [...request.history] };
 
   const previousAssistantId = [...useChatStore.getState().messages]
     .reverse().find((message) => message.role === "assistant")?.id;
   const previousFiles = useSandpackStore.getState().generatedFiles !== null;
   const currentHistory = [...request.history, userMessage];
-  const runId = `run-${crypto.randomUUID()}`;
+  const runId = request.runId ?? `run-${crypto.randomUUID()}`;
+  const repairContext = request.repair === undefined ? undefined : { ...request.repair, runId };
   let activeFlow: BackendFlowType | null = null;
   let latestFiles: Record<string, string> | null = null;
   let streamedCandidate: CandidateEventPayload | null = null;
@@ -72,7 +74,7 @@ export async function runChatRequest(
   const {
     addMessage, appendMessageContent, setLoading, addThought, updateThought,
     archiveThoughts, updatePhaseProgress, collapsePhase, updateProjectName,
-    setCurrentFlow, setGeneration, markPendingThoughts, stageCandidate,
+    setCurrentFlow, setGeneration, markPendingThoughts, stageCandidate, finishCandidateRepair,
   } = useChatStore.getState();
   const { setIsAssembling } = useSandpackStore.getState();
   addMessage(userMessage);
@@ -80,7 +82,9 @@ export async function runChatRequest(
   setLoading(true);
   setCurrentFlow(null);
   setGeneration({
-    status: "running", mode: request.mockConfig.global ? "mock" : "real",
+    status: "running", runId,
+    validationReport: request.repair === undefined ? undefined : useChatStore.getState().candidate?.validation.report,
+    mode: request.mockConfig.global ? "mock" : "real",
     modeForced: false, currentPhase: undefined, currentStep: undefined,
     completedSteps: [], failedStep: undefined, error: undefined,
     failedNode: undefined, startedAt, elapsedMs: undefined, stageTimings: {},
@@ -109,6 +113,12 @@ export async function runChatRequest(
       preservedResult: useSandpackStore.getState().generatedFiles !== null,
     });
     setIsAssembling(false);
+    if (request.repair !== undefined) {
+      const currentCandidate = useChatStore.getState().candidate;
+      if (currentCandidate?.candidateId === request.repair.candidateId) {
+        finishCandidateRepair(request.repair.candidateId, "fail", elapsed());
+      }
+    }
     setLoading(false);
     context.activeRequestRef.current = null;
     controller.abort();
@@ -187,15 +197,15 @@ export async function runChatRequest(
           const stagedCandidate: CandidateState = streamedCandidate === null
             ? {
               candidateId: `${runId}:candidate`, runId, projectId: request.projectId,
-              baseVersionId: request.base.versionId, baseHash: request.base.hash,
+              baseVersionId: request.base.versionId, baseHash: request.base.hash, modelBaseHash: request.base.hash,
               operation: "create", prompt: request.content, assistantMessageId: assistantId,
               files: { ...latestFiles }, resources: request.base.resources.map((resource) => ({ ...resource })),
               changes: calculateCandidateChanges(request.base.files, latestFiles),
               summary: `收到 ${Object.keys(latestFiles).length} 个文件，等待确认应用。`,
-              validation: { protocol: "pass", files: "pass", preview: "not-verified" },
+              validation: createCandidateValidation(`${runId}:candidate`, runId),
               status: "staged", createdAt: Date.now(),
             }
-            : await candidateEventToState(streamedCandidate, request.content, assistantId, request.base);
+            : await candidateEventToState(streamedCandidate, request.content, assistantId, request.base, repairContext);
           stageCandidate(stagedCandidate);
         }
         setGeneration({ status: "success", elapsedMs: elapsed(), currentPhase: undefined, currentStep: undefined, nextStep: undefined, preservedResult: previousFiles });

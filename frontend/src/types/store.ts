@@ -4,6 +4,7 @@ import type { ChatMessage } from "./message";
 import type { FlowType, Phase, StepType } from "./flow";
 import type { ProjectHydration } from "./project";
 import type { CandidateState } from "./candidate";
+import type { RepairAttempt, ValidationErrorCategory, ValidationReport, ValidationStatus } from "./validation";
 
 // ============================================================================
 // Sandpack Store 类型
@@ -44,6 +45,10 @@ export type GenerationMode = "mock" | "real";
 
 export interface GenerationState {
   status: GenerationStatus;
+  /** 当前请求/候选的可追溯运行 ID；不包含密钥或完整敏感请求。 */
+  runId?: string;
+  /** 最近一次候选校验摘要，供本地运行记录保存；候选文件仍保持隔离。 */
+  validationReport?: ValidationReport;
   mode?: GenerationMode;
   modeForced?: boolean;
   currentPhase?: Phase;
@@ -150,7 +155,15 @@ export interface ChatState {
   /** Actions */
   hydrateProject: (project: ProjectHydration) => void;
   stageCandidate: (candidate: CandidateState) => void;
-  setCandidatePreviewStatus: (candidateId: string, status: CandidateState["validation"]["preview"]) => void;
+  setCandidatePreviewStatus: (
+    candidateId: string,
+    status: CandidateState["validation"]["preview"],
+    errorCategory?: ValidationErrorCategory,
+    summary?: string,
+    evidence?: string,
+  ) => void;
+  beginCandidateRepair: (candidateId: string, attempt: RepairAttempt) => void;
+  finishCandidateRepair: (candidateId: string, status: ValidationStatus, durationMs: number) => void;
   setCandidateConflict: (reason: string) => void;
   clearCandidate: () => void;
   addMessage: (message: ChatMessage) => void;

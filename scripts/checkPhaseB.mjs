@@ -137,10 +137,19 @@ class FakeIndexedDb {
 
 globalThis.indexedDB = new FakeIndexedDb();
 const typeModule = loadTsModule(path.join(root, "frontend/src/types/project.ts"));
-const replacements = { "@/types/project": typeModule.exports };
+const validationTypeModule = loadTsModule(path.join(root, "frontend/src/types/validation.ts"));
+const validationConstants = loadTsModule(path.join(root, "frontend/src/constants/validation.ts"));
+const validationReportModule = loadTsModule(path.join(root, "frontend/src/lib/validationReport.ts"), {
+  "@/constants/validation": validationConstants.exports,
+}).exports;
+const replacements = {
+  "@/types/project": typeModule.exports,
+  "@/types/validation": validationTypeModule.exports,
+};
 const serialization = loadTsModule(path.join(root, "frontend/src/lib/projectSerialization.ts"), replacements).exports;
 const repositoryModule = loadTsModule(path.join(root, "frontend/src/lib/projectRepository.ts"), replacements).exports;
 const repository = new repositoryModule.IndexedDbProjectRepository();
+const validationReport = validationReportModule.createCandidateValidation("candidate-b-fixture", "run-b-fixture").report;
 const startedAt = Date.now();
 const version = {
   versionId: "v1", versionNumber: 1, threadId: "project-fixture-v1", assistantMessageId: "assistant-1",
@@ -150,7 +159,7 @@ const draft = serialization.createProjectDraft({
   projectId: "project-fixture", projectName: "阶段 B fixture", createdAt: startedAt, workspaceId: "workspace-fixture",
   currentVersion: 1, versions: [version], messages: [{ id: "m1", role: "user", content: "hello" }],
   files: { "/App.tsx": { code: "export default function App() { return null; }" }, "/cover.svg": { code: "<svg />" } },
-  generation: { status: "success", mode: "real", modeForced: false, startedAt, elapsedMs: 12, completedSteps: [], stageTimings: {}, preservedResult: false },
+  generation: { status: "success", mode: "real", modeForced: false, runId: "run-b-fixture", validationReport, startedAt, elapsedMs: 12, completedSteps: [], stageTimings: {}, preservedResult: false },
   resourceManifest: { version: 1, caseId: "fixture", resources: [{ id: "cover", kind: "image", required: true, hostPath: "/cover.svg", sandpackPath: "/cover.svg", exportPath: "cover.svg", contentType: "image/svg+xml" }] },
 });
 const firstSave = await repository.saveProject(draft, null);
@@ -160,6 +169,8 @@ assert.ok(loaded);
 assert.equal(loaded.workspace.files["/App.tsx"], version.files["/App.tsx"]);
 assert.equal(loaded.versions.length, 1);
 assert.equal(loaded.project.messages[0].content, "hello");
+assert.equal(loaded.runs[0].validationReport?.candidateId, "candidate-b-fixture");
+assert.equal(loaded.runs[0].validationReport?.layers.length, 6);
 assert.equal(JSON.stringify(loaded.project).includes("ReactNode"), false);
 assert.equal(serialization.projectDraftFingerprint(draft), serialization.projectDraftFingerprint(serialization.snapshotToDraft(loaded)));
 
@@ -176,7 +187,7 @@ await assert.rejects(() => repository.saveProject(mutatedVersion, 2), /不可变
 const database = globalThis.indexedDB.databases.get("promptforge-projects");
 database.stores.get("workspaces").values.get("workspace-fixture").filesHash = "broken";
 await assert.rejects(() => repository.loadProject("project-fixture"), /工作副本 hash 格式无效/);
-console.log(JSON.stringify({ save: true, reload: true, conflict: true, immutableVersion: true, corruptData: true }));
+console.log(JSON.stringify({ save: true, reload: true, conflict: true, immutableVersion: true, corruptData: true, validationRunRecord: true }));
 
 function loadTsModule(filePath, replacements = {}, cache = new Map()) {
   const absolutePath = path.resolve(filePath);

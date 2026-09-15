@@ -17,7 +17,12 @@ export interface EditCandidatePayload {
   operation: "edit";
   projectId: string;
   baseVersionId: string | null;
+  /** Hash of the files/resources supplied to this model run. */
   baseHash: string;
+  /** Hash of the original workspace accepted by the apply gate. */
+  acceptanceBaseHash: string;
+  sourceCandidateId?: string;
+  sourceBaseHash?: string;
   files: Record<string, string>;
   resources: EditBaseSnapshot["resources"];
   changes: FileChange[];
@@ -44,6 +49,9 @@ export async function generateEditCandidate(
     projectId: base.projectId,
     baseVersionId: base.versionId,
     baseHash: base.hash,
+    acceptanceBaseHash: base.sourceBaseHash ?? base.hash,
+    sourceCandidateId: base.sourceCandidateId,
+    sourceBaseHash: base.sourceBaseHash,
     resources: base.resources,
     files: base.files,
   });
@@ -64,6 +72,9 @@ export async function generateEditCandidate(
     projectId: base.projectId,
     baseVersionId: base.versionId,
     baseHash: base.hash,
+    acceptanceBaseHash: base.sourceBaseHash ?? base.hash,
+    sourceCandidateId: base.sourceCandidateId,
+    sourceBaseHash: base.sourceBaseHash,
     files: applied.files,
     resources: base.resources.map((resource) => ({ ...resource })),
     changes: applied.changes,

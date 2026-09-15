@@ -13,7 +13,10 @@ const backendRequire = createRequire(path.join(root, "backend/package.json"));
 const typescript = require(path.join(root, "frontend/node_modules/typescript"));
 const contract = loadTsModule(path.join(root, "backend/routes/editContract.ts")).exports;
 const validation = loadTsModule(path.join(root, "backend/routes/chatValidation.ts")).exports;
-const frontendContract = loadTsModule(path.join(root, "frontend/src/lib/changeContract.ts")).exports;
+const validationConstants = loadTsModule(path.join(root, "frontend/src/constants/validation.ts")).exports;
+const frontendContract = loadTsModule(path.join(root, "frontend/src/lib/changeContract.ts"), {
+  "@/constants/validation": validationConstants,
+}).exports;
 
 const baseFiles = {
   "/src/App.tsx": "export default function App() { return <main>Keep</main>; }",
@@ -89,6 +92,7 @@ const candidatePayload = {
   projectId: "fixture-project",
   baseVersionId: "v3",
   baseHash,
+  acceptanceBaseHash: baseHash,
   files: applied.files,
   resources: base.resources,
   changes: applied.changes,

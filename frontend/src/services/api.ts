@@ -230,9 +230,13 @@ function isModeEventData(value: unknown): value is ModeEventData {
 }
 
 function isCandidateEventData(value: unknown): value is CandidateStreamEvent["data"] {
-  if (!isRecord(value) || value.operation !== "edit" || typeof value.candidateId !== "string" || typeof value.runId !== "string" || typeof value.projectId !== "string" || !/^[0-9a-f]{64}$/.test(typeof value.baseHash === "string" ? value.baseHash : "") || typeof value.summary !== "string" || !isRecord(value.files) || !Array.isArray(value.resources) || !Array.isArray(value.changes)) {
+  if (!isRecord(value) || value.operation !== "edit" || typeof value.candidateId !== "string" || typeof value.runId !== "string" || typeof value.projectId !== "string" || !/^[0-9a-f]{64}$/.test(typeof value.baseHash === "string" ? value.baseHash : "") || !/^[0-9a-f]{64}$/.test(typeof value.acceptanceBaseHash === "string" ? value.acceptanceBaseHash : "") || typeof value.summary !== "string" || !isRecord(value.files) || !Array.isArray(value.resources) || !Array.isArray(value.changes)) {
     return false;
   }
+  const hasSourceCandidate = value.sourceCandidateId !== undefined;
+  const hasSourceHash = value.sourceBaseHash !== undefined;
+  if (hasSourceCandidate !== hasSourceHash) return false;
+  if (hasSourceCandidate && (typeof value.sourceCandidateId !== "string" || !/^[A-Za-z0-9._:-]{1,200}$/.test(value.sourceCandidateId) || typeof value.sourceBaseHash !== "string" || !/^[0-9a-f]{64}$/.test(value.sourceBaseHash))) return false;
   if (value.baseVersionId !== null && typeof value.baseVersionId !== "string") return false;
   if (!Object.values(value.files).every((file) => typeof file === "string")) return false;
   if (!value.resources.every((resource) => isRecord(resource) && typeof resource.id === "string" && typeof resource.kind === "string" && typeof resource.hostPath === "string" && typeof resource.sandpackPath === "string" && typeof resource.exportPath === "string" && typeof resource.contentType === "string" && (resource.contentHash === null || (typeof resource.contentHash === "string" && /^[0-9a-f]{64}$/.test(resource.contentHash))) && (resource.hashStatus === "known" || resource.hashStatus === "unknown"))) return false;

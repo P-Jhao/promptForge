@@ -68,7 +68,12 @@ export interface CandidateStreamEvent {
     operation: "edit";
     projectId: string;
     baseVersionId: string | null;
+    /** Hash of the files/resources supplied to this model run. */
     baseHash: string;
+    /** Hash of the original workspace used by the eventual apply gate. */
+    acceptanceBaseHash: string;
+    sourceCandidateId?: string;
+    sourceBaseHash?: string;
     files: Record<string, string>;
     resources: CandidateResourceReference[];
     changes: CandidateChange[];

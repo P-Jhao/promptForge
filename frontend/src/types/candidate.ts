@@ -1,4 +1,5 @@
 import type { SerializableFileMap } from "./project";
+import type { ValidationReport, ValidationStatus } from "./validation";
 
 export type CandidateOperation = "create" | "edit";
 export type CandidateStatus = "staged" | "conflict";
@@ -21,9 +22,10 @@ export interface CandidateResourceReference {
 }
 
 export interface CandidateValidation {
-  protocol: "pass" | "fail";
-  files: "pass" | "fail";
-  preview: "not-verified" | "pass" | "fail";
+  protocol: ValidationStatus;
+  files: ValidationStatus;
+  preview: ValidationStatus;
+  report: ValidationReport;
 }
 
 /** Serializable candidate data; it is deliberately separate from ThoughtItem. */
@@ -32,7 +34,13 @@ export interface CandidateState {
   runId: string;
   projectId: string;
   baseVersionId: string | null;
+  /** Original workspace hash used by applyStagedCandidate. */
   baseHash: string;
+  /** Hash of the files/resources supplied to the model for this candidate. */
+  modelBaseHash: string;
+  /** Present together for a candidate repaired from another staged candidate. */
+  sourceCandidateId?: string;
+  sourceBaseHash?: string;
   operation: CandidateOperation;
   prompt: string;
   assistantMessageId: string;

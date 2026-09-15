@@ -19,6 +19,7 @@ export * from "./store";
 // 项目持久化相关类型
 export * from "./project";
 export * from "./candidate";
+export * from "./validation";
 
 // 组件 Props 相关类型
 export * from "./components";

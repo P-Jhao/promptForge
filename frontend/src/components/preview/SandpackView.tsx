@@ -143,7 +143,7 @@ export function SandpackView({ initialFiles }: SandpackViewProps) {
       >
         <div className="relative h-full w-full border-none sandpack-wrapper">
           <SandpackLayout style={{ height: "100%", border: "none", borderRadius: 0 }}>
-            <SandpackContent viewMode={viewMode} syncEditor={!candidatePreview} />
+            <SandpackContent viewMode={viewMode} syncEditor={!candidatePreview} templateError={templateError} />
           </SandpackLayout>
         </div>
       </SandpackProvider>
@@ -157,11 +157,11 @@ export function SandpackView({ initialFiles }: SandpackViewProps) {
   );
 }
 
-function SandpackContent({ viewMode, syncEditor }: { viewMode: ViewMode; syncEditor: boolean }) {
-  return viewMode === "preview" ? <PreviewContent syncEditor={syncEditor} /> : <CodeContent />;
+function SandpackContent({ viewMode, syncEditor, templateError }: { viewMode: ViewMode; syncEditor: boolean; templateError: string | null }) {
+  return viewMode === "preview" ? <PreviewContent syncEditor={syncEditor} templateError={templateError} /> : <CodeContent />;
 }
 
-function PreviewContent({ syncEditor }: { syncEditor: boolean }) {
+function PreviewContent({ syncEditor, templateError }: { syncEditor: boolean; templateError: string | null }) {
   const { sandpack, listen } = useSandpack();
   const { setCurrentFiles } = useSandpackStore();
   const candidateId = useChatStore((state) => state.candidate?.candidateId);
@@ -193,13 +193,27 @@ function PreviewContent({ syncEditor }: { syncEditor: boolean }) {
 
   useEffect(() => {
     if (candidateId === undefined || syncEditor) return;
-    const previewStatus = hasError
-      ? "fail"
-      : diagnostics.buildState === "success" && diagnostics.mountState === "ready"
-        ? "pass"
-        : "not-verified";
-    setCandidatePreviewStatus(candidateId, previewStatus);
-  }, [candidateId, diagnostics.buildState, diagnostics.mountState, hasError, setCandidatePreviewStatus, syncEditor]);
+    if (templateError !== null) {
+      setCandidatePreviewStatus(candidateId, "fail", "template", "React 模板加载失败", templateError);
+      return;
+    }
+    if (diagnostics.timedOut) {
+      setCandidatePreviewStatus(candidateId, "fail", "external-timeout", "外部预览环境超时", diagnostics.lastEvent ?? undefined);
+      return;
+    }
+    if (hasError) {
+      setCandidatePreviewStatus(
+        candidateId,
+        "fail",
+        diagnostics.errorCategory ?? "build",
+        diagnostics.runtimeError ?? buildError ?? "预览运行失败",
+        diagnostics.lastEvent ?? undefined,
+      );
+      return;
+    }
+    const previewStatus = diagnostics.buildState === "success" && diagnostics.mountState === "ready" ? "pass" : "not-verified";
+    setCandidatePreviewStatus(candidateId, previewStatus, undefined, previewStatus === "pass" ? "Sandpack 构建完成且应用已挂载" : "等待真实构建与应用挂载", diagnostics.lastEvent ?? undefined);
+  }, [candidateId, diagnostics.buildState, diagnostics.errorCategory, diagnostics.lastEvent, diagnostics.mountState, diagnostics.runtimeError, diagnostics.timedOut, hasError, buildError, setCandidatePreviewStatus, syncEditor, templateError]);
 
   return (
     <div ref={previewRootRef} className="relative h-full w-full bg-white">

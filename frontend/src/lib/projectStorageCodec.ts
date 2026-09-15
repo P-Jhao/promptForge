@@ -10,6 +10,7 @@ import type {
   ResourceRecord,
 } from "@/types/project";
 import { isSchemaVersion } from "./projectStorage";
+import { parseValidationReport } from "./validationStorage";
 
 export function parseProjectRecord(value: unknown): ProjectRecord {
   const record = requireRecord(value, "项目记录");
@@ -82,6 +83,7 @@ export function parseRunRecord(value: unknown): RunRecord {
     runId: requireId(record.runId, "运行 ID"),
     projectId: requireId(record.projectId, "运行项目 ID"),
     kind: record.kind === "generation" ? "generation" : (() => { throw corrupt("运行类型无效"); })(),
+    validationReport: record.validationReport === undefined ? undefined : parseValidationReport(record.validationReport),
     status,
     mode,
     modeForced: optionalBoolean(record.modeForced),

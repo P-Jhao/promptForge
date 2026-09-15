@@ -2,6 +2,7 @@ import type { CaseResourceManifest } from "@/cases/resourceManifest";
 import type { SandpackFiles } from "@/types/store";
 import type { CandidateChange, CandidateResourceReference, CandidateState } from "@/types/candidate";
 import { hashFiles, serializeFiles, stableStringify } from "./projectSerialization";
+import { createCandidateValidation, type RepairContext } from "./validationReport";
 
 const MAX_FILES = 150;
 const MAX_FILE_BYTES = 128 * 1024;
@@ -15,6 +16,10 @@ export interface EditBaseSnapshot {
   hash: string;
   files: Record<string, string>;
   resources: EditResourceReference[];
+  /** Present together only when this snapshot repairs a staged candidate. */
+  sourceCandidateId?: string;
+  /** Original workspace hash used by the eventual apply gate. */
+  sourceBaseHash?: string;
 }
 
 export interface CandidateEventPayload {
@@ -23,7 +28,12 @@ export interface CandidateEventPayload {
   operation: "edit";
   projectId: string;
   baseVersionId: string | null;
+  /** Hash of the files/resources supplied to this model run. */
   baseHash: string;
+  /** Hash of the workspace that may be accepted by the apply gate. */
+  acceptanceBaseHash: string;
+  sourceCandidateId?: string;
+  sourceBaseHash?: string;
   files: Record<string, string>;
   resources: EditResourceReference[];
   changes: CandidateChange[];
@@ -79,6 +89,23 @@ export async function validateCandidateEventAgainstBase(
 ): Promise<void> {
   if (payload.operation !== "edit" || payload.projectId !== base.projectId || payload.baseHash !== base.hash || payload.baseVersionId !== base.versionId) {
     throw new Error("候选事件与请求冻结基线不一致");
+  }
+  const expectedAcceptanceBaseHash = base.sourceBaseHash ?? base.hash;
+  if (payload.acceptanceBaseHash !== expectedAcceptanceBaseHash) {
+    throw new Error("候选外部接受基线与请求不一致");
+  }
+  const payloadHasCandidate = payload.sourceCandidateId !== undefined;
+  const payloadHasHash = payload.sourceBaseHash !== undefined;
+  const baseHasCandidate = base.sourceCandidateId !== undefined;
+  const baseHasHash = base.sourceBaseHash !== undefined;
+  if (payloadHasCandidate !== payloadHasHash || baseHasCandidate !== baseHasHash) {
+    throw new Error("候选修复来源元数据不完整");
+  }
+  const payloadHasSource = payloadHasCandidate || payloadHasHash;
+  const baseHasSource = baseHasCandidate || baseHasHash;
+  if (payloadHasSource !== baseHasSource ||
+      (baseHasSource && (payload.sourceCandidateId !== base.sourceCandidateId || payload.sourceBaseHash !== base.sourceBaseHash))) {
+    throw new Error("候选修复来源元数据与请求不一致");
   }
   validatePlainFiles(payload.files);
   if (await hashEditBase(base.files, base.resources) !== base.hash) {
@@ -159,6 +186,7 @@ export async function candidateEventToState(
   prompt: string,
   assistantMessageId: string,
   base: EditBaseSnapshot,
+  repair?: RepairContext,
 ): Promise<CandidateState> {
   await validateCandidateEventAgainstBase(payload, base);
   return {
@@ -166,7 +194,10 @@ export async function candidateEventToState(
     runId: payload.runId,
     projectId: payload.projectId,
     baseVersionId: payload.baseVersionId,
-    baseHash: payload.baseHash,
+    baseHash: payload.acceptanceBaseHash,
+    modelBaseHash: payload.baseHash,
+    sourceCandidateId: payload.sourceCandidateId,
+    sourceBaseHash: payload.sourceBaseHash,
     operation: "edit",
     prompt,
     assistantMessageId,
@@ -174,7 +205,7 @@ export async function candidateEventToState(
     resources: payload.resources.map((resource) => ({ ...resource })),
     changes: payload.changes.map((change) => ({ ...change })),
     summary: payload.summary,
-    validation: { protocol: "pass", files: "pass", preview: "not-verified" },
+    validation: createCandidateValidation(payload.candidateId, payload.runId, "pass", "pass", "not-verified", repair),
     status: "staged",
     createdAt: Date.now(),
   };

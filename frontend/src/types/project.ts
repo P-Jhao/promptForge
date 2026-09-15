@@ -1,4 +1,5 @@
 import type { GenerationState, ProjectVersion, SandpackFiles } from "./store";
+import type { ValidationReport } from "./validation";
 
 export const PROJECT_SCHEMA_VERSION = 1 as const;
 
@@ -60,6 +61,7 @@ export interface ProjectRunDraft {
   runId: string;
   projectId: string;
   kind: "generation";
+  validationReport?: ValidationReport;
   status: ProjectRunStatus;
   mode?: ProjectRunMode;
   modeForced?: boolean;

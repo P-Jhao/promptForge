@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { PREVIEW_TIMINGS } from "@/constants/preview";
 import { readPreviewBridgeEvent } from "./previewBridge";
+import type { ValidationErrorCategory } from "@/types/validation";
 
 type SandpackListen = (listener: (message: unknown) => void) => () => void;
 
@@ -9,6 +10,7 @@ export interface PreviewDiagnostics {
   mountState: "waiting" | "ready";
   buildError: string | null;
   runtimeError: string | null;
+  errorCategory: ValidationErrorCategory | null;
   longWait: boolean;
   timedOut: boolean;
   hasRenderedBefore: boolean;
@@ -20,6 +22,7 @@ const INITIAL_STATE: PreviewDiagnostics = {
   mountState: "waiting",
   buildError: null,
   runtimeError: null,
+  errorCategory: null,
   longWait: false,
   timedOut: false,
   hasRenderedBefore: false,
@@ -55,6 +58,7 @@ export function usePreviewDiagnostics(
         mountState: "waiting",
         buildError: null,
         runtimeError: null,
+        errorCategory: null,
         longWait: false,
         timedOut: false,
         lastEvent: "start",
@@ -89,17 +93,19 @@ export function usePreviewDiagnostics(
       if (eventType === "done") {
         if (message.compilatonError !== false) {
           clearTimers();
+          const buildError = message.compilatonError === true
+            ? readSandpackError(message)
+            : "Sandpack 完成事件缺少编译结果，无法确认预览构建成功。";
           setDiagnostics((current) => ({
             ...current,
             buildState: "error",
-            buildError: message.compilatonError === true
-              ? readSandpackError(message)
-              : "Sandpack 完成事件缺少编译结果，无法确认预览构建成功。",
+            buildError,
+            errorCategory: classifyPreviewError(buildError, "build"),
             lastEvent: eventType,
           }));
           return;
         }
-        setDiagnostics((current) => ({ ...current, buildState: "success", lastEvent: eventType }));
+        setDiagnostics((current) => ({ ...current, buildState: "success", errorCategory: null, lastEvent: eventType }));
         return;
       }
       if (
@@ -108,10 +114,12 @@ export function usePreviewDiagnostics(
           (message.action === "notification" && message.notificationType === "error"))
       ) {
         clearTimers();
+        const errorMessage = readSandpackError(message);
         setDiagnostics((current) => ({
           ...current,
           buildState: "error",
-          buildError: readSandpackError(message),
+          buildError: errorMessage,
+          errorCategory: classifyPreviewError(errorMessage, message.action === "notification" ? "runtime" : "build"),
           lastEvent: "action/show-error",
         }));
       }
@@ -129,9 +137,11 @@ export function usePreviewDiagnostics(
         return;
       }
       clearTimers();
+      const errorMessage = bridgeEvent.message ?? "预览应用发生运行时错误";
       setDiagnostics((current) => ({
         ...current,
-        runtimeError: bridgeEvent.message ?? "预览应用发生运行时错误",
+        runtimeError: errorMessage,
+        errorCategory: classifyPreviewError(errorMessage, "runtime"),
         lastEvent: "runtime-error",
       }));
     };
@@ -153,6 +163,17 @@ function readSandpackError(message: Record<string, unknown>): string {
   if (typeof message.message === "string" && message.message.length > 0) return message.message;
   if (typeof message.title === "string" && message.title.length > 0) return message.title;
   return "Sandpack 构建失败，请查看代码中的错误位置。";
+}
+
+function classifyPreviewError(
+  message: string,
+  fallback: ValidationErrorCategory,
+): ValidationErrorCategory {
+  const normalized = message.toLowerCase();
+  if (normalized.includes("time_out") || normalized.includes("timeout") || normalized.includes("timed out")) return "external-timeout";
+  if (normalized.includes("network") || normalized.includes("failed to fetch") || normalized.includes("dependency install")) return "network";
+  if (normalized.includes("resource") || normalized.includes("asset") || normalized.includes("404") || normalized.includes(".svg")) return "resource";
+  return fallback;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

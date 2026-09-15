@@ -22,7 +22,7 @@ const REQUEST_SUGGESTIONS = [
 ];
 
 export function ChatPanel() {
-  const { messages, isLoading, sendMessage, cancelMessage, retryLastMessage, canRetry, candidate, applyCandidate, discardCandidate } = useChat();
+  const { messages, isLoading, sendMessage, cancelMessage, retryLastMessage, canRetry, candidate, applyCandidate, repairCandidate, discardCandidate } = useChat();
   const thoughts = useChatStore((state) => state.messageThoughts);
   const versions = useChatStore((state) => state.versions);
   const projectName = useChatStore((state) => state.projectName);
@@ -66,7 +66,7 @@ export function ChatPanel() {
 
       <GenerationStatusPanel />
       {candidate !== null && (
-        <CandidatePanel candidate={candidate} onApply={() => void applyCandidate()} onDiscard={discardCandidate} disabled={isLoading} />
+        <CandidatePanel candidate={candidate} onApply={() => void applyCandidate()} onRepair={() => void repairCandidate()} onDiscard={discardCandidate} disabled={isLoading} />
       )}
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3">

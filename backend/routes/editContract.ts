@@ -53,9 +53,14 @@ export interface EditResourceReference {
 export interface EditBaseSnapshot {
   projectId: string;
   versionId: string | null;
+  /** Hash of the files/resources supplied to this edit model run. */
   hash: string;
   files: Record<string, string>;
   resources: EditResourceReference[];
+  /** Present only when this edit repairs a staged candidate. Both source fields are required together. */
+  sourceCandidateId?: string;
+  /** The original accepted-workspace hash used by the eventual apply gate. */
+  sourceBaseHash?: string;
 }
 
 export interface AppliedEdit {
@@ -77,12 +82,23 @@ export function parseEditBase(
     : readId(record.versionId, "edit.base.versionId");
   const hash = readHash(record.hash, "edit.base.hash");
   const files = readFileMap(record.files, "edit.base.files");
+  const sourceCandidateId = record.sourceCandidateId === undefined
+    ? undefined
+    : readId(record.sourceCandidateId, "edit.base.sourceCandidateId");
+  const sourceBaseHash = record.sourceBaseHash === undefined
+    ? undefined
+    : readHash(record.sourceBaseHash, "edit.base.sourceBaseHash");
+  if ((sourceCandidateId === undefined) !== (sourceBaseHash === undefined)) {
+    throw new Error("edit.base.sourceCandidateId and sourceBaseHash must be provided together");
+  }
   return {
     projectId,
     versionId,
     hash,
     files,
     resources: readResources(record.resources, files),
+    sourceCandidateId,
+    sourceBaseHash,
   };
 }
 
