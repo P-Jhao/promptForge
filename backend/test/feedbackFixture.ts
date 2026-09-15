@@ -200,6 +200,7 @@ function streamChat(
   sendNext();
 }
 const app = express();
+const JSON_BODY_LIMIT_BYTES = 1024 * 1024;
 app.disable("x-powered-by");
 app.use((request: Request, response: Response, next: NextFunction): void => {
   setCorsHeaders(response);
@@ -210,7 +211,7 @@ app.use((request: Request, response: Response, next: NextFunction): void => {
 
   next();
 });
-app.use(express.json({ limit: "256kb" }));
+app.use(express.json({ limit: JSON_BODY_LIMIT_BYTES }));
 app.use("/api/template", templateRouter);
 
 app.post("/api/chat", (request: Request, response: Response): void => {

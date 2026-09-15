@@ -7,6 +7,7 @@ import type {
   VersionChanges,
   GenerationState,
 } from "@/types/store";
+import type { CandidateState } from "@/types/candidate";
 
 // Re-export types for backward compatibility
 export type { ThoughtItem, ProjectVersion, VersionChanges };
@@ -40,6 +41,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isLoading: false,
   phaseCompletion: {},
   generation: initialGeneration,
+  candidate: null,
 
   // 设置当前流程类型
   setCurrentFlow: (flow) => set({ currentFlow: flow }),
@@ -57,6 +59,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       phaseCompletion: {},
       generation: { ...initialGeneration },
       isLoading: false,
+      candidate: null,
     }),
 
   // 切换项目（未来可扩展为加载历史项目）
@@ -77,6 +80,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       // 保留 projectId 和 projectName
       currentProjectId: state.currentProjectId,
       projectName: state.projectName,
+      candidate: null,
     })),
 
   // 更新项目名称
@@ -94,7 +98,22 @@ export const useChatStore = create<ChatState>((set, get) => ({
       currentFlow: null,
       generation: { ...initialGeneration },
       isLoading: false,
+      candidate: null,
     }),
+
+  stageCandidate: (candidate: CandidateState) => set({ candidate }),
+
+  setCandidatePreviewStatus: (candidateId: string, status: CandidateState["validation"]["preview"]) =>
+    set((state) => state.candidate === null || state.candidate.candidateId !== candidateId || state.candidate.validation.preview === status
+      ? state
+      : { candidate: { ...state.candidate, validation: { ...state.candidate.validation, preview: status } } }),
+
+  setCandidateConflict: (reason: string) =>
+    set((state) => state.candidate === null
+      ? state
+      : { candidate: { ...state.candidate, status: "conflict", conflictReason: reason } }),
+
+  clearCandidate: () => set({ candidate: null }),
 
   // 版本管理方法
 

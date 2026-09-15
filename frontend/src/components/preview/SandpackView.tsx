@@ -15,8 +15,10 @@ import { createPreviewFiles, stripPreviewFiles } from "@/components/preview/prev
 import { usePreviewDiagnostics } from "@/components/preview/usePreviewDiagnostics";
 import { getReactTS_Template } from "@/services/api";
 import { areSandpackFilesEqual, useSandpackStore } from "@/store/sandpackStore";
+import { useChatStore } from "@/store/chatStore";
 import { NOVEL_CASE_MANIFEST } from "@/cases/novelCase";
 import type { SandpackFiles, ViewMode } from "@/types/store";
+import { formatSandpackError, sameFiles, toPlainFiles, toSandpackFiles, toStoreFiles } from "./sandpackFileUtils";
 
 const SandpackProvider = dynamic(
   () => import("@codesandbox/sandpack-react").then((mod) => mod.SandpackProvider),
@@ -36,6 +38,7 @@ interface TemplateLoadState {
 
 export function SandpackView({ initialFiles }: SandpackViewProps) {
   const { viewMode, generatedFiles, currentFiles, setGeneratedFiles } = useSandpackStore();
+  const candidate = useChatStore((state) => state.candidate);
   const [templateFiles, setTemplateFiles] = useState<SandpackFiles>({});
   const [templateRetryCount, setTemplateRetryCount] = useState(0);
   const caseSignature = useMemo(
@@ -51,7 +54,7 @@ export function SandpackView({ initialFiles }: SandpackViewProps) {
     status: initialFiles === undefined ? "loading" : "ready",
   }));
   const isPresetCase = initialFiles !== undefined && (
-    generatedFiles === null || sameFiles(generatedFiles, initialFiles)
+    candidate === null && (generatedFiles === null || sameFiles(generatedFiles, initialFiles))
   );
 
   useEffect(() => {
@@ -89,9 +92,11 @@ export function SandpackView({ initialFiles }: SandpackViewProps) {
     window.__templateFiles = templateFiles;
   }, [templateFiles]);
 
-  const resultFiles = initialFiles === undefined
-    ? (currentFiles ?? generatedFiles)
-    : (caseLoadedSignature === caseSignature ? (currentFiles ?? generatedFiles ?? initialFiles) : initialFiles);
+  const resultFiles = viewMode === "preview" && candidate !== null
+    ? toSandpackFiles(candidate.files)
+    : initialFiles === undefined
+      ? (currentFiles ?? generatedFiles)
+      : (caseLoadedSignature === caseSignature ? (currentFiles ?? generatedFiles ?? initialFiles) : initialFiles);
   const hasResultFiles = resultFiles !== null && resultFiles !== undefined && Object.keys(resultFiles).length > 0;
   const templateStatus = templateLoad.key === templateRequestKey ? templateLoad.status : "loading";
   const templateError = templateStatus === "error" ? templateLoad.error ?? "React 模板加载失败" : null;
@@ -104,6 +109,7 @@ export function SandpackView({ initialFiles }: SandpackViewProps) {
     () => viewMode === "preview" ? createPreviewFiles(sourceFiles) : sourceFiles,
     [sourceFiles, viewMode],
   );
+  const candidatePreview = viewMode === "preview" && candidate !== null;
 
   if (blockingTemplate) {
     return <div className="relative h-full w-full"><BuildingLoadingOverlay message="正在加载 React 模板" detail="正在读取可导出的模板文件…" /></div>;
@@ -121,7 +127,7 @@ export function SandpackView({ initialFiles }: SandpackViewProps) {
   return (
     <div className="relative h-full w-full">
       <SandpackProvider
-        key={`${viewMode}:${caseSignature ?? "generated"}`}
+        key={`${viewMode}:${caseSignature ?? "generated"}:${candidate?.candidateId ?? "accepted"}`}
         template="react-ts"
         theme="light"
         files={previewFiles}
@@ -137,7 +143,7 @@ export function SandpackView({ initialFiles }: SandpackViewProps) {
       >
         <div className="relative h-full w-full border-none sandpack-wrapper">
           <SandpackLayout style={{ height: "100%", border: "none", borderRadius: 0 }}>
-            <SandpackContent viewMode={viewMode} />
+            <SandpackContent viewMode={viewMode} syncEditor={!candidatePreview} />
           </SandpackLayout>
         </div>
       </SandpackProvider>
@@ -151,13 +157,15 @@ export function SandpackView({ initialFiles }: SandpackViewProps) {
   );
 }
 
-function SandpackContent({ viewMode }: { viewMode: ViewMode }) {
-  return viewMode === "preview" ? <PreviewContent /> : <CodeContent />;
+function SandpackContent({ viewMode, syncEditor }: { viewMode: ViewMode; syncEditor: boolean }) {
+  return viewMode === "preview" ? <PreviewContent syncEditor={syncEditor} /> : <CodeContent />;
 }
 
-function PreviewContent() {
+function PreviewContent({ syncEditor }: { syncEditor: boolean }) {
   const { sandpack, listen } = useSandpack();
   const { setCurrentFiles } = useSandpackStore();
+  const candidateId = useChatStore((state) => state.candidate?.candidateId);
+  const setCandidatePreviewStatus = useChatStore((state) => state.setCandidatePreviewStatus);
   const previewRootRef = useRef<HTMLDivElement>(null);
   const lastFilesRef = useRef<SandpackFiles | null>(null);
   const [retryKey, setRetryKey] = useState(0);
@@ -172,8 +180,8 @@ function PreviewContent() {
     const files = stripPreviewFiles(toStoreFiles(sandpack.files));
     if (lastFilesRef.current !== null && areSandpackFilesEqual(lastFilesRef.current, files)) return;
     lastFilesRef.current = files;
-    setCurrentFiles(files);
-  }, [sandpack.files, setCurrentFiles]);
+    if (syncEditor) setCurrentFiles(files);
+  }, [sandpack.files, setCurrentFiles, syncEditor]);
 
   const retryPreview = (): void => {
     setRetryKey((value) => value + 1);
@@ -182,6 +190,16 @@ function PreviewContent() {
   const hasError = buildError !== null || diagnostics.runtimeError !== null;
   const waiting = diagnostics.buildState !== "success" || diagnostics.mountState !== "ready";
   const showCentralLoading = waiting && !diagnostics.hasRenderedBefore && !hasError && !diagnostics.timedOut;
+
+  useEffect(() => {
+    if (candidateId === undefined || syncEditor) return;
+    const previewStatus = hasError
+      ? "fail"
+      : diagnostics.buildState === "success" && diagnostics.mountState === "ready"
+        ? "pass"
+        : "not-verified";
+    setCandidatePreviewStatus(candidateId, previewStatus);
+  }, [candidateId, diagnostics.buildState, diagnostics.mountState, hasError, setCandidatePreviewStatus, syncEditor]);
 
   return (
     <div ref={previewRootRef} className="relative h-full w-full bg-white">
@@ -254,32 +272,4 @@ function PreviewError({ title, message, onRetry }: { title: string; message: str
       <button type="button" onClick={onRetry}>重试预览</button>
     </div>
   );
-}
-
-function toPlainFiles(files: SandpackFiles): Record<string, string> {
-  return Object.fromEntries(Object.entries(files).map(([path, file]) => [path, file.code]));
-}
-
-function toStoreFiles(files: Record<string, unknown>): SandpackFiles {
-  return Object.fromEntries(Object.entries(files).map(([path, file]) => {
-    if (typeof file === "string") return [path, { code: file }];
-    if (isRecord(file) && typeof file.code === "string") return [path, { code: file.code }];
-    throw new Error(`Sandpack 返回了无效文件：${path}`);
-  }));
-}
-
-function formatSandpackError(error: unknown): string {
-  if (isRecord(error) && typeof error.message === "string") return error.message;
-  return "外部预览打包器返回了错误，请重试。";
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function sameFiles(first: SandpackFiles, second: SandpackFiles): boolean {
-  const firstPaths = Object.keys(first);
-  const secondPaths = Object.keys(second);
-  if (firstPaths.length !== secondPaths.length) return false;
-  return firstPaths.every((path) => first[path]?.code === second[path]?.code);
 }

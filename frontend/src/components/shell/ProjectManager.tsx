@@ -16,6 +16,7 @@ export function ProjectManager() {
   const projectName = useChatStore((state) => state.projectName);
   const versions = useChatStore((state) => state.versions);
   const isLoading = useChatStore((state) => state.isLoading);
+  const candidate = useChatStore((state) => state.candidate);
   const updateProjectName = useChatStore((state) => state.updateProjectName);
   const persistence = useProjectPersistence();
   const { refreshProjects } = persistence;
@@ -109,6 +110,7 @@ export function ProjectManager() {
 
   const statusText = persistence.dirty ? "未保存" : storageStatusLabel(persistence.status);
   const statusClass = persistence.dirty ? "project-status dirty" : `project-status ${persistence.status}`;
+  const candidateBlocksSwitch = candidate !== null;
 
   return (
     <>
@@ -123,10 +125,10 @@ export function ProjectManager() {
         <button type="button" onClick={save} disabled={busy || persistence.status === "saving"} title="保存当前工作副本">
           <Save size={13} /> 保存
         </button>
-        <button type="button" onClick={() => setShowBrowser(true)} disabled={busy || isLoading} title={isLoading ? "生成进行中，暂不能切换项目" : "打开本地项目"}>
+        <button type="button" onClick={() => setShowBrowser(true)} disabled={busy || isLoading || candidateBlocksSwitch} title={isLoading ? "生成进行中，暂不能切换项目" : candidateBlocksSwitch ? "请先应用或放弃候选" : "打开本地项目"}>
           <FolderOpen size={13} /> 打开
         </button>
-        <button type="button" onClick={beginSaveAs} disabled={busy || isLoading} title={isLoading ? "生成进行中，暂不能另存为" : "另存为新项目"}>
+        <button type="button" onClick={beginSaveAs} disabled={busy || isLoading || candidateBlocksSwitch} title={isLoading ? "生成进行中，暂不能另存为" : candidateBlocksSwitch ? "请先应用或放弃候选" : "另存为新项目"}>
           <Copy size={13} /> 另存为
         </button>
       </div>
@@ -155,7 +157,7 @@ export function ProjectManager() {
               <h3><History size={14} /> 当前项目版本历史</h3>
               {versions.length === 0 && <p className="project-modal-note">尚无已接受版本。</p>}
               {[...versions].reverse().map((version) => (
-                <button type="button" key={version.versionId} className="project-history-item" disabled={version.files === null || busy || isLoading} onClick={() => requestAction({ kind: "restore", version })}>
+                <button type="button" key={version.versionId} className="project-history-item" disabled={version.files === null || busy || isLoading || candidateBlocksSwitch} onClick={() => requestAction({ kind: "restore", version })}>
                   <span>版本 {version.versionNumber} · {version.operation === "restore" ? "恢复" : version.operation === "create" ? "创建" : "编辑"}</span>
                   <small>{version.files === null ? "无文件快照" : `${version.fileCount} 个文件`}</small>
                 </button>

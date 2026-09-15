@@ -1,6 +1,6 @@
 # 07 验收映射与待决问题
 
-本文件把稳定需求映射到可审查的验收条目。除阶段 A 已落地的代码证据外，所有条目仍需按下方环境完成现场验收；本轮没有生成任务看板，也没有运行付费模型。阶段 A 的实现与证据边界见 [`phase-a.md`](../phase-two-plan/phase-a.md)。
+本文件把稳定需求映射到可审查的验收条目。阶段 A/B/C 已有代码和 fixture 证据，但真实模型、外部 Sandpack、导出构建、浏览器存储故障和固定功能仍需现场验收；本轮没有生成任务看板，也没有运行付费模型。阶段 A、B、C 的实现与证据边界见 [`phase-a.md`](../phase-two-plan/phase-a.md)、[`phase-b.md`](../phase-two-plan/phase-b.md) 和 [`phase-c.md`](../phase-two-plan/phase-c.md)。
 
 ## 需求到验收映射
 

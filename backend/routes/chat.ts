@@ -13,6 +13,7 @@ import {
   parseChatRequest,
 } from "./chatValidation.js";
 import type { ChatRequestData } from "./chatValidation.js";
+import { streamEditRequest } from "./editStream.js";
 import {
   processChatStreamChunk,
   type ChatStreamState,
@@ -155,6 +156,18 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    if (requestData.operation === "edit") {
+      currentNode = "edit";
+      await streamEditRequest({
+        request: requestData,
+        allNodesUseMock,
+        isStopped: () => stopRequested || res.writableEnded || res.destroyed,
+        writeSse,
+        end: () => res.end(),
+      });
+      return;
+    }
+
     const routeResult = await resolveRouteAdapter({ messages, mockConfig });
     console.log(`📝 [Route] 使用 ${routeResult.flow} 流程`);
     console.log("Using mockConfig:", JSON.stringify(mockConfig));
@@ -165,7 +178,10 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
 
     currentNode = routeResult.flow === "chat" ? "chatNode" : "analysisNode";
 
-    if (!writeSse({ type: "flow", data: { flow: routeResult.flow } })) {
+    if (!writeSse({
+      type: "flow",
+      data: { flow: routeResult.flow, operation: routeResult.flow === "chat" ? "chat" : "generate" },
+    })) {
       return;
     }
 

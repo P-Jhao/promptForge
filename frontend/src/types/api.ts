@@ -1,6 +1,7 @@
 // API 相关类型定义
 
 import type { BackendFlowType, StepType } from "./flow";
+import type { CandidateChange, CandidateResourceReference } from "./candidate";
 
 /**
  * SSE 流式事件的基础结构
@@ -15,6 +16,7 @@ export interface StreamErrorData {
 /** 后端 flow 事件载荷 */
 export interface FlowEventData {
   flow: BackendFlowType;
+  operation?: "generate" | "chat" | "edit";
 }
 
 /** Chat flow 的文本增量事件载荷 */
@@ -58,6 +60,23 @@ export interface DoneStreamEvent {
   message?: string;
 }
 
+export interface CandidateStreamEvent {
+  type: "candidate";
+  data: {
+    candidateId: string;
+    runId: string;
+    operation: "edit";
+    projectId: string;
+    baseVersionId: string | null;
+    baseHash: string;
+    files: Record<string, string>;
+    resources: CandidateResourceReference[];
+    changes: CandidateChange[];
+    summary: string;
+  };
+  message?: string;
+}
+
 export interface StepStreamEvent {
   type: StepType;
   data?: unknown;
@@ -69,6 +88,7 @@ export type StreamEvent =
   | FlowStreamEvent
   | ChatStreamEvent
   | ModeStreamEvent
+  | CandidateStreamEvent
   | ErrorStreamEvent
   | DoneStreamEvent
   | StepStreamEvent;

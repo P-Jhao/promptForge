@@ -1,10 +1,12 @@
 // API 请求封装
 import type { ChatMessage } from "@/types/message";
 import type {
+  CandidateStreamEvent,
   ModeEventData,
   StreamErrorData,
   StreamEvent,
 } from "@/types/api";
+import type { EditBaseSnapshot } from "@/lib/changeContract";
 import type { MockConfig } from "@/types/mock";
 import type { BackendFlowType, StepType } from "@/types/flow";
 import { apiUrl } from "@/constants/config";
@@ -44,8 +46,11 @@ export async function generateAppStream(
     messages: ChatMessage[];
     projectId?: string;
     mockConfig: MockConfig;
+    operation?: "generate" | "edit";
+    base?: EditBaseSnapshot;
+    runId?: string;
   },
-  onChunk: (event: StreamEvent) => void,
+  onChunk: (event: StreamEvent) => void | Promise<void>,
   signal?: AbortSignal,
 ): Promise<void> {
   if (signal?.aborted) {
@@ -60,6 +65,9 @@ export async function generateAppStream(
       messages: params.messages,
       projectId: params.projectId,
       mockConfig: params.mockConfig,
+      operation: params.operation ?? "generate",
+      base: params.base,
+      runId: params.runId,
     }),
   });
 
@@ -92,7 +100,7 @@ export async function generateAppStream(
         for (const frame of finalFrames.frames) {
           const event = parseSseFrame(frame);
           if (event === null) continue;
-          onChunk(event);
+          await onChunk(event);
           receivedDone ||= event.type === "done";
         }
         if (buffer.trim().length > 0) {
@@ -107,7 +115,7 @@ export async function generateAppStream(
       for (const frame of frames.frames) {
         const event = parseSseFrame(frame);
         if (event === null) continue;
-        onChunk(event);
+        await onChunk(event);
         receivedDone ||= event.type === "done";
       }
     }
@@ -176,13 +184,17 @@ function parseSseFrame(frame: string): StreamEvent | null {
 function isStreamEvent(value: unknown): value is StreamEvent {
   if (!isRecord(value) || typeof value.type !== "string") return false;
   if (value.type === "flow") {
-    return isRecord(value.data) && isBackendFlowType(value.data.flow);
+    return isRecord(value.data) && isBackendFlowType(value.data.flow) &&
+      (value.data.operation === undefined || value.data.operation === "generate" || value.data.operation === "chat" || value.data.operation === "edit");
   }
   if (value.type === "chat") {
     return isRecord(value.data) && typeof value.data.delta === "string";
   }
   if (value.type === "mode") {
     return isModeEventData(value.data);
+  }
+  if (value.type === "candidate") {
+    return isCandidateEventData(value.data);
   }
   if (value.type === "error") {
     return (value.data === undefined || isStreamErrorData(value.data)) &&
@@ -215,6 +227,20 @@ function isModeEventData(value: unknown): value is ModeEventData {
     (value.mode === "mock" || value.mode === "real") &&
     typeof value.forced === "boolean" &&
     (value.message === undefined || typeof value.message === "string");
+}
+
+function isCandidateEventData(value: unknown): value is CandidateStreamEvent["data"] {
+  if (!isRecord(value) || value.operation !== "edit" || typeof value.candidateId !== "string" || typeof value.runId !== "string" || typeof value.projectId !== "string" || !/^[0-9a-f]{64}$/.test(typeof value.baseHash === "string" ? value.baseHash : "") || typeof value.summary !== "string" || !isRecord(value.files) || !Array.isArray(value.resources) || !Array.isArray(value.changes)) {
+    return false;
+  }
+  if (value.baseVersionId !== null && typeof value.baseVersionId !== "string") return false;
+  if (!Object.values(value.files).every((file) => typeof file === "string")) return false;
+  if (!value.resources.every((resource) => isRecord(resource) && typeof resource.id === "string" && typeof resource.kind === "string" && typeof resource.hostPath === "string" && typeof resource.sandpackPath === "string" && typeof resource.exportPath === "string" && typeof resource.contentType === "string" && (resource.contentHash === null || (typeof resource.contentHash === "string" && /^[0-9a-f]{64}$/.test(resource.contentHash))) && (resource.hashStatus === "known" || resource.hashStatus === "unknown"))) return false;
+  return value.changes.every((change) => {
+    if (!isRecord(change) || typeof change.path !== "string") return false;
+    if (change.operation === "delete") return change.content === undefined;
+    return (change.operation === "add" || change.operation === "modify") && typeof change.content === "string";
+  });
 }
 
 function isStreamErrorData(value: unknown): value is StreamErrorData {

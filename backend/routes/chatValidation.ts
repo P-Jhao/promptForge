@@ -2,6 +2,7 @@ import type {
   ChatAttachment,
   ChatMessage,
 } from "../agents/adapters/routeTypes.js";
+import { parseEditBase, type EditBaseSnapshot } from "./editContract.js";
 
 export const CHAT_LIMITS = {
   maxMessages: 24,
@@ -16,6 +17,9 @@ export interface ChatRequestData {
   messages: ChatMessage[];
   projectId?: string;
   mockConfig: unknown;
+  operation: "generate" | "edit";
+  base?: EditBaseSnapshot;
+  runId?: string;
 }
 
 export class ChatValidationError extends Error {
@@ -54,6 +58,22 @@ function readProjectId(value: unknown): string | undefined {
   }
 
   return projectId;
+}
+
+function readOperation(value: unknown): "generate" | "edit" {
+  if (value === undefined) return "generate";
+  if (value !== "generate" && value !== "edit") {
+    throw new ChatValidationError("operation must be generate or edit");
+  }
+  return value;
+}
+
+function readRunId(value: unknown): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || value.trim().length === 0 || value.length > 200 || !/^[A-Za-z0-9._:-]+$/.test(value)) {
+    throw new ChatValidationError("runId is invalid");
+  }
+  return value;
 }
 
 function readAttachments(value: unknown): ChatAttachment[] | undefined {
@@ -158,9 +178,32 @@ export function parseChatRequest(body: unknown): ChatRequestData {
     throw new ChatValidationError("Request body must be a JSON object");
   }
 
+  const projectId = readProjectId(body.projectId);
+  const operation = readOperation(body.operation);
+  if (operation === "edit" && projectId === undefined) {
+    throw new ChatValidationError("edit operation requires projectId");
+  }
+  if (operation === "edit" && body.base === undefined) {
+    throw new ChatValidationError("edit operation requires a base snapshot");
+  }
+  const runId = readRunId(body.runId);
+  if (operation === "edit" && runId === undefined) {
+    throw new ChatValidationError("edit operation requires runId");
+  }
+  let base: EditBaseSnapshot | undefined;
+  if (body.base !== undefined) {
+    try {
+      base = parseEditBase(body.base, projectId);
+    } catch (error: unknown) {
+      throw new ChatValidationError(error instanceof Error ? error.message : "edit base is invalid");
+    }
+  }
   return {
     messages: readMessages(body.messages),
-    projectId: readProjectId(body.projectId),
+    projectId,
     mockConfig: body.mockConfig,
+    operation,
+    base,
+    runId,
   };
 }

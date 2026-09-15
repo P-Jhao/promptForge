@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { ChatMessage } from "./message";
 import type { FlowType, Phase, StepType } from "./flow";
 import type { ProjectHydration } from "./project";
+import type { CandidateState } from "./candidate";
 
 // ============================================================================
 // Sandpack Store 类型
@@ -130,6 +131,7 @@ export interface ChatState {
   isLoading: boolean;
   phaseCompletion: Record<string, { completed: number; total: number }>; // 阶段完成进度
   generation: GenerationState;
+  candidate: CandidateState | null;
 
   /** Flow Actions */
   setCurrentFlow: (flow: FlowType | null) => void; // 设置当前流程类型
@@ -147,6 +149,10 @@ export interface ChatState {
 
   /** Actions */
   hydrateProject: (project: ProjectHydration) => void;
+  stageCandidate: (candidate: CandidateState) => void;
+  setCandidatePreviewStatus: (candidateId: string, status: CandidateState["validation"]["preview"]) => void;
+  setCandidateConflict: (reason: string) => void;
+  clearCandidate: () => void;
   addMessage: (message: ChatMessage) => void;
   appendMessageContent: (messageId: string, delta: string) => void;
   setLoading: (loading: boolean) => void;

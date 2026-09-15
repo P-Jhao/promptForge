@@ -2,6 +2,7 @@ import type { ErrorStreamEvent } from "@/types/api";
 import type { ChatMessage } from "@/types/message";
 import type { StepType } from "@/types/flow";
 import type { MockConfig } from "@/types/mock";
+import type { EditBaseSnapshot } from "@/lib/changeContract";
 import { useChatStore } from "@/store/chatStore";
 import { NODE_TO_STEP_MAP, STEP_DEFINITIONS } from "@/constants/chat";
 
@@ -12,11 +13,7 @@ export interface ActiveRequest {
   startedAt: number;
 }
 
-export interface TraditionalVersionContext {
-  versionNumber: number;
-  threadId: string;
-  operation: "create" | "edit";
-}
+export type RequestOperation = "generate" | "edit";
 
 export type Attachment = { type: "image"; url: string };
 
@@ -26,6 +23,8 @@ export interface RetryableRequest {
   mockConfig: MockConfig;
   history: ChatMessage[];
   projectId: string;
+  operation: RequestOperation;
+  base: EditBaseSnapshot;
 }
 
 export function isAbortError(error: unknown): boolean {

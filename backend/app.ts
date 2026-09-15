@@ -73,12 +73,13 @@ const corsOptions: CorsOptions = {
 };
 
 const app = express();
+const JSON_BODY_LIMIT_BYTES = 1024 * 1024;
 
 app.set("trust proxy", readTrustProxyHops());
 app.disable("x-powered-by");
 app.use(logger("dev"));
 app.use(cors(corsOptions));
-app.use(express.json({ limit: "256kb" }));
+app.use(express.json({ limit: JSON_BODY_LIMIT_BYTES }));
 app.use(express.urlencoded({ extended: false, limit: "64kb" }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "../public")));

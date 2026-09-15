@@ -46,6 +46,8 @@ PromptForge 是一个聊天式的 AI 前端生成器：用户输入产品或页�
 ├── scripts/
 │   ├── assembleNovelCase.mjs      # 从 backend/mock 重新组装小说案例
 │   ├── checkPhaseA.mjs            # 阶段 A 资源、桥接与导出 fixture
+│   ├── checkPhaseB.mjs            # 阶段 B IndexedDB 仓储 fixture
+│   ├── checkPhaseC.mjs            # 阶段 C 文件变更与基线 fixture
 │   └── recordRealTaskBoard.mjs    # 固定评测 prompt 的真实运行记录器
 ├── docs/phase-one/                # 第一阶段能力边界、验证与手动项
 ├── docs/phase-two-spec/           # 第二阶段权威规格与验收计划
@@ -190,7 +192,7 @@ pnpm start
 
 首页首屏和工作台的“小说阅读管理”案例直接使用 `backend/mock` 的节点结果，不调用模型。`scripts/assembleNovelCase.mjs` 会生成两个初始场景（书库管理、阅读笔记）共用的源码清单，并补充会话内新增书籍/笔记/书签、搜索依赖、移动端布局和案例入口类型检查。案例正文带有示意内容提示，首页的需求摘要也不等同于原始完整 prompt。
 
-工作台开启“示例体验”时只提供预存案例入口，不会根据访客输入伪造生成；关闭后才会提交真实 `/api/chat` 请求。第二阶段 B 已提供手动保存、打开、另存为和历史恢复，未保存修改会明确显示并在切换/恢复前要求处理；基于编辑文件继续生成仍属于后续阶段。第一阶段的完整限制和待手动验证项见 [docs/phase-one/README.md](docs/phase-one/README.md)，第二阶段 A/B 的实现状态和现场边界见 [docs/phase-two-plan/phase-a.md](docs/phase-two-plan/phase-a.md) 与 [docs/phase-two-plan/phase-b.md](docs/phase-two-plan/phase-b.md)。
+工作台开启“示例体验”时只提供预存案例入口，不会根据访客输入伪造生成；关闭后才会提交真实 `/api/chat` 请求。第二阶段 B 已提供手动保存、打开、另存为和历史恢复，未保存修改会明确显示并在切换/恢复前要求处理；阶段 C 已接入以当前编辑文件为基线的明确编辑请求和候选隔离，完整真实模型、运行校验和固定功能验收仍待现场完成。第一阶段的完整限制和待手动验证项见 [docs/phase-one/README.md](docs/phase-one/README.md)，第二阶段 A/B/C 的实现状态和现场边界见 [docs/phase-two-plan/phase-a.md](docs/phase-two-plan/phase-a.md)、[docs/phase-two-plan/phase-b.md](docs/phase-two-plan/phase-b.md) 与 [docs/phase-two-plan/phase-c.md](docs/phase-two-plan/phase-c.md)。
 
 ## 开发注意事项
 
