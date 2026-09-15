@@ -1,6 +1,6 @@
 # PromptForge 第二阶段规格（讨论稿）
 
-状态：阶段 A 代码与首页资源已现场核验，阶段 B 代码已实现，阶段 C 最小候选隔离切片已实现，阶段 D 分层校验/有限修复切片与固定任务板验收工具已实现；外部 Sandpack、导出包、真实模型、编辑真实 SSE、固定任务板和 IndexedDB 故障场景仍待现场验收；阶段 E 未开始。
+状态：阶段 A 代码与首页资源已现场核验，阶段 B 代码已实现，阶段 C 最小候选隔离切片已实现，阶段 D 分层校验/有限修复切片与固定任务板验收工具已实现，阶段 E 评测/来源门槛工具已实现；外部 Sandpack、导出包、真实模型、编辑真实 SSE、固定任务板和 IndexedDB 故障场景仍待现场验收；独立任务看板案例尚未固化。
 更新时间：2026-09-16
 
 本目录把第二阶段要解决的问题、产品判断、当前能力基线、用户体验状态、项目与变更语义、验证口径和待决问题拆开记录。它是执行计划的输入，不是执行计划本身；执行记录见 [`docs/phase-two-plan/`](../phase-two-plan/)。
@@ -13,6 +13,7 @@
 - 阶段 B 已建立 IndexedDB 项目仓储、可序列化工作副本/版本/运行摘要和保存/打开/恢复界面；实现与未验证项见 [`phase-b.md`](../phase-two-plan/phase-b.md)。
 - 阶段 C 已建立明确的生成/聊天/编辑 operation、当前文件 base 快照、结构化编辑合并和候选隔离预览/确认应用；实现与未验证项见 [`phase-c.md`](../phase-two-plan/phase-c.md)。
 - 阶段 D 已建立 L0-L5 可序列化验证报告、真实 Sandpack 构建/挂载诊断、候选有限修复入口和固定任务板交互检查工具；实现与未验证项见 [`phase-d.md`](../phase-two-plan/phase-d.md)。
+- 阶段 E 已建立固定 EVAL-01/EVAL-02 prompt 契约、REAL-EVAL/PROTOCOL-FIXTURE/FIXED-INTERACTION 分池报告、真实 run 复用和独立案例来源门槛；实现与未验证项见 [`phase-e.md`](../phase-two-plan/phase-e.md)。当前没有真实 run 或可审查验收证据，因此不固化任务看板案例。
 - 预览 ready 的判定是 Sandpack `done` 且 `compilatonError=false`，并收到入口内 `app-mounted`；模板收到、代码可见、iframe `load` 或 `status=running` 都不能单独宣称 ready。
 - 资源清单同时约束宿主案例、Sandpack 文件和 Vite 导出；缺少必需资源必须失败。真实生成结果没有对应 manifest 时不沿用小说案例 manifest。
 - 真实生成记录必须收到明确的 `mode={mode:"real",forced:false}`，不允许缺失 mode 或强制 Mock 结果被记录为真实；成功 run ID 复用，中断/失败产生新 attempt。

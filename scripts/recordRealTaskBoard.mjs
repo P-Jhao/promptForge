@@ -2,6 +2,7 @@
 
 import path from "node:path";
 import process from "node:process";
+import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import {
   createAttempt,
@@ -13,25 +14,27 @@ import {
   RecorderError,
   redactSecrets,
   safeErrorMessage,
-  sha256,
 } from "./lib/realRunRecorder.mjs";
+import { inspectRealRun } from "./lib/realRunReadiness.mjs";
+import { EVAL_PROMPTS, EVAL_SCENARIOS, hashEditBase, sha256 } from "./lib/taskBoardEvaluation.mjs";
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const FIXED_PROMPT = "做一个 React/TypeScript 任务看板，展示任务标题、描述、负责人、截止日期和优先级字段；按待办、进行中、已完成三列展示任务；用户可以新增任务、编辑任务、切换任务状态，并用关键词筛选任务。请保留清晰的看板标题、空状态和表单校验。初始版本只需要展示优先级字段，不要求提供按优先级筛选。";
+const FIXED_PROMPT = EVAL_PROMPTS["EVAL-01"];
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const runId = args["--run-id"] ?? "";
   if (!/^[A-Za-z0-9._:-]{1,128}$/.test(runId)) throw new RecorderError("必须通过 --run-id 提供安全的运行 ID", "arguments");
+  const scenarioId = args["--scenario"] ?? "EVAL-01";
+  if (scenarioId !== "EVAL-01" && scenarioId !== "EVAL-02") throw new RecorderError("记录器只接受 EVAL-01 或 EVAL-02", "arguments");
   const baseUrl = (args["--base-url"] ?? process.env.PROMPTFORGE_BACKEND_URL ?? "http://localhost:7001/api").replace(/\/+$/, "");
   if (baseUrl.length === 0) throw new RecorderError("backend URL 不能为空", "arguments");
   const outputRoot = path.resolve(ROOT_DIR, args["--output-dir"] ?? "artifacts/real-runs/task-board");
-  const request = {
-    prompt: FIXED_PROMPT,
-    baseUrl,
-    body: { messages: [{ role: "user", content: FIXED_PROMPT }], projectId: runId, mockConfig: { global: false } },
-  };
-  const attempt = await createAttempt({ outputRoot, runId, request, configSummary: await readConfigSummary(ROOT_DIR) });
+  const request = await buildRequest({ args, scenarioId, runId, outputRoot, baseUrl });
+  const attempt = await createAttempt({
+    outputRoot, runId, request, configSummary: await readConfigSummary(ROOT_DIR),
+    metadata: { scenarioId, samplePool: EVAL_SCENARIOS[scenarioId].samplePool, kind: EVAL_SCENARIOS[scenarioId].kind },
+  });
   if (attempt.reused) {
     console.log(`runID=${runId} 已有成功记录，复用 attempt-${String(attempt.previous.currentAttempt).padStart(3, "0")}`);
     return;
@@ -69,8 +72,43 @@ async function main() {
   }
 
   const result = await finishAttempt({ ...attempt, rootDir: ROOT_DIR }, capture, terminal);
-  console.log(`${result.status}: runID=${runId}, attempt=${attempt.attempt}, files=${result.finalEntry.fileCount}, promptSha256=${sha256(FIXED_PROMPT)}`);
+  console.log(`${result.status}: scenario=${scenarioId}, runID=${runId}, attempt=${attempt.attempt}, files=${result.finalEntry.fileCount}, promptSha256=${sha256(request.prompt)}`);
   if (result.status !== "success") process.exitCode = 1;
+}
+
+async function buildRequest({ args, scenarioId, runId, outputRoot, baseUrl }) {
+  const prompt = scenarioId === "EVAL-01" ? FIXED_PROMPT : EVAL_PROMPTS[scenarioId];
+  if (scenarioId === "EVAL-01") {
+    return {
+      prompt, baseUrl,
+      body: { messages: [{ role: "user", content: prompt }], projectId: runId, operation: "generate", mockConfig: { global: false } },
+    };
+  }
+  const baseRunId = args["--base-run-id"] ?? "";
+  if (!/^[A-Za-z0-9._:-]{1,128}$/.test(baseRunId)) throw new RecorderError("EVAL-02 必须通过 --base-run-id 提供成功的 EVAL-01 run", "readiness");
+  const baseFiles = await readRecordedFiles(outputRoot, baseRunId);
+  const projectId = args["--project-id"] ?? baseRunId;
+  const versionId = args["--base-version-id"] ?? null;
+  const baseHash = hashEditBase(baseFiles, []);
+  return {
+    prompt, baseUrl,
+    body: {
+      messages: [{ role: "user", content: prompt }], projectId, operation: "edit", runId,
+      base: { projectId, versionId, hash: baseHash, files: baseFiles, resources: [] }, mockConfig: { global: false },
+    },
+  };
+}
+
+async function readRecordedFiles(outputRoot, runId) {
+  const summary = await readJson(path.join(outputRoot, runId, "record.json"));
+  const readiness = await inspectRealRun(summary, outputRoot);
+  if (!readiness.ready || readiness.files === undefined) throw new RecorderError(`EVAL-02 的 EVAL-01 基线不可用：${readiness.reason ?? "files 不完整"}`, "readiness");
+  return readiness.files;
+}
+
+async function readJson(filePath) {
+  try { return JSON.parse(await readFile(filePath, "utf8")); }
+  catch (error) { if (error?.code === "ENOENT") return undefined; throw error; }
 }
 
 main().catch((error) => {

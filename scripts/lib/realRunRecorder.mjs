@@ -10,11 +10,20 @@ export class RecorderError extends Error {
   }
 }
 
-export async function createAttempt({ outputRoot, runId, request, configSummary }) {
+export async function createAttempt({ outputRoot, runId, request, configSummary, metadata = {} }) {
   const runDir = path.join(outputRoot, runId);
   const summaryPath = path.join(runDir, "record.json");
   const previous = await readJson(summaryPath);
-  if (previous?.status === "success") return { reused: true, previous, runDir, summaryPath };
+  if (previous?.status === "success") {
+    const latest = previous.latest ?? previous.attempts?.at(-1);
+    if (metadata.scenarioId !== undefined && latest?.scenarioId !== metadata.scenarioId) {
+      throw new RecorderError("成功 run ID 已用于其他评测场景，拒绝复用", "run-id");
+    }
+    if (latest?.request?.promptSha256 !== undefined && latest.request.promptSha256 !== sha256(request.prompt)) {
+      throw new RecorderError("成功 run ID 的 prompt 不一致，拒绝复用", "run-id");
+    }
+    return { reused: true, previous, runDir, summaryPath };
+  }
   const attempts = await readAttemptNumbers(runDir);
   const attempt = Math.max(...attempts, 0) + 1;
   const attemptDir = path.join(runDir, `attempt-${String(attempt).padStart(3, "0")}`);
@@ -22,7 +31,12 @@ export async function createAttempt({ outputRoot, runId, request, configSummary 
   const staleAttempts = await markStaleAttempt(previous, runDir);
   const runningEntry = {
     attempt, status: "running", startedAt: new Date().toISOString(),
-    request: { baseUrl: request.baseUrl, mockConfig: request.body.mockConfig, promptSha256: sha256(request.prompt), promptCharacters: request.prompt.length },
+    ...metadata,
+    request: {
+      baseUrl: request.baseUrl, operation: request.body.operation, projectId: request.body.projectId, runId: request.body.runId,
+      base: summarizeBase(request.body.base), mockConfig: request.body.mockConfig,
+      promptSha256: sha256(request.prompt), promptCharacters: request.prompt.length,
+    },
     configSummary,
   };
   await writeJson(path.join(attemptDir, "record.json"), runningEntry);
@@ -47,6 +61,28 @@ export async function finishAttempt(attempt, capture, terminal) {
   const finishedAttempts = [...attempt.staleAttempts, finalEntry];
   await writeJson(attempt.summaryPath, { schemaVersion: 1, runId: path.basename(attempt.runDir), status, currentAttempt: attempt.attempt, attempts: finishedAttempts, latest: finalEntry });
   return { status, finalEntry };
+}
+
+export async function appendManualCorrection({ outputRoot, runId, scenarioId, summary, paths = [] }) {
+  if (!/^[A-Za-z0-9._:-]{1,128}$/.test(runId)) throw new RecorderError("run ID 无效", "arguments");
+  if (typeof scenarioId !== "string" || scenarioId.length === 0 || typeof summary !== "string" || summary.length === 0) {
+    throw new RecorderError("人工修正记录缺少场景或说明", "arguments");
+  }
+  if (!Array.isArray(paths) || !paths.every((item) => typeof item === "string" && item.startsWith("/"))) {
+    throw new RecorderError("人工修正路径列表无效", "arguments");
+  }
+  const runDir = path.join(outputRoot, runId);
+  const correctionPath = path.join(runDir, "manual-corrections.json");
+  const previous = await readJson(correctionPath);
+  const corrections = Array.isArray(previous?.corrections) ? previous.corrections : [];
+  const correction = {
+    scenarioId,
+    summary: redactSecrets(summary),
+    paths: paths.map((item) => item.slice(0, 512)),
+    recordedAt: new Date().toISOString(),
+  };
+  await writeJson(correctionPath, { schemaVersion: 1, corrections: [...corrections, correction] });
+  return correction;
 }
 
 export function inspectEvent(event, capture) {
@@ -233,6 +269,15 @@ export function parseArgs(args) {
 }
 
 function isRecord(value) { return typeof value === "object" && value !== null && !Array.isArray(value); }
+
+function summarizeBase(base) {
+  if (!isRecord(base)) return undefined;
+  return {
+    projectId: base.projectId, versionId: base.versionId ?? null, hash: base.hash,
+    fileCount: isRecord(base.files) ? Object.keys(base.files).length : undefined,
+    resourceCount: Array.isArray(base.resources) ? base.resources.length : undefined,
+  };
+}
 
 const SAFE_CONFIG_KEYS = [
   "MAIN_MODEL_PROVIDER", "MAIN_MODEL", "DEEPSEEK_MODEL", "OPENAI_MODEL", "MOCK_MODE", "NODE_ENV",
