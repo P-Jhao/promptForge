@@ -10,6 +10,7 @@ import { spawnSync } from "node:child_process";
 import { createAttempt } from "./lib/realRunRecorder.mjs";
 import { inspectRealRun } from "./lib/realRunReadiness.mjs";
 import { classifyAssertionFailure } from "./lib/taskBoardAssertion.mjs";
+import { createEvaluationPlan, isReusableEval01Summary, readRecorderState } from "./runTaskBoardEvaluation.mjs";
 import {
   EVAL_PROMPTS,
   buildEvaluationReport,
@@ -28,6 +29,26 @@ try {
   assert.equal(promptHashes[0].sha256, sha256(EVAL_PROMPTS["EVAL-01"]));
   assert.match(EVAL_PROMPTS["EVAL-02"], /按优先级筛选/);
   assert.match(EVAL_PROMPTS["EVAL-02"], /保留看板标题/);
+  const blockedPlan = createEvaluationPlan();
+  assert.equal(blockedPlan.serial, true);
+  assert.equal(blockedPlan.eval01.length, 3);
+  assert.equal(blockedPlan.eval02.length, 0);
+  assert.equal(blockedPlan.notExecuted[0].scenarioId, "EVAL-02");
+  const reusablePlan = createEvaluationPlan({ count: 3, baselineRunId: "eval-01-ready" });
+  assert.equal(reusablePlan.eval02.length, 3);
+  assert.ok(reusablePlan.eval02.every((job) => job.baseRunId === "eval-01-ready"));
+  assert.deepEqual(reusablePlan.eval01.map((job) => job.runId), [
+    "task-board-eval-01-001", "task-board-eval-01-002", "task-board-eval-01-003",
+  ]);
+  const reusableSummary = {
+    status: "success", latest: {
+      scenarioId: "EVAL-01", request: { promptSha256: sha256(EVAL_PROMPTS["EVAL-01"]) },
+    },
+  };
+  assert.equal(isReusableEval01Summary(reusableSummary), true);
+  assert.equal(isReusableEval01Summary({
+    ...reusableSummary, latest: { ...reusableSummary.latest, request: { promptSha256: sha256("旧版 EVAL-01") } },
+  }), false);
   assert.equal(hashEditBase({ "/src/App.tsx": "export default function App() { return null; }" }, []), sha256('{"files":{"/src/App.tsx":"export default function App() { return null; }"},"resources":[]}'));
   assert.throws(() => hashEditBase({ "/src/../App.tsx": "invalid" }, []), /文件快照无效/);
   const functionalFailure = classifyAssertionFailure(new Error("新增任务标题未出现在列表中"));
@@ -68,6 +89,15 @@ try {
     metadata: { scenarioId: "EVAL-01", samplePool: "REAL-EVAL" },
   });
   assert.equal(reused.reused, true);
+  const interruptedRoot = path.join(tempRoot, "orchestration-status");
+  const interruptedRunId = "interrupted-status-fixture";
+  await mkdir(path.join(interruptedRoot, interruptedRunId), { recursive: true });
+  await writeFile(path.join(interruptedRoot, interruptedRunId, "record.json"), JSON.stringify({
+    status: "interrupted", latest: { status: "interrupted", terminal: { category: "interrupted" } },
+  }));
+  const interruptedState = await readRecorderState(interruptedRoot, interruptedRunId);
+  assert.equal(interruptedState.status, "interrupted");
+  assert.equal(interruptedState.terminalCategory, "interrupted");
 
   const completeRunRoot = path.join(tempRoot, "complete-runs");
   const completeRunId = "complete-real-fixture";
@@ -122,7 +152,12 @@ try {
     samplePools: report.samplePools,
     checks: {
       eval02KeepsEval01: true,
+      serialPlanGatesEval02: blockedPlan.eval02.length === 0 && reusablePlan.eval02.length === 3,
+      eval01PromptHashGate: isReusableEval01Summary(reusableSummary)
+        && !isReusableEval01Summary({ ...reusableSummary, latest: { ...reusableSummary.latest, request: { promptSha256: "old" } } }),
       successfulRunReused: reused.reused,
+      orchestrationPreservesInterrupted: interruptedState.status === "interrupted"
+        && interruptedState.terminalCategory === "interrupted",
       missingProvenanceRejected: true,
       noRealSuccessClaim: report.samplePools["REAL-EVAL"].rawSuccessRate === null,
     },

@@ -12,6 +12,7 @@
 | EVAL-03 故障隔离 | [`taskBoardEvaluation.mjs`](../../scripts/lib/taskBoardEvaluation.mjs)、[`checkPhaseE.mjs`](../../scripts/checkPhaseE.mjs) | EVAL-03 归入 `PROTOCOL-FIXTURE`；固定任务板浏览器断言归入独立的 `FIXED-INTERACTION`。三类样本池不会合并统计。 |
 | 真实 run 与 attempt 复用 | [`realRunRecorder.mjs`](../../scripts/lib/realRunRecorder.mjs)、[`realRunReadiness.mjs`](../../scripts/lib/realRunReadiness.mjs) | 成功 run ID 在场景和 prompt hash 一致时复用；不同场景或 prompt 不复用。running 记录在下一次启动前标记为 interrupted；每次新尝试保留独立 `attempt-NNN`。raw SSE、脱敏 files、配置摘要、项目/版本/base hash 摘要、mode evidence、事件类型和终态指针均保留。来源门槛还要求顶层和 latest 均为 success、明确 `REAL-EVAL`、`mode=real/forced=false`、事件含 `done`，且 files 指针可读、文件数一致；否则只能是 `NOT_READY/not-verified`。 |
 | 统计报告 | [`reportTaskBoardEvaluation.mjs`](../../scripts/reportTaskBoardEvaluation.mjs)、[`taskBoardEvaluation.mjs`](../../scripts/lib/taskBoardEvaluation.mjs) | 报告列出每个样本池的 `N_all`、取消、环境阻断、未验证、原始成功、修复后成功、失败分类和 recorder 墙钟耗时口径；零分母或全为未验证时成功率为 `null/not-verified`，不制造比例。可读取既有 run summary/attempt 和人工修正记录。 |
+| 固定次数串行编排 | [`runTaskBoardEvaluation.mjs`](../../scripts/runTaskBoardEvaluation.mjs) | 默认先串行执行 3 次 EVAL-01；仅从这 3 个固定 run ID 中找到可复用的 `REAL-EVAL`、`real/forced=false`、`success`、`done`、完整 files 且 `latest.request.promptSha256` 等于固定 EVAL-01 hash 的基线后，才串行执行 3 次 EVAL-02。成功 run 交给 recorder 按 run ID 复用；失败、取消、中断、环境阻断和未验证的 recorder 终态与分类原样保留，缺基线时 EVAL-02 明确列为未执行。编排末尾调用既有 report，不创建或固化案例。 |
 | 固定交互报告接入 | [`checkTaskBoard.mjs`](../../scripts/checkTaskBoard.mjs) | 通过 `--interaction-report` 将固定 `data-testid/task-board-v1` 断言纳入 `FIXED-INTERACTION`；缺 Playwright、URL 或选择器时保留逐条 `not-verified`。不执行模型生成的 shell 或 package script。 |
 | 独立案例固化门槛 | [`taskBoardEvaluation.mjs`](../../scripts/lib/taskBoardEvaluation.mjs) | 预期案例目录需有 `case.json`、独立 `caseId`、entry/files/resources/manifest/provenance 路径；manifest 的 case ID 必须一致，provenance 必须列 EVAL-01/02/03 证据。EVAL-01/02 必须对应真实 `mode=real, forced=false` 且有 files 的成功 run，三项证据必须为 pass 且有来源文件；缺任一项返回 `NOT_READY` 和原因码。路径遍历、novel/generated 目录和 novel case ID 被拒绝。 |
 | 人工修正记录 | [`recordTaskBoardCorrection.mjs`](../../scripts/recordTaskBoardCorrection.mjs)、[`realRunRecorder.mjs`](../../scripts/lib/realRunRecorder.mjs) | 修正写入 run 目录的 `manual-corrections.json`，只保存场景、说明和路径并脱敏；不改写 raw SSE 或原始 files。报告会回读这些记录。 |
@@ -34,6 +35,7 @@ node --check scripts/lib/taskBoardEvaluation.mjs
 node --check scripts/lib/realRunReadiness.mjs
 node --check scripts/recordRealTaskBoard.mjs
 node --check scripts/recordTaskBoardCorrection.mjs
+node --check scripts/runTaskBoardEvaluation.mjs
 node --check scripts/reportTaskBoardEvaluation.mjs
 node --check scripts/checkPhaseE.mjs
 node scripts/checkPhaseE.mjs
@@ -44,10 +46,11 @@ node scripts/reportTaskBoardEvaluation.mjs --runs-dir artifacts/real-runs/task-b
 
 已有真实环境时的可复制流程：
 
-1. 用 `node scripts/recordRealTaskBoard.mjs --scenario EVAL-01 --run-id <new-id>` 记录 EVAL-01；必须收到 `mode={mode:real,forced:false}`、files 和 done 才会标为成功。
-2. 在 EVAL-01 已接受并保存、且能提供文件基线后，用 `node scripts/recordRealTaskBoard.mjs --scenario EVAL-02 --base-run-id <eval-01-id> --run-id <new-id>` 记录增量编辑；若基线缺失，命令明确以 readiness 错误结束。
-3. 将 `TASK_BOARD_URL=... node scripts/checkTaskBoard.mjs > <interaction-report.json>` 的输出作为固定交互证据，并人工写入独立案例 provenance；再运行报告脚本检查固化门槛。
-4. 只有报告 `status=READY` 且来源、文件、资源 manifest 和三场景证据齐全后，才可新增独立任务看板 case 目录。真实 run 未完成时，保持 `NOT_READY`。
+1. 需要固定三次串行评测时运行 `node scripts/runTaskBoardEvaluation.mjs --count 3 --output-dir artifacts/real-runs/task-board --report-output artifacts/real-runs/task-board/evaluation-report.json --output artifacts/real-runs/task-board/orchestration.json`。脚本使用 Node 子进程参数数组调用现有 recorder，不经过 shell，也不会把密钥写入编排结果。
+2. 脚本先按 `task-board-eval-01-001..003` 串行记录 EVAL-01。每个成功 run ID 由 recorder 按固定场景和 prompt hash 复用；失败、取消、中断或环境阻断仍留下原始 attempt。没有可复用的 EVAL-01 基线时，EVAL-02 三次都列入 `notExecuted`，不会发送不完整的编辑请求。
+3. 找到可复用基线后，脚本才按 `task-board-eval-02-001..003` 串行调用 recorder，并把同一 EVAL-01 文件快照作为 `--base-run-id`；末尾自动调用既有 `reportTaskBoardEvaluation.mjs`，报告按样本池回读所有已有 run。传入 `--count 1` 或 `--count 2` 只用于受控排查，正式评测保持默认三次。
+4. 也可单独用 `node scripts/recordRealTaskBoard.mjs --scenario EVAL-01 --run-id <new-id>` 或 `node scripts/recordRealTaskBoard.mjs --scenario EVAL-02 --base-run-id <eval-01-id> --run-id <new-id>` 记录单个样本；EVAL-02 基线缺失时命令明确以 readiness 错误结束。将 `TASK_BOARD_URL=... node scripts/checkTaskBoard.mjs > <interaction-report.json>` 的输出作为固定交互证据，并人工写入独立案例 provenance。
+5. 只有报告 `status=READY` 且来源、文件、资源 manifest 和三场景证据齐全后，才可新增独立任务看板 case 目录。真实 run 未完成时，保持 `NOT_READY`；编排脚本不会创建案例，也不会用 fixture 或小说 mock 代替真实来源。
 
 ## 未验证和限制
 
