@@ -1,17 +1,31 @@
 import type { ErrorStreamEvent } from "@/types/api";
+import type { ChatMessage } from "@/types/message";
 import type { StepType } from "@/types/flow";
+import type { MockConfig } from "@/types/mock";
 import { useChatStore } from "@/store/chatStore";
 import { NODE_TO_STEP_MAP, STEP_DEFINITIONS } from "@/constants/chat";
 
 export interface ActiveRequest {
   id: number;
   controller: AbortController;
+  assistantMessageId?: string;
+  startedAt: number;
 }
 
 export interface TraditionalVersionContext {
   versionNumber: number;
   threadId: string;
   operation: "create" | "edit";
+}
+
+export type Attachment = { type: "image"; url: string };
+
+export interface RetryableRequest {
+  content: string;
+  attachments: Attachment[] | undefined;
+  mockConfig: MockConfig;
+  history: ChatMessage[];
+  projectId: string;
 }
 
 export function isAbortError(error: unknown): boolean {
@@ -29,6 +43,14 @@ export function getStreamErrorDetails(event: ErrorStreamEvent): {
     node: node ? node : undefined,
     message: message ? message : "未知错误",
   };
+}
+
+export function getStepLabel(nodeName: string | undefined): string | undefined {
+  if (nodeName === undefined) return undefined;
+  const step = NODE_TO_STEP_MAP[nodeName] ?? (
+    nodeName in STEP_DEFINITIONS ? nodeName as StepType : undefined
+  );
+  return step === undefined ? "未知步骤" : STEP_DEFINITIONS[step]?.title ?? "未知步骤";
 }
 
 export function findPendingThoughtKey(

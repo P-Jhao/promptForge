@@ -1,36 +1,30 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PromptForge 前端
 
-## Getting Started
+这是 PromptForge 的 Next.js 前端。前端默认通过同源 `/api` 请求后端；本地开发时，Next rewrite 将请求转发到 `http://localhost:7001`。
 
-First, run the development server:
+## 启动
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+BACKEND_URL=http://localhost:7001 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+浏览器访问 <http://localhost:3000>。`BACKEND_URL` 用于配置 `next.config.ts` 的本地代理目标；跨域开发时可以设置 `NEXT_PUBLIC_API_BASE_URL`，例如 `http://localhost:7001/api`。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 页面
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `/`：首页和预置小说阅读管理案例。
+- `/workspace`：真实生成工作台。
+- `/workspace?case=novel&scene=library`：书库案例。
+- `/workspace?case=novel&scene=notes`：阅读笔记案例。
 
-## Learn More
+示例体验直接打开预置案例，不会提交访客输入；关闭示例体验后才会请求真实 `/api/chat`。案例数据和编辑内容目前只保留在当前浏览会话。
 
-To learn more about Next.js, take a look at the following resources:
+## 检查
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+pnpm lint
+pnpm exec tsc --noEmit
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+第一阶段能力边界、验证结果和待手动验证项见 [../docs/phase-one/README.md](../docs/phase-one/README.md)；第二阶段 A 的实现状态和现场边界见 [../docs/phase-two-plan/phase-a.md](../docs/phase-two-plan/phase-a.md)。

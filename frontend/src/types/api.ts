@@ -22,6 +22,12 @@ export interface ChatEventData {
   delta: string;
 }
 
+export interface ModeEventData {
+  mode: "mock" | "real";
+  forced: boolean;
+  message?: string;
+}
+
 export interface FlowStreamEvent {
   type: "flow";
   data: FlowEventData;
@@ -31,6 +37,12 @@ export interface FlowStreamEvent {
 export interface ChatStreamEvent {
   type: "chat";
   data: ChatEventData;
+  message?: string;
+}
+
+export interface ModeStreamEvent {
+  type: "mode";
+  data: ModeEventData;
   message?: string;
 }
 
@@ -56,6 +68,7 @@ export interface StepStreamEvent {
 export type StreamEvent =
   | FlowStreamEvent
   | ChatStreamEvent
+  | ModeStreamEvent
   | ErrorStreamEvent
   | DoneStreamEvent
   | StepStreamEvent;

@@ -11,12 +11,15 @@
   "dependencies": {
     "@ant-design/x": "^2.1.3",
     "@codesandbox/sandpack-react": "^2.20.0",
+    "clsx": "^2.1.1",
     "jszip": "^3.10.1",
     "lucide-react": "^0.562.0",
     "next": "16.1.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "react-router-dom": "6.28.0",
     "sonner": "^2.0.7",
+    "tailwind-merge": "^3.7.0",
     "zustand": "^5.0.9"
   },
   "devDependencies": {

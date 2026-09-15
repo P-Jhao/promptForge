@@ -1,286 +1,285 @@
-// Sandpack 代码预览组件
 "use client";
 
 import {
-  SandpackLayout,
-  SandpackPreview,
   SandpackCodeEditor,
   SandpackFileExplorer,
+  SandpackLayout,
+  SandpackPreview,
   useSandpack,
-  useActiveCode,
 } from "@codesandbox/sandpack-react";
-import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { useSandpackStore } from "@/store/sandpackStore";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { BuildingLoadingOverlay } from "@/components/preview/BuildingLoadingOverlay";
+import { createPreviewFiles, stripPreviewFiles } from "@/components/preview/previewBridge";
+import { usePreviewDiagnostics } from "@/components/preview/usePreviewDiagnostics";
 import { getReactTS_Template } from "@/services/api";
-import { BuildingLoadingOverlay } from "./BuildingLoadingOverlay";
+import { areSandpackFilesEqual, useSandpackStore } from "@/store/sandpackStore";
+import { NOVEL_CASE_MANIFEST } from "@/cases/novelCase";
+import type { SandpackFiles, ViewMode } from "@/types/store";
 
-// Client-only provider to prevent hydration mismatch
 const SandpackProvider = dynamic(
-  () =>
-    import("@codesandbox/sandpack-react").then((mod) => mod.SandpackProvider),
-  {
-    ssr: false,
-    loading: () => <div className="h-full w-full bg-white" />,
-  },
+  () => import("@codesandbox/sandpack-react").then((mod) => mod.SandpackProvider),
+  { ssr: false, loading: () => <BuildingLoadingOverlay message="正在加载预览组件" detail="正在加载 Sandpack 运行环境…" /> },
 );
 
-export function SandpackView() {
-  const { viewMode, generatedFiles, isAssembling, setIsAssembling } =
-    useSandpackStore();
-  const [templateFiles, setTemplateFiles] = useState<
-    Record<string, { code: string }>
-  >({});
-  const [loading, setLoading] = useState(true);
+interface SandpackViewProps {
+  /** A preassembled case bypasses both chat and the template API. */
+  initialFiles?: SandpackFiles;
+}
 
-  // 将 templateFiles 暴露给全局（供 PreviewToolbar 使用）
+interface TemplateLoadState {
+  key: string;
+  status: "loading" | "ready" | "error";
+  error?: string;
+}
+
+export function SandpackView({ initialFiles }: SandpackViewProps) {
+  const { viewMode, generatedFiles, currentFiles, setGeneratedFiles } = useSandpackStore();
+  const [templateFiles, setTemplateFiles] = useState<SandpackFiles>({});
+  const [templateRetryCount, setTemplateRetryCount] = useState(0);
+  const caseSignature = useMemo(
+    () => initialFiles === undefined ? null : JSON.stringify(initialFiles),
+    [initialFiles],
+  );
+  const [caseLoadedSignature, setCaseLoadedSignature] = useState<string | null>(null);
+  const templateRequestKey = initialFiles === undefined
+    ? `template:${templateRetryCount}`
+    : "case";
+  const [templateLoad, setTemplateLoad] = useState<TemplateLoadState>(() => ({
+    key: templateRequestKey,
+    status: initialFiles === undefined ? "loading" : "ready",
+  }));
+  const isPresetCase = initialFiles !== undefined && (
+    generatedFiles === null || sameFiles(generatedFiles, initialFiles)
+  );
+
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.__templateFiles = templateFiles;
-    }
+    if (initialFiles === undefined) return;
+    if (caseLoadedSignature === caseSignature) return;
+    setGeneratedFiles(toPlainFiles(initialFiles));
+    const timer = window.setTimeout(() => setCaseLoadedSignature(caseSignature), 0);
+    return () => window.clearTimeout(timer);
+  }, [caseLoadedSignature, caseSignature, initialFiles, setGeneratedFiles]);
+
+  useEffect(() => {
+    window.__resourceManifest = isPresetCase ? NOVEL_CASE_MANIFEST : undefined;
+  }, [isPresetCase]);
+
+  useEffect(() => {
+    if (initialFiles !== undefined) return;
+    let cancelled = false;
+    void getReactTS_Template().then((template) => {
+      if (cancelled) return;
+      setTemplateFiles(template);
+      window.__templateFiles = template;
+      setTemplateLoad({ key: templateRequestKey, status: "ready" });
+    }).catch((error: unknown) => {
+      if (cancelled) return;
+      setTemplateLoad({
+        key: templateRequestKey,
+        status: "error",
+        error: error instanceof Error ? error.message : "React 模板加载失败",
+      });
+    });
+    return () => { cancelled = true; };
+  }, [initialFiles, templateRequestKey]);
+
+  useEffect(() => {
+    window.__templateFiles = templateFiles;
   }, [templateFiles]);
 
-  // 加载默认模板
-  useEffect(() => {
-    async function load() {
-      try {
-        const template = await getReactTS_Template();
-        setTemplateFiles(template);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, []);
+  const resultFiles = initialFiles === undefined
+    ? (currentFiles ?? generatedFiles)
+    : (caseLoadedSignature === caseSignature ? (currentFiles ?? generatedFiles ?? initialFiles) : initialFiles);
+  const hasResultFiles = resultFiles !== null && resultFiles !== undefined && Object.keys(resultFiles).length > 0;
+  const templateStatus = templateLoad.key === templateRequestKey ? templateLoad.status : "loading";
+  const templateError = templateStatus === "error" ? templateLoad.error ?? "React 模板加载失败" : null;
+  const blockingTemplate = initialFiles === undefined && templateStatus === "loading" && !hasResultFiles;
+  const sourceFiles = useMemo(
+    () => ({ ...templateFiles, ...(resultFiles ?? {}) }),
+    [resultFiles, templateFiles],
+  );
+  const previewFiles = useMemo(
+    () => viewMode === "preview" ? createPreviewFiles(sourceFiles) : sourceFiles,
+    [sourceFiles, viewMode],
+  );
 
-  // 合并模板文件和生成的文件（生成的文件优先）
-  const files = generatedFiles
-    ? { ...templateFiles, ...generatedFiles }
-    : templateFiles;
-
-  // 生成唯一 key，当 generatedFiles 变化时强制 SandpackProvider 重新挂载
-  const sandpackKey = useMemo(() => {
-    if (!generatedFiles) return "template";
-    return `generated-${Object.keys(generatedFiles).length}-${Date.now()}`;
-  }, [generatedFiles]);
-
-  if (loading) {
+  if (blockingTemplate) {
+    return <div className="relative h-full w-full"><BuildingLoadingOverlay message="正在加载 React 模板" detail="正在读取可导出的模板文件…" /></div>;
+  }
+  if (templateError !== null && !hasResultFiles) {
     return (
-      <div className="flex h-full w-full items-center justify-center bg-gray-50 text-gray-500">
-        正在加载 React 模板...
+      <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-gray-50 p-6 text-center">
+        <p className="text-sm font-medium text-gray-700">预览模板加载失败</p>
+        <p className="max-w-md text-xs text-gray-500">{templateError}</p>
+        <button type="button" onClick={() => setTemplateRetryCount((value) => value + 1)} className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50">重试模板</button>
       </div>
     );
   }
 
-  // 只在 tabs 中显示核心文件，其他文件通过文件树访问
-  const visibleFiles = ["/App.tsx", "/index.tsx", "/styles.css"];
-
   return (
-    <SandpackProvider
-      key={sandpackKey}
-      template="react-ts"
-      theme="light"
-      files={files}
-      options={{
-        externalResources: ["https://cdn.tailwindcss.com"],
-        visibleFiles: visibleFiles,
-        activeFile: "/App.tsx",
-      }}
-      style={{ height: "100%", width: "100%" }}
-    >
-      <div className="relative h-full w-full border-none sandpack-wrapper">
-        {/* Loading Overlay - 覆盖在 Sandpack 之上，让 Sandpack 在后台加载 */}
-        {isAssembling && <BuildingLoadingOverlay />}
-
-        <SandpackLayout
-          style={{ height: "100%", border: "none", borderRadius: 0 }}
-        >
-          <SandpackContent
-            viewMode={viewMode}
-            onReady={() => {
-              // Sandpack 加载完成后关闭组装 loading
-              if (isAssembling) {
-                setIsAssembling(false);
-              }
-            }}
-          />
-        </SandpackLayout>
-      </div>
-    </SandpackProvider>
+    <div className="relative h-full w-full">
+      <SandpackProvider
+        key={`${viewMode}:${caseSignature ?? "generated"}`}
+        template="react-ts"
+        theme="light"
+        files={previewFiles}
+        options={{
+          externalResources: ["https://cdn.tailwindcss.com"],
+          visibleFiles: ["/App.tsx", "/index.tsx", "/styles.css"],
+          activeFile: "/App.tsx",
+          autoReload: true,
+          recompileMode: "delayed",
+          recompileDelay: 200,
+        }}
+        style={{ height: "100%", width: "100%" }}
+      >
+        <div className="relative h-full w-full border-none sandpack-wrapper">
+          <SandpackLayout style={{ height: "100%", border: "none", borderRadius: 0 }}>
+            <SandpackContent viewMode={viewMode} />
+          </SandpackLayout>
+        </div>
+      </SandpackProvider>
+      {templateError !== null && hasResultFiles && (
+        <div className="pointer-events-auto absolute left-1/2 top-3 z-30 flex max-w-[calc(100%-24px)] -translate-x-1/2 items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 shadow-sm">
+          <span>模板加载失败，当前仍展示已收到的完整结果。</span>
+          <button type="button" onClick={() => setTemplateRetryCount((value) => value + 1)} className="font-semibold underline underline-offset-2">重试</button>
+        </div>
+      )}
+    </div>
   );
 }
 
-function SandpackContent({
-  viewMode,
-  onReady,
-}: {
-  viewMode: "preview" | "code";
-  onReady?: () => void;
-}) {
+function SandpackContent({ viewMode }: { viewMode: ViewMode }) {
+  return viewMode === "preview" ? <PreviewContent /> : <CodeContent />;
+}
+
+function PreviewContent() {
+  const { sandpack, listen } = useSandpack();
+  const { setCurrentFiles } = useSandpackStore();
+  const previewRootRef = useRef<HTMLDivElement>(null);
+  const lastFilesRef = useRef<SandpackFiles | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
+  const diagnostics = usePreviewDiagnostics(listen, previewRootRef, retryKey);
+  const buildError = diagnostics.buildError ?? (
+    diagnostics.buildState === "error" && sandpack.error !== null
+      ? formatSandpackError(sandpack.error)
+      : null
+  );
+
+  useEffect(() => {
+    const files = stripPreviewFiles(toStoreFiles(sandpack.files));
+    if (lastFilesRef.current !== null && areSandpackFilesEqual(lastFilesRef.current, files)) return;
+    lastFilesRef.current = files;
+    setCurrentFiles(files);
+  }, [sandpack.files, setCurrentFiles]);
+
+  const retryPreview = (): void => {
+    setRetryKey((value) => value + 1);
+    void sandpack.runSandpack().catch(() => undefined);
+  };
+  const hasError = buildError !== null || diagnostics.runtimeError !== null;
+  const waiting = diagnostics.buildState !== "success" || diagnostics.mountState !== "ready";
+  const showCentralLoading = waiting && !diagnostics.hasRenderedBefore && !hasError && !diagnostics.timedOut;
+
+  return (
+    <div ref={previewRootRef} className="relative h-full w-full bg-white">
+      <SandpackPreview style={{ height: "100%" }} showOpenInCodeSandbox={false} showRefreshButton={true} showSandpackErrorOverlay={false} />
+      {showCentralLoading && (
+        <BuildingLoadingOverlay
+          message={diagnostics.buildState === "success" ? "正在等待应用挂载" : "正在启动预览"}
+          detail={diagnostics.longWait ? "启动耗时较长，仍在等待真实运行事件…" : "正在等待 Sandpack 构建和应用挂载…"}
+        />
+      )}
+      {waiting && diagnostics.hasRenderedBefore && !hasError && !diagnostics.timedOut && (
+        <BuildingLoadingOverlay compact message={diagnostics.longWait ? "预览启动耗时较长" : "正在重新编译预览"} />
+      )}
+      {diagnostics.timedOut && (
+        <PreviewError title="预览启动超时" message="外部运行环境在配置的等待边界内没有完成构建或应用挂载。已有画面和代码仍可查看。" onRetry={retryPreview} />
+      )}
+      {buildError !== null && (
+        <PreviewError title="预览构建失败" message={buildError} onRetry={retryPreview} />
+      )}
+      {diagnostics.runtimeError !== null && buildError === null && (
+        <PreviewError title="预览运行时错误" message={diagnostics.runtimeError} onRetry={retryPreview} />
+      )}
+    </div>
+  );
+}
+
+function CodeContent() {
   const { sandpack } = useSandpack();
-  const { code } = useActiveCode();
-  const lastPreviewCode = useRef<string | undefined>(code);
-  const pendingRefresh = useRef(false);
+  const { setCurrentFiles } = useSandpackStore();
   const [isFileTreeOpen, setIsFileTreeOpen] = useState(true);
-  const hasNotifiedReady = useRef(false);
-
-  // ✨ 监听 Sandpack 预览 iframe 加载完成
-  useEffect(() => {
-    if (!onReady) return;
-
-    const notifyReady = () => {
-      if (hasNotifiedReady.current) return;
-      hasNotifiedReady.current = true;
-      onReady();
-    };
-
-    const tryAttach = () => {
-      const iframe =
-        document.querySelector<HTMLIFrameElement>(".sp-preview-iframe");
-      if (!iframe) return false;
-
-      try {
-        if (iframe.contentDocument?.readyState === "complete") {
-          notifyReady();
-          return true;
-        }
-      } catch {
-        // 跨域或访问异常时，等待 load 事件
-      }
-
-      const handleLoad = () => {
-        notifyReady();
-      };
-      iframe.addEventListener("load", handleLoad, { once: true });
-      return true;
-    };
-
-    let intervalId: number | undefined;
-    if (!tryAttach()) {
-      intervalId = window.setInterval(() => {
-        if (tryAttach() && intervalId) {
-          window.clearInterval(intervalId);
-        }
-      }, 200);
-    }
-
-    return () => {
-      if (intervalId) window.clearInterval(intervalId);
-    };
-  }, [onReady]);
-
-  // 限制 tab 数量
-  const MAX_TABS = 4;
-  const prevVisibleFilesRef = useRef<string[]>([]);
+  const lastFilesRef = useRef<SandpackFiles | null>(null);
 
   useEffect(() => {
-    const visibleFiles = sandpack.visibleFiles;
-
-    // 如果超过最大数量，关闭最早打开的（但不是当前活动的）
-    if (visibleFiles.length > MAX_TABS) {
-      // 找到新增的文件（当前活动文件）
-      const activeFile = sandpack.activeFile;
-      // 找到最早打开的文件（排除当前活动文件）
-      const fileToClose = visibleFiles.find((f) => f !== activeFile);
-      if (fileToClose) {
-        sandpack.closeFile(fileToClose);
-      }
-    }
-
-    // 更新 ref
-    prevVisibleFilesRef.current = [...visibleFiles];
-  }, [sandpack.visibleFiles, sandpack.activeFile, sandpack]);
-
-  useEffect(() => {
-    if (viewMode === "code" && code !== lastPreviewCode.current) {
-      pendingRefresh.current = true;
-    }
-  }, [code, viewMode]);
-
-  useEffect(() => {
-    if (viewMode !== "preview") {
-      return;
-    }
-
-    if (pendingRefresh.current) {
-      sandpack.runSandpack();
-      pendingRefresh.current = false;
-    }
-
-    lastPreviewCode.current = code;
-  }, [viewMode, sandpack, code]);
+    const files = toStoreFiles(sandpack.files);
+    if (lastFilesRef.current !== null && areSandpackFilesEqual(lastFilesRef.current, files)) return;
+    lastFilesRef.current = files;
+    setCurrentFiles(files);
+  }, [sandpack.files, setCurrentFiles]);
 
   return (
     <div className="relative h-full w-full bg-white">
-      <div
-        className={viewMode === "preview" ? "h-full" : "hidden"}
-        aria-hidden={viewMode !== "preview"}
-      >
-        <SandpackPreview
-          style={{ height: "100%" }}
-          showOpenInCodeSandbox={false}
-          showRefreshButton={true}
-        />
-      </div>
-      <div
-        className={viewMode === "code" ? "h-full" : "hidden"}
-        aria-hidden={viewMode !== "code"}
-      >
-        <div className="relative flex h-full w-full overflow-hidden">
-          <div
-            className={`relative flex-shrink-0 h-full flex-col border-r border-gray-200 overflow-hidden transition-all duration-300 ease-in-out ${
-              isFileTreeOpen ? "w-[200px]" : "w-0 border-none"
-            }`}
-          >
-            <div
-              className={`h-full w-full overflow-y-auto transition-opacity duration-300 ${
-                isFileTreeOpen ? "opacity-100" : "opacity-0"
-              }`}
-            >
-              <SandpackFileExplorer style={{ height: "auto", width: "100%" }} />
-            </div>
+      <div className="relative flex h-full w-full overflow-hidden">
+        <div className={`relative h-full flex-shrink-0 overflow-hidden border-r border-gray-200 transition-all ${isFileTreeOpen ? "w-[200px]" : "w-0 border-none"}`}>
+          <div className={`h-full w-full overflow-y-auto transition-opacity ${isFileTreeOpen ? "opacity-100" : "opacity-0"}`}>
+            <SandpackFileExplorer style={{ height: "auto", width: "100%" }} />
           </div>
-
-          {/* 编辑器容器 */}
-          <div className="relative flex-1 h-full min-w-0 overflow-hidden">
-            <SandpackCodeEditor
-              style={{ height: "100%", width: "100%" }}
-              showTabs={true}
-              showLineNumbers={true}
-              showInlineErrors={true}
-              wrapContent={true}
-              closableTabs={true}
-            />
-          </div>
-
-          {/* Toggle Button Overlaid on the Divider line */}
-          <button
-            type="button"
-            onClick={() => setIsFileTreeOpen((prev) => !prev)}
-            className={`absolute top-7 z-20 flex h-6 w-6 items-center justify-center border border-gray-200 bg-white text-gray-500 shadow-sm hover:text-gray-700 transition-all duration-300 ${
-              isFileTreeOpen
-                ? "rounded-full"
-                : "rounded-r-full rounded-l-none border-l-0"
-            }`}
-            style={{
-              left: isFileTreeOpen ? 200 : 0,
-              transform: isFileTreeOpen ? "translateX(-50%)" : "translateX(0)",
-            }}
-            aria-label={
-              isFileTreeOpen ? "Collapse file tree" : "Expand file tree"
-            }
-          >
-            {isFileTreeOpen ? (
-              <ChevronLeft size={14} />
-            ) : (
-              <ChevronRight size={14} />
-            )}
-          </button>
         </div>
+        <div className="relative h-full min-w-0 flex-1 overflow-hidden">
+          <SandpackCodeEditor style={{ height: "100%", width: "100%" }} showTabs showLineNumbers showInlineErrors wrapContent closableTabs />
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsFileTreeOpen((value) => !value)}
+          className={`absolute top-7 z-20 flex h-6 w-6 items-center justify-center border border-gray-200 bg-white text-gray-500 shadow-sm hover:text-gray-700 ${isFileTreeOpen ? "rounded-full" : "rounded-r-full rounded-l-none border-l-0"}`}
+          style={{ left: isFileTreeOpen ? 200 : 0, transform: isFileTreeOpen ? "translateX(-50%)" : "translateX(0)" }}
+          aria-label={isFileTreeOpen ? "收起文件树" : "展开文件树"}
+        >
+          {isFileTreeOpen ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+        </button>
       </div>
     </div>
   );
+}
+
+function PreviewError({ title, message, onRetry }: { title: string; message: string; onRetry: () => void }) {
+  return (
+    <div className="preview-error" role="alert">
+      <strong>{title}</strong>
+      <span>{message}</span>
+      <button type="button" onClick={onRetry}>重试预览</button>
+    </div>
+  );
+}
+
+function toPlainFiles(files: SandpackFiles): Record<string, string> {
+  return Object.fromEntries(Object.entries(files).map(([path, file]) => [path, file.code]));
+}
+
+function toStoreFiles(files: Record<string, unknown>): SandpackFiles {
+  return Object.fromEntries(Object.entries(files).map(([path, file]) => {
+    if (typeof file === "string") return [path, { code: file }];
+    if (isRecord(file) && typeof file.code === "string") return [path, { code: file.code }];
+    throw new Error(`Sandpack 返回了无效文件：${path}`);
+  }));
+}
+
+function formatSandpackError(error: unknown): string {
+  if (isRecord(error) && typeof error.message === "string") return error.message;
+  return "外部预览打包器返回了错误，请重试。";
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function sameFiles(first: SandpackFiles, second: SandpackFiles): boolean {
+  const firstPaths = Object.keys(first);
+  const secondPaths = Object.keys(second);
+  if (firstPaths.length !== secondPaths.length) return false;
+  return firstPaths.every((path) => first[path]?.code === second[path]?.code);
 }

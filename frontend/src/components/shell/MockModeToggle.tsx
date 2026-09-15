@@ -81,7 +81,7 @@ export function MockModeToggle({
               top: tooltipPosition.top,
             }}
           >
-            Mock 模式展示预生成项目，响应更快更稳定；关闭后使用真实大模型，耗时更长且可能失败。
+            示例体验直接加载预置成果，不会根据新输入伪生成；切换到真实生成后才会调用模型，耗时更长且可能失败。
           </span>,
           document.body,
         )
@@ -93,7 +93,7 @@ export function MockModeToggle({
         type="button"
         role="switch"
         aria-checked={enabled}
-        aria-label={`Mock 模式${enabled ? "已开启" : "已关闭"}`}
+        aria-label={`示例体验${enabled ? "已开启" : "已关闭"}`}
         onClick={() => onChange(!enabled)}
         className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 ${
           enabled
@@ -101,7 +101,7 @@ export function MockModeToggle({
             : "border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100"
         }`}
       >
-        <span>Mock 模式</span>
+        <span>{enabled ? "示例体验" : "真实生成"}</span>
         <span
           aria-hidden="true"
           className={`relative h-4 w-7 rounded-full transition-colors ${
@@ -120,7 +120,7 @@ export function MockModeToggle({
         <button
           ref={infoButtonRef}
           type="button"
-          aria-label="关于 Mock 模式"
+          aria-label="关于示例体验"
           aria-describedby={tooltipId}
           onMouseEnter={() => {
             handleTooltipTrigger();

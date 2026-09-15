@@ -1,7 +1,28 @@
 // 构建加载动画组件
 "use client";
 
-export function BuildingLoadingOverlay() {
+import { LoaderCircle } from "lucide-react";
+
+interface BuildingLoadingOverlayProps {
+  message?: string;
+  detail?: string;
+  compact?: boolean;
+}
+
+export function BuildingLoadingOverlay({
+  message = "正在启动预览",
+  detail = "正在等待 Sandpack 构建和应用挂载…",
+  compact = false,
+}: BuildingLoadingOverlayProps) {
+  if (compact) {
+    return (
+      <div className="preview-status-updating" role="status">
+        <LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+        <span>{message}</span>
+      </div>
+    );
+  }
+
   return (
     <div className="absolute inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-50 to-slate-100">
       <div className="flex flex-col items-start gap-0 font-mono text-sm w-[320px]">
@@ -10,7 +31,7 @@ export function BuildingLoadingOverlay() {
           <div className="w-3 h-3 rounded-full bg-[#ff5f56]" />
           <div className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
           <div className="w-3 h-3 rounded-full bg-[#27c93f]" />
-          <span className="ml-2 text-gray-500 text-xs">building...</span>
+          <span className="ml-2 text-gray-500 text-xs">{message}</span>
         </div>
 
         {/* 终端内容区 */}
@@ -26,7 +47,7 @@ export function BuildingLoadingOverlay() {
             className="text-gray-500 mb-1"
             style={{ animation: "fadeIn 0.3s ease-out 0.4s both" }}
           >
-            <span className="text-amber-500">⚡</span> Compiling modules...
+            <span className="text-amber-500">⚡</span> {detail}
           </div>
 
           {/* 第三行 - 进度条动画 */}

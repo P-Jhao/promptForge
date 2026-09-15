@@ -5,6 +5,7 @@ import type {
   ThoughtItem,
   ProjectVersion,
   VersionChanges,
+  GenerationState,
 } from "@/types/store";
 
 // Re-export types for backward compatibility
@@ -13,6 +14,13 @@ export type { ThoughtItem, ProjectVersion, VersionChanges };
 // 生成唯一项目 ID 的工具函数
 const generateProjectId = () => {
   return `project-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+};
+
+const initialGeneration: GenerationState = {
+  status: "idle",
+  completedSteps: [],
+  stageTimings: {},
+  preservedResult: false,
 };
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -31,6 +39,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   messageThoughts: {}, // ✨ 初始化思维链映射
   isLoading: false,
   phaseCompletion: {},
+  generation: initialGeneration,
 
   // 设置当前流程类型
   setCurrentFlow: (flow) => set({ currentFlow: flow }),
@@ -46,6 +55,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       messages: [],
       messageThoughts: {},
       phaseCompletion: {},
+      generation: { ...initialGeneration },
       isLoading: false,
     }),
 
@@ -62,6 +72,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       messages: [],
       messageThoughts: {},
       phaseCompletion: {},
+      generation: { ...initialGeneration },
       isLoading: false,
       // 保留 projectId 和 projectName
       currentProjectId: state.currentProjectId,
@@ -128,6 +139,36 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }),
 
   setLoading: (loading) => set({ isLoading: loading }),
+
+  setGeneration: (update) =>
+    set((state) => ({ generation: { ...state.generation, ...update } })),
+
+  resetGeneration: () => set({ generation: { ...initialGeneration } }),
+
+  resetMessage: (messageId) =>
+    set((state) => ({
+      messages: state.messages.map((message) =>
+        message.id === messageId ? { ...message, content: "" } : message,
+      ),
+    })),
+
+  clearMessageThoughts: (messageId) =>
+    set((state) => ({
+      messageThoughts: { ...state.messageThoughts, [messageId]: [] },
+      phaseCompletion: {},
+    })),
+
+  markPendingThoughts: (messageId, description) =>
+    set((state) => ({
+      messageThoughts: {
+        ...state.messageThoughts,
+        [messageId]: (state.messageThoughts[messageId] ?? []).map((thought) =>
+          thought.status === "pending"
+            ? { ...thought, status: "error", description }
+            : thought,
+        ),
+      },
+    })),
 
   addThought: (messageId, thought) =>
     set((state) => {

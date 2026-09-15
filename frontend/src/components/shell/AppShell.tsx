@@ -4,6 +4,7 @@
 import { useState } from "react";
 // import { useRef, useEffect } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { ChatPanel } from "./ChatPanel";
 import { PreviewPanel } from "./PreviewPanel";
 import { useSandpackStore } from "@/store/sandpackStore";
@@ -34,6 +35,7 @@ export function AppShell({ children }: AppShellProps) {
    * preview-only  : Preview 全屏
    */
   const [layoutMode, setLayoutMode] = useState<LayoutMode>("split");
+  const [mobilePanel, setMobilePanel] = useState<"chat" | "preview">("chat");
 
   /**
    * 布局控制方法
@@ -67,7 +69,7 @@ export function AppShell({ children }: AppShellProps) {
       <header className="relative flex h-14 shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4">
         <div className="flex items-center gap-3">
           {/* Logo 和标题 */}
-          <div className="flex items-center gap-2 font-semibold text-gray-900">
+          <Link href="/" className="flex items-center gap-2 font-semibold text-gray-900">
             <div className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-100">
               <Image
                 src="/logo.png"
@@ -82,12 +84,12 @@ export function AppShell({ children }: AppShellProps) {
             <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-normal text-gray-500">
               Beta
             </span>
-          </div>
+          </Link>
         </div>
 
         {/* 中间 Toggle Controls */}
         <div className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
-          <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-100 p-1">
+          <div className="hidden items-center gap-1 rounded-lg border border-gray-200 bg-gray-100 p-1 sm:flex">
             <button
               onClick={() => setViewMode("preview")}
               className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
@@ -158,13 +160,32 @@ export function AppShell({ children }: AppShellProps) {
       </header>
 
       {/* 下方主体内容：包含 Chat 和 Preview */}
-      <main className="flex flex-1 overflow-hidden gap-4 p-4">
+      <div className="flex shrink-0 items-center justify-center gap-1 border-b border-gray-200 bg-white px-3 py-2 sm:hidden">
+        <button
+          type="button"
+          onClick={() => setMobilePanel("chat")}
+          className={`flex-1 rounded-md px-3 py-2 text-sm font-medium ${mobilePanel === "chat" ? "bg-gray-900 text-white" : "text-gray-600"}`}
+          aria-pressed={mobilePanel === "chat"}
+        >
+          对话与进度
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobilePanel("preview")}
+          className={`flex-1 rounded-md px-3 py-2 text-sm font-medium ${mobilePanel === "preview" ? "bg-gray-900 text-white" : "text-gray-600"}`}
+          aria-pressed={mobilePanel === "preview"}
+        >
+          预览与代码
+        </button>
+      </div>
+
+      <main className="flex flex-1 gap-4 overflow-hidden p-4">
         {/* 左侧 Chat 面板 */}
         <div
-          className={`flex flex-col shrink-0 transition-all duration-300 ease-out ${
+          className={`${mobilePanel === "chat" ? "flex" : "hidden sm:flex"} flex-col shrink-0 transition-all duration-300 ease-out ${
             layoutMode === "preview-only"
               ? "w-0 opacity-0 pointer-events-none"
-              : "w-[400px] opacity-100"
+              : "w-full sm:w-[400px] opacity-100"
           }`}
         >
           <div className="flex-1 min-h-0 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -173,7 +194,7 @@ export function AppShell({ children }: AppShellProps) {
         </div>
 
         {/* 右侧 Preview 面板 */}
-        <div className="flex-1 relative bg-gray-50 transition-all duration-300 ease-out">
+        <div className={`relative flex-1 bg-gray-50 transition-all duration-300 ease-out ${mobilePanel === "preview" ? "block" : "hidden sm:block"}`}>
           <PreviewPanel
             layoutMode={layoutMode}
             onExitFullScreen={showSplit}

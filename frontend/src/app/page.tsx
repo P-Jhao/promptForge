@@ -1,10 +1,5 @@
-import { AppShell } from "@/components/shell/AppShell";
-import { SandpackView } from "@/components/preview/SandpackView";
+import { LandingPage } from "@/components/landing/LandingPage";
 
 export default function Page() {
-  return (
-    <AppShell>
-      <SandpackView />
-    </AppShell>
-  );
+  return <LandingPage />;
 }

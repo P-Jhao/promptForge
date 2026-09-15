@@ -35,6 +35,7 @@ PromptForge 是一个聊天式的 AI 前端生成器：用户输入产品或页�
 ├── frontend/
 │   ├── src/app/                  # Next.js App Router 入口
 │   ├── src/components/           # 聊天、思维链、预览和布局组件
+│   ├── src/cases/                 # 从 backend/mock 组装的预置案例与源码清单
 │   ├── src/services/             # 后端 API 调用与 SSE 解析
 │   ├── src/hooks/                # 聊天、预览等业务 Hook
 │   ├── src/store/                # 聊天和 Sandpack 状态
@@ -42,12 +43,19 @@ PromptForge 是一个聊天式的 AI 前端生成器：用户输入产品或页�
 │   ├── src/lib/                  # 代码下载等工具
 │   ├── src/constants/            # 流程、步骤和服务地址配置
 │   └── next.config.ts            # Next.js 配置及 API rewrite
+├── scripts/
+│   ├── assembleNovelCase.mjs      # 从 backend/mock 重新组装小说案例
+│   ├── checkPhaseA.mjs            # 阶段 A 资源、桥接与导出 fixture
+│   └── recordRealTaskBoard.mjs    # 固定评测 prompt 的真实运行记录器
+├── docs/phase-one/                # 第一阶段能力边界、验证与手动项
+├── docs/phase-two-spec/           # 第二阶段权威规格与验收计划
+├── docs/phase-two-plan/           # 第二阶段执行交接与证据
 └── AGENTS.md                    # 项目协作与维护约定
 ```
 
 ## 环境变量
 
-后端通过 `dotenv` 读取 `backend/.env`。仓库未提供固定的 Node.js 版本，也没有前端环境变量配置；前端当前将后端地址写在代码中。
+后端通过 `dotenv` 读取 `backend/.env`。仓库未提供固定的 Node.js 版本。前端默认使用同源 `/api`，本地 Next rewrite 的后端地址由 `BACKEND_URL` 控制；需要跨域开发时可用 `NEXT_PUBLIC_API_BASE_URL` 覆盖浏览器端 API 地址。
 
 | 变量 | 用途 | 说明 |
 | --- | --- | --- |
@@ -66,6 +74,8 @@ PromptForge 是一个聊天式的 AI 前端生成器：用户输入产品或页�
 | `ALI_OSS_SK` | 阿里云 OSS Access Key Secret | 图片上传接口需要 |
 | `ALI_OSS_ENDPOINT` | OSS Endpoint | 未设置时为 `oss-cn-hangzhou.aliyuncs.com` |
 | `ALI_OSS_BUCKET` | OSS Bucket | 图片上传接口需要 |
+| `BACKEND_URL` | Next rewrite 的后端地址 | 前端本地开发默认 `http://localhost:7001` |
+| `NEXT_PUBLIC_API_BASE_URL` | 浏览器端 API 基地址 | 可选；默认使用同源 `/api`，跨域开发时可设置 |
 
 本地只验证前端界面和生成流程时，可以先在 `backend/.env` 设置 `MOCK_MODE=true`，不填写模型 Key。需要真实生成时，再填写所选模型提供商对应的配置。图片上传还需要完整的 OSS 配置。不要把真实密钥写入提交内容。
 
@@ -106,7 +116,7 @@ pnpm build
 pnpm start
 ```
 
-后端脚本目前只有 `dev`、`start`；前端还提供 `pnpm lint`。后端没有单独声明 `build` 或 `test` 脚本。
+后端提供 `pnpm dev`、`pnpm start`、`pnpm build`；前端提供 `pnpm dev`、`pnpm build`、`pnpm start` 和 `pnpm lint`。仓库没有统一的测试脚本。
 
 ## 主要接口
 
@@ -147,7 +157,7 @@ pnpm start
 
 `projectId` 会被用作 LangGraph 的 `thread_id`，用于隔离项目/版本上下文。`mockConfig` 至少可以使用 `global`；后端还支持按 `phases` 或 `nodes` 细分 Mock 开关。
 
-每条 SSE 数据形如 `data: {"type":"...","data":...}`，事件类型包括各生成步骤、`files`、`done` 和 `error`。`files` 事件包含最终的文件映射，前端收到后会更新 Sandpack 预览；流程失败时后端发送 `error`，不会发送 `done`。
+每条 SSE 数据形如 `data: {"type":"...","data":...}`，事件类型包括各生成步骤、`files`、`done` 和 `error`。前端会暂存 `files` 事件，只有收到 `done` 才写入 Sandpack 预览和版本；流程失败或流提前结束时保留上一份完整结果。
 
 ### `POST /api/upload/image`
 
@@ -164,7 +174,7 @@ pnpm start
 
 ## 生成流程
 
-当前后端聊天入口只注册了 `traditional` 流程。有效文本提示词会优先匹配 `prompt-route`，否则使用 traditional fallback，随后构建 `backend/agents/graphs/traditional.graph.ts` 中的图，并按以下阶段顺序执行：
+后端聊天入口先由 route-classifier 将请求分为 `traditional` 或 `chat`，再由 `backend/agents/graphs/main.graph.ts` 构建对应的图。`traditional` 流程使用 `backend/agents/graphs/traditional.graph.ts`，按以下阶段顺序执行：
 
 | 阶段 | 节点/事件 |
 | --- | --- |
@@ -174,13 +184,19 @@ pnpm start
 | 视图构建 `view` | `componentsCode` → `pagesCode` → `layouts` → `styles` |
 | 应用组装 `assembly` | `app` → `files` |
 
-其中组件和页面代码分别由组件子图、页面子图生成；最后 `assembleNode` 合并模板、生成代码和依赖信息，生成 Sandpack 文件映射。前端负责展示思维链、预览/编辑文件，并可将当前文件打包下载。
+其中组件和页面代码分别由组件子图、页面子图生成；最后 `assembleNode` 合并模板、生成代码和依赖信息，生成 Sandpack 文件映射。`chat` 流程通过同一条 SSE 接口输出普通助手文本，不发送 traditional 的阶段进度事件。前端负责展示思维链、预览/编辑文件，并可将当前文件打包下载。
+
+## 预置案例与模式
+
+首页首屏和工作台的“小说阅读管理”案例直接使用 `backend/mock` 的节点结果，不调用模型。`scripts/assembleNovelCase.mjs` 会生成两个初始场景（书库管理、阅读笔记）共用的源码清单，并补充会话内新增书籍/笔记/书签、搜索依赖、移动端布局和案例入口类型检查。案例正文带有示意内容提示，首页的需求摘要也不等同于原始完整 prompt。
+
+工作台开启“示例体验”时只提供预存案例入口，不会根据访客输入伪造生成；关闭后才会提交真实 `/api/chat` 请求。案例数据、生成版本和编辑器修改目前只保留在当前浏览会话，保存、重新打开、恢复和基于编辑文件继续生成尚未实现。第一阶段的完整限制和待手动验证项见 [docs/phase-one/README.md](docs/phase-one/README.md)，第二阶段 A 的实现状态和现场边界见 [docs/phase-two-plan/phase-a.md](docs/phase-two-plan/phase-a.md)。
 
 ## 开发注意事项
 
 - 前端聊天和模板请求默认使用同源 `/api`；本地开发由 `frontend/next.config.ts` rewrite 到后端，生产环境由 Nginx 代理到后端。需要跨域开发时，可通过 `NEXT_PUBLIC_API_BASE_URL` 显式覆盖。
 - 建议从 `backend` 目录启动服务。组装节点会按当前工作目录读取 `templates/react-ts/`，从错误目录启动可能导致模板读取失败并触发内置降级模板。
-- `MOCK_MODE=true` 会覆盖客户端传入的 Mock 配置并强制全局 Mock；关闭后，前端 Mock 开关会通过请求体传给后端。
-- 后端当前 `RouteFlow` 只支持 `traditional`。前端代码中虽然保留了 Figma 流程的类型和展示配置，但后端对应适配器仍未注册，不应将其视为已完成的独立后端流程。
+- `MOCK_MODE=true` 会覆盖客户端传入的 Mock 配置并强制全局 Mock；真实生成模式会把客户端 Mock 配置放进请求体，关闭示例体验时默认携带 `global:false`。示例体验直接加载预置案例，不发起聊天请求。
+- 后端 `RouteFlow` 当前支持 `traditional` 和 `chat`；前端仍保留 Figma 流程的类型和展示配置，但后端对应适配器尚未注册，不应将其视为已完成的独立后端流程。
 - 后端默认允许本地开发来源，并通过 `CORS_ORIGINS` 增加生产前端来源；生产 Compose 会配置 `https://promptforge.pjhao.xyz`。
 - 修改核心业务能力或关键目录结构时维护根目录 `AGENTS.md`；小改动、文案调整和临时修复不写入该文件。

@@ -1,7 +1,7 @@
 // Store 相关类型定义
 import type { ReactNode } from "react";
 import type { ChatMessage } from "./message";
-import type { FlowType } from "./flow";
+import type { FlowType, Phase, StepType } from "./flow";
 
 // ============================================================================
 // Sandpack Store 类型
@@ -21,11 +21,41 @@ export interface SandpackStore {
   /** AI 生成的文件 */
   generatedFiles: SandpackFiles | null;
   setGeneratedFiles: (files: Record<string, string>) => void;
+  /** Sandpack 当前文件内容（包含编辑器中的本地改动） */
+  currentFiles: SandpackFiles | null;
+  setCurrentFiles: (files: SandpackFiles) => void;
   clearGeneratedFiles: () => void;
 
   /** 组装状态 */
   isAssembling: boolean;
   setIsAssembling: (isAssembling: boolean) => void;
+}
+
+export type GenerationStatus =
+  | "idle"
+  | "running"
+  | "success"
+  | "error"
+  | "cancelled";
+
+export type GenerationMode = "mock" | "real";
+
+export interface GenerationState {
+  status: GenerationStatus;
+  mode?: GenerationMode;
+  modeForced?: boolean;
+  currentPhase?: Phase;
+  currentStep?: StepType;
+  completedSteps: StepType[];
+  failedStep?: string;
+  failedNode?: string;
+  error?: string;
+  startedAt?: number;
+  elapsedMs?: number;
+  /** 从首次阶段事件到下一阶段事件的客户端接收间隔，包含网络传输。 */
+  stageTimings: Record<string, number>;
+  preservedResult: boolean;
+  nextStep?: string;
 }
 
 // ============================================================================
@@ -95,6 +125,7 @@ export interface ChatState {
   messageThoughts: Record<string, ThoughtItem[]>; // messageId -> thoughts 映射
   isLoading: boolean;
   phaseCompletion: Record<string, { completed: number; total: number }>; // 阶段完成进度
+  generation: GenerationState;
 
   /** Flow Actions */
   setCurrentFlow: (flow: FlowType | null) => void; // 设置当前流程类型
@@ -114,6 +145,11 @@ export interface ChatState {
   addMessage: (message: ChatMessage) => void;
   appendMessageContent: (messageId: string, delta: string) => void;
   setLoading: (loading: boolean) => void;
+  setGeneration: (update: Partial<GenerationState>) => void;
+  resetGeneration: () => void;
+  resetMessage: (messageId: string) => void;
+  clearMessageThoughts: (messageId: string) => void;
+  markPendingThoughts: (messageId: string, description: string) => void;
 
   /** ThoughtChain Actions */
   addThought: (messageId: string, thought: ThoughtItem) => void;

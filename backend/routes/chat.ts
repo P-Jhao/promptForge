@@ -7,7 +7,6 @@ import {
   resolveMockConfig,
   type MockConfig,
 } from "../config/mock.js";
-import { NodeExecutionError } from "../agents/utils/nodeError.js";
 import { NODE_HANDLERS } from "../config/chat.js";
 import {
   ChatValidationError,
@@ -18,10 +17,18 @@ import {
   processChatStreamChunk,
   type ChatStreamState,
 } from "./chatStream.js";
+import {
+  createTimeoutDiagnostic,
+  getNextTraditionalNode,
+  isMockConfig,
+  isRecord,
+  readPositiveInteger,
+  resolveDiagnosticNode,
+  type UnknownRecord,
+} from "./chatDiagnostics.js";
 
 const router = express.Router();
 
-type UnknownRecord = Record<string, unknown>;
 type FlushableResponse = Response & { flush?: () => void };
 
 const CHAT_REQUEST_TIMEOUT_MS = readPositiveInteger(
@@ -29,54 +36,10 @@ const CHAT_REQUEST_TIMEOUT_MS = readPositiveInteger(
   15 * 60 * 1000,
 );
 const SSE_HEARTBEAT_INTERVAL_MS = 15 * 1000;
-
 const agents: Record<RouteFlow, ReturnType<typeof buildAgent>> = {
   traditional: buildAgent("traditional"),
   chat: buildAgent("chat"),
 };
-
-function readPositiveInteger(name: string, fallback: number): number {
-  const rawValue = process.env[name];
-  if (rawValue === undefined) {
-    return fallback;
-  }
-
-  const parsedValue = Number.parseInt(rawValue, 10);
-  if (!Number.isInteger(parsedValue) || parsedValue <= 0) {
-    throw new Error(`${name} must be a positive integer`);
-  }
-
-  return parsedValue;
-}
-
-function isRecord(value: unknown): value is UnknownRecord {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function isBooleanRecord(value: unknown): value is Record<string, boolean> {
-  return (
-    isRecord(value) &&
-    Object.values(value).every((entry) => typeof entry === "boolean")
-  );
-}
-
-function isMockConfig(value: unknown): value is MockConfig {
-  if (!isRecord(value)) return false;
-
-  const hasGlobal = value.global !== undefined;
-  const hasPhases = value.phases !== undefined;
-  const hasNodes = value.nodes !== undefined;
-
-  if (hasGlobal && typeof value.global !== "boolean") return false;
-  if (hasPhases && !isBooleanRecord(value.phases)) return false;
-  if (hasNodes && !isBooleanRecord(value.nodes)) return false;
-
-  return (
-    typeof value.global === "boolean" ||
-    (hasPhases && Object.keys(value.phases as UnknownRecord).length > 0) ||
-    (hasNodes && Object.keys(value.nodes as UnknownRecord).length > 0)
-  );
-}
 
 router.post("/", async (req: Request, res: Response): Promise<void> => {
   let requestData: ChatRequestData | undefined;
@@ -102,6 +65,8 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
   let requestTimedOut = false;
   let streamCompleted = false;
   let sseStarted = false;
+  let currentNode = "routeClassifier";
+  let lastCompletedNode: string | undefined;
   const abortController = new AbortController();
 
   const handleDisconnect = (): void => {
@@ -125,13 +90,9 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
     abortController.abort();
 
     if (!res.writableEnded && !res.destroyed) {
-      res.write(
-        `data: ${JSON.stringify({
-          type: "error",
-          data: { message: "Chat generation timed out" },
-          message: "Chat generation timed out",
-        })}\n\n`,
-      );
+      res.write(`data: ${JSON.stringify(
+        createTimeoutDiagnostic(currentNode, lastCompletedNode),
+      )}\n\n`);
       res.end();
     }
   };
@@ -171,11 +132,28 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
     const clientMockConfig = isMockConfig(userMockConfig)
       ? userMockConfig
       : undefined;
+    const serverMockForced =
+      process.env.MOCK_MODE === "true" && clientMockConfig?.global !== true;
     const mockConfigInput: MockConfig =
       process.env.MOCK_MODE === "true"
         ? { global: true }
         : clientMockConfig ?? DEFAULT_MOCK_PRESET;
     const mockConfig = resolveMockConfig(mockConfigInput);
+
+    const allNodesUseMock = Object.values(mockConfig).every(
+      (usesMock) => usesMock,
+    );
+    if (
+      !writeSse({
+        type: "mode",
+        data: {
+          mode: allNodesUseMock ? "mock" : "real",
+          forced: serverMockForced,
+        },
+      })
+    ) {
+      return;
+    }
 
     const routeResult = await resolveRouteAdapter({ messages, mockConfig });
     console.log(`📝 [Route] 使用 ${routeResult.flow} 流程`);
@@ -184,6 +162,8 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
     if (stopRequested || res.writableEnded || res.destroyed) {
       return;
     }
+
+    currentNode = routeResult.flow === "chat" ? "chatNode" : "analysisNode";
 
     if (!writeSse({ type: "flow", data: { flow: routeResult.flow } })) {
       return;
@@ -267,6 +247,9 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
       ) {
         break;
       }
+
+      lastCompletedNode = nodeName;
+      currentNode = getNextTraditionalNode(nodeName);
     }
 
     streamCompleted = !stopRequested && !requestTimedOut;
@@ -279,7 +262,7 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
     }
 
     console.error("Error processing chat:", error);
-    const node = error instanceof NodeExecutionError ? error.node : "unknown";
+    const node = resolveDiagnosticNode(error, currentNode);
     const message =
       error instanceof Error ? error.message : "Internal server error";
 

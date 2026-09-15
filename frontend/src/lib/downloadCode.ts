@@ -1,6 +1,10 @@
 // 代码下载工具函数
 import JSZip from "jszip";
 import type { SandpackFiles } from "@/types/store";
+import {
+  validateResourceManifest,
+  type CaseResourceManifest,
+} from "@/cases/resourceManifest";
 
 /**
  * 生成 index.html 文件内容
@@ -97,8 +101,18 @@ function generateTsConfigNode(): string {
 export async function downloadGeneratedCode(
   generatedFiles: SandpackFiles,
   templateFiles: SandpackFiles,
+  resourceManifest?: CaseResourceManifest,
 ): Promise<void> {
   const zip = new JSZip();
+  const allFiles = { ...templateFiles, ...generatedFiles };
+
+  if (resourceManifest !== undefined) {
+    validateResourceManifest(allFiles, resourceManifest);
+    zip.file(
+      "promptforge-resource-manifest.json",
+      JSON.stringify(resourceManifest, null, 2),
+    );
+  }
 
   // 1. 添加必需的配置文件（Sandpack 内置但下载时需要）
   zip.file("index.html", generateIndexHtml());
@@ -108,15 +122,29 @@ export async function downloadGeneratedCode(
 
   // 2. 添加模板文件（保持 Sandpack 的扁平结构）
   Object.entries(templateFiles).forEach(([path, file]) => {
-    const cleanPath = path.startsWith("/") ? path.slice(1) : path;
-    zip.file(cleanPath, file.code);
+    zip.file(toZipPath(path), file.code);
   });
 
   // 3. 添加生成的文件（保持 Sandpack 的扁平结构，包括子目录）
   Object.entries(generatedFiles).forEach(([path, file]) => {
-    const cleanPath = path.startsWith("/") ? path.slice(1) : path;
-    zip.file(cleanPath, file.code);
+    zip.file(toZipPath(path), file.code);
   });
+
+  if (resourceManifest !== undefined) {
+    for (const resource of resourceManifest.resources) {
+      const file = allFiles[resource.sandpackPath];
+      if (file === undefined) {
+        if (resource.required) {
+          throw new Error(`资源导出失败：缺少 ${resource.sandpackPath}`);
+        }
+        continue;
+      }
+      const exportPath = toZipPath(resource.exportPath);
+      if (exportPath !== toZipPath(resource.sandpackPath)) {
+        zip.file(exportPath, file.code);
+      }
+    }
+  }
 
   // 4. 生成 zip 文件
   const blob = await zip.generateAsync({
@@ -133,7 +161,7 @@ export async function downloadGeneratedCode(
     .replace(/[:.]/g, "-")
     .replace("T", "_")
     .slice(0, -5); // 格式: 2026-02-05_14-42-35
-  const filename = `figma-project-${timestamp}.zip`;
+  const filename = `promptforge-project-${timestamp}.zip`;
 
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -145,4 +173,16 @@ export async function downloadGeneratedCode(
   // 清理
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+function toZipPath(path: string): string {
+  const cleanPath = path.replace(/^\/+/, "");
+  const segments = cleanPath.split("/");
+  if (
+    cleanPath.length === 0 ||
+    segments.some((segment) => segment.length === 0 || segment === "." || segment === "..")
+  ) {
+    throw new Error(`导出文件路径无效：${path}`);
+  }
+  return cleanPath;
 }
