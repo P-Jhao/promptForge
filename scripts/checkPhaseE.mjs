@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { createAttempt } from "./lib/realRunRecorder.mjs";
 import { inspectRealRun } from "./lib/realRunReadiness.mjs";
+import { classifyAssertionFailure } from "./lib/taskBoardAssertion.mjs";
 import {
   EVAL_PROMPTS,
   buildEvaluationReport,
@@ -29,6 +30,13 @@ try {
   assert.match(EVAL_PROMPTS["EVAL-02"], /保留看板标题/);
   assert.equal(hashEditBase({ "/src/App.tsx": "export default function App() { return null; }" }, []), sha256('{"files":{"/src/App.tsx":"export default function App() { return null; }"},"resources":[]}'));
   assert.throws(() => hashEditBase({ "/src/../App.tsx": "invalid" }, []), /文件快照无效/);
+  const functionalFailure = classifyAssertionFailure(new Error("新增任务标题未出现在列表中"));
+  assert.equal(functionalFailure.status, "fail");
+  assert.match(functionalFailure.evidence, /新增任务标题未出现在列表中/);
+  assert.notEqual(functionalFailure.status, "pass");
+  const environmentNotVerified = classifyAssertionFailure(new Error("未配置真实页面"), true);
+  assert.equal(environmentNotVerified.status, "not-verified");
+  assert.notEqual(environmentNotVerified.status, "pass");
 
   const fixtureAttempts = [
     attempt("REAL-EVAL", "success", "EVAL-01", { real: true }),

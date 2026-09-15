@@ -4,6 +4,7 @@ import path from "node:path";
 import process from "node:process";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
+import { classifyAssertionFailure } from "./lib/taskBoardAssertion.mjs";
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const URL = process.env.TASK_BOARD_URL ?? readArgument("--url");
@@ -34,7 +35,12 @@ const ASSERTION_DEFINITIONS = [
   ["title-retention", "看板标题保留"],
 ];
 
-class NotVerifiedError extends Error {}
+class NotVerifiedError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "NotVerifiedError";
+  }
+}
 
 async function main() {
   const assertions = ASSERTION_DEFINITIONS.map(([id, label]) => ({ id, label, status: "not-verified", evidence: "未执行" }));
@@ -56,28 +62,50 @@ async function main() {
   }
 
   let browser;
+  let assertionFailure;
   try {
     browser = await playwright.chromium.launch({ headless: true });
     const page = await browser.newPage();
     await page.goto(URL, { waitUntil: "domcontentloaded", timeout: 30_000 });
-    await verifyEntry(page, assertions[0]);
-    await verifyColumns(page, assertions[1]);
+    await runAssertion(assertions[0], () => verifyEntry(page, assertions[0]));
+    await runAssertion(assertions[1], () => verifyColumns(page, assertions[1]));
     const title = await readBoardTitle(page);
-    await verifyAdd(page, assertions[2]);
-    await verifyEdit(page, assertions[3]);
-    await verifyStatus(page, assertions[4]);
-    await verifyFilter(page, assertions[5]);
-    await verifyEmptyAndValidation(page, assertions[6]);
-    await verifyTitleRetention(page, assertions[7], title);
+    await runAssertion(assertions[2], () => verifyAdd(page, assertions[2]));
+    await runAssertion(assertions[3], () => verifyEdit(page, assertions[3]));
+    await runAssertion(assertions[4], () => verifyStatus(page, assertions[4]));
+    await runAssertion(assertions[5], () => verifyFilter(page, assertions[5]));
+    await runAssertion(assertions[6], () => verifyEmptyAndValidation(page, assertions[6]));
+    await runAssertion(assertions[7], () => verifyTitleRetention(page, assertions[7], title));
   } catch (error) {
-    const evidence = `任务板环境未完成：${safeMessage(error)}`;
-    for (const assertion of assertions) {
-      if (assertion.status === "not-verified" || assertion.status === "skipped") assertion.evidence = evidence;
+    if (assertionFailure === undefined) {
+      const result = classifyAssertionFailure(error, true);
+      for (const assertion of assertions) {
+        if (assertion.status === "not-verified" || assertion.status === "skipped") assertion.evidence = result.evidence;
+      }
+    } else {
+      const failed = assertionFailure.assertion;
+      for (const assertion of assertions) {
+        if (assertion !== failed && (assertion.status === "not-verified" || assertion.status === "skipped")) {
+          assertion.evidence = `未执行：断言 ${failed.id} 已${failed.status === "fail" ? "失败" : "未验证"}`;
+        }
+      }
     }
   } finally {
     await browser?.close();
   }
   return printResult(environment, assertions);
+
+  async function runAssertion(assertion, action) {
+    try {
+      await action();
+    } catch (error) {
+      const result = classifyAssertionFailure(error);
+      assertion.status = result.status;
+      assertion.evidence = result.evidence;
+      assertionFailure = { assertion, result };
+      throw error;
+    }
+  }
 }
 
 async function verifyEntry(page, assertion) {
