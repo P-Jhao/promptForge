@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import GeneratedNovelApp from "@/cases/generated/App";
 import type { NovelCaseScene } from "@/cases/novelCase";
 
@@ -17,12 +17,16 @@ function readScene(value: string | string[] | undefined): NovelCaseScene {
 export default function CasePreviewPage() {
   const params = useParams<{ scene?: string | string[] }>();
   const scene = readScene(params.scene);
-  const [ready, setReady] = useState(false);
+  const expectedHash = scene === "notes" ? "#/novels/novel_001" : "#/novels";
+  const ready = useSyncExternalStore(
+    subscribeToHashChange,
+    () => window.location.hash === expectedHash,
+    getServerSnapshot,
+  );
 
   useEffect(() => {
-    window.location.hash = scene === "notes" ? "/novels/novel_001" : "/novels";
-    setReady(true);
-  }, [scene]);
+    if (window.location.hash !== expectedHash) window.location.hash = expectedHash;
+  }, [expectedHash]);
 
   if (!ready) {
     return <div className="case-route-loading">正在加载案例成果…</div>;
@@ -31,3 +35,11 @@ export default function CasePreviewPage() {
   return <GeneratedNovelApp />;
 }
 
+function subscribeToHashChange(onStoreChange: () => void): () => void {
+  window.addEventListener("hashchange", onStoreChange);
+  return () => window.removeEventListener("hashchange", onStoreChange);
+}
+
+function getServerSnapshot(): boolean {
+  return false;
+}
