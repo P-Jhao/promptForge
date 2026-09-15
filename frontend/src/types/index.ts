@@ -16,6 +16,9 @@ export * from "./mock";
 // Store 相关类型
 export * from "./store";
 
+// 项目持久化相关类型
+export * from "./project";
+
 // 组件 Props 相关类型
 export * from "./components";
 

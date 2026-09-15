@@ -31,7 +31,7 @@
 | 阶段时间 | [`useChat.ts`](../../frontend/src/hooks/useChat.ts)、[`GenerationStatusPanel.tsx`](../../frontend/src/components/shell/GenerationStatusPanel.tsx) | 记录的是客户端收到事件的间隔，包含网络传输；不是服务端节点耗时 | 已实现（诊断层） | 指标必须区分客户端间隔、服务端耗时和总用户等待时间 |
 | 失败/重试/EOF 夹具 | [`feedbackFixture.ts`](../../backend/test/feedbackFixture.ts) | 有 success、fail、EOF、delay、chat、429 的本地反馈夹具 | 已实现（夹具） | 可作为协议状态测试；不代表真实模型、真实 Sandpack 或运行时通过 |
 | 代码导出 | [`downloadCode.ts`](../../frontend/src/lib/downloadCode.ts)、[`PreviewToolbar.tsx`](../../frontend/src/components/preview/PreviewToolbar.tsx) | 导出当前 Sandpack 文件；引用封面且文件映射缺资源时尝试 fetch `/book-cover.svg` 放入 ZIP | 部分实现，导出构建未验证 | 需定义当前工作副本、资源清单和失败保留语义；不能声称部署路径已完全解决 |
-| React 项目持久化 | `frontend/src/store/`、`frontend/src/services/` | 未发现 IndexedDB、服务端项目存储或恢复入口 | 未实现 | 本阶段需要项目保存、重新打开和恢复 |
+| React 项目持久化 | [`projectRepository.ts`](../../frontend/src/lib/projectRepository.ts)、[`ProjectManager.tsx`](../../frontend/src/components/shell/ProjectManager.tsx)、[`phase-b.md`](../phase-two-plan/phase-b.md) | IndexedDB 保存项目、工作副本、版本、资源和运行摘要；工作台提供手动保存、打开、另存为、dirty 保护和历史恢复 | 部分实现，真实浏览器故障场景未验证 | 阶段 B 已覆盖首版本地保存语义；配额、损坏数据、双标签冲突和刷新/移动端仍需现场验收 |
 | Vue 生成/预览 | [`package.json`](../../backend/templates/react-ts/package.json)、[`SandpackView.tsx`](../../frontend/src/components/preview/SandpackView.tsx) 使用固定 React TypeScript 模板和 `SandpackProvider template="react-ts"` | 当前交付链路固定为 React；没有 Vue 模板、Provider 或 Vue 运行证据 | 未实现（本阶段明确不做） | 仅输出评估结论和后续问题；`frontend/src/types/flow.ts` 的类型保留不作为 Vue 能力证据 |
 
 ## 必须保留的事实边界

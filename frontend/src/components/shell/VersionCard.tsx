@@ -18,7 +18,7 @@ export function VersionCard({
             </h3>
             {version.operation && (
               <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700 shrink-0">
-                {version.operation === "create" ? "创建" : "编辑"}
+                {version.operation === "create" ? "创建" : version.operation === "restore" ? "恢复" : "编辑"}
               </span>
             )}
           </div>

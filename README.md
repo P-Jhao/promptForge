@@ -190,7 +190,7 @@ pnpm start
 
 首页首屏和工作台的“小说阅读管理”案例直接使用 `backend/mock` 的节点结果，不调用模型。`scripts/assembleNovelCase.mjs` 会生成两个初始场景（书库管理、阅读笔记）共用的源码清单，并补充会话内新增书籍/笔记/书签、搜索依赖、移动端布局和案例入口类型检查。案例正文带有示意内容提示，首页的需求摘要也不等同于原始完整 prompt。
 
-工作台开启“示例体验”时只提供预存案例入口，不会根据访客输入伪造生成；关闭后才会提交真实 `/api/chat` 请求。案例数据、生成版本和编辑器修改目前只保留在当前浏览会话，保存、重新打开、恢复和基于编辑文件继续生成尚未实现。第一阶段的完整限制和待手动验证项见 [docs/phase-one/README.md](docs/phase-one/README.md)，第二阶段 A 的实现状态和现场边界见 [docs/phase-two-plan/phase-a.md](docs/phase-two-plan/phase-a.md)。
+工作台开启“示例体验”时只提供预存案例入口，不会根据访客输入伪造生成；关闭后才会提交真实 `/api/chat` 请求。第二阶段 B 已提供手动保存、打开、另存为和历史恢复，未保存修改会明确显示并在切换/恢复前要求处理；基于编辑文件继续生成仍属于后续阶段。第一阶段的完整限制和待手动验证项见 [docs/phase-one/README.md](docs/phase-one/README.md)，第二阶段 A/B 的实现状态和现场边界见 [docs/phase-two-plan/phase-a.md](docs/phase-two-plan/phase-a.md) 与 [docs/phase-two-plan/phase-b.md](docs/phase-two-plan/phase-b.md)。
 
 ## 开发注意事项
 

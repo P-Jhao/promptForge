@@ -82,6 +82,20 @@ export const useChatStore = create<ChatState>((set, get) => ({
   // 更新项目名称
   updateProjectName: (name) => set({ projectName: name }),
 
+  hydrateProject: (project) =>
+    set({
+      currentProjectId: project.projectId,
+      projectName: project.projectName,
+      currentVersion: project.currentVersion,
+      versions: project.versions,
+      messages: project.messages,
+      messageThoughts: {},
+      phaseCompletion: {},
+      currentFlow: null,
+      generation: { ...initialGeneration },
+      isLoading: false,
+    }),
+
   // 版本管理方法
 
   // 递增版本号并返回新版本号

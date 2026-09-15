@@ -9,6 +9,7 @@ import { ChatPanel } from "./ChatPanel";
 import { PreviewPanel } from "./PreviewPanel";
 import { useSandpackStore } from "@/store/sandpackStore";
 import { Eye, Code2 } from "lucide-react";
+import { ProjectManager } from "./ProjectManager";
 // import { Settings, LogOut } from "lucide-react";
 import type { LayoutMode, AppShellProps } from "@/types/components";
 
@@ -66,10 +67,10 @@ export function AppShell({ children }: AppShellProps) {
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-gray-50">
       {/* 顶部 Header */}
-      <header className="relative flex h-14 shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4">
-        <div className="flex items-center gap-3">
+      <header className="app-header relative flex h-14 shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4">
+        <div className="app-brand flex min-w-0 items-center gap-3">
           {/* Logo 和标题 */}
-          <Link href="/" className="flex items-center gap-2 font-semibold text-gray-900">
+          <Link href="/" className="app-brand-link flex shrink-0 items-center gap-2 font-semibold text-gray-900">
             <div className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-100">
               <Image
                 src="/logo.png"
@@ -80,12 +81,14 @@ export function AppShell({ children }: AppShellProps) {
                 sizes="32px"
               />
             </div>
-            <span>PromptForge</span>
-            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-normal text-gray-500">
+            <span className="app-brand-name">PromptForge</span>
+            <span className="app-brand-beta rounded-full bg-gray-100 px-2 py-0.5 text-xs font-normal text-gray-500">
               Beta
             </span>
           </Link>
         </div>
+
+        <ProjectManager />
 
         {/* 中间 Toggle Controls */}
         <div className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2">

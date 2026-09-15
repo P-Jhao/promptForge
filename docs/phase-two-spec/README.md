@@ -1,6 +1,6 @@
 # PromptForge 第二阶段规格（讨论稿）
 
-状态：阶段 A 代码与首页资源已现场核验，外部 Sandpack、导出包和真实模型运行仍待验收；阶段 B-E 未开始。  
+状态：阶段 A 代码与首页资源已现场核验，阶段 B 代码已实现；外部 Sandpack、导出包、真实模型和 IndexedDB 故障场景仍待现场验收；阶段 C-E 未开始。
 更新时间：2026-09-16
 
 本目录把第二阶段要解决的问题、产品判断、当前能力基线、用户体验状态、项目与变更语义、验证口径和待决问题拆开记录。它是执行计划的输入，不是执行计划本身；执行记录见 [`docs/phase-two-plan/`](../phase-two-plan/)。
@@ -10,6 +10,7 @@
 ## 当前执行状态与已确认决策
 
 - 阶段 A 已建立案例资源 manifest、预览副本桥接、Sandpack 构建/挂载/运行诊断、可配置等待边界和真实运行记录脚本；实现与未验证项见 [`phase-a.md`](../phase-two-plan/phase-a.md)。
+- 阶段 B 已建立 IndexedDB 项目仓储、可序列化工作副本/版本/运行摘要和保存/打开/恢复界面；实现与未验证项见 [`phase-b.md`](../phase-two-plan/phase-b.md)。
 - 预览 ready 的判定是 Sandpack `done` 且 `compilatonError=false`，并收到入口内 `app-mounted`；模板收到、代码可见、iframe `load` 或 `status=running` 都不能单独宣称 ready。
 - 资源清单同时约束宿主案例、Sandpack 文件和 Vite 导出；缺少必需资源必须失败。真实生成结果没有对应 manifest 时不沿用小说案例 manifest。
 - 真实生成记录必须收到明确的 `mode={mode:"real",forced:false}`，不允许缺失 mode 或强制 Mock 结果被记录为真实；成功 run ID 复用，中断/失败产生新 attempt。

@@ -2,6 +2,7 @@
 import type { ReactNode } from "react";
 import type { ChatMessage } from "./message";
 import type { FlowType, Phase, StepType } from "./flow";
+import type { ProjectHydration } from "./project";
 
 // ============================================================================
 // Sandpack Store 类型
@@ -77,7 +78,7 @@ export interface ProjectVersion {
   assistantMessageId: string; // 关联生成该版本的 assistant 消息
 
   /** 版本元数据 */
-  operation: "create" | "edit"; // 操作类型：创建 or 编辑
+  operation: "create" | "edit" | "restore"; // 操作类型：创建、编辑或恢复
   prompt: string; // 用户输入的需求描述
   timestamp: number; // 创建时间戳
 
@@ -87,6 +88,9 @@ export interface ProjectVersion {
 
   /** 变更记录（相对于上一版本） */
   changes?: VersionChanges;
+  /** 恢复或编辑时的来源版本，用于追溯，不改变旧版本内容 */
+  parentVersionId?: string;
+  restoredFromVersionId?: string;
 }
 
 /** 思维链项的接口 (参考 ant-design/x 的 ThoughtItem) */
@@ -142,6 +146,7 @@ export interface ChatState {
   getCurrentThreadId: () => string; // 获取当前版本的 threadId
 
   /** Actions */
+  hydrateProject: (project: ProjectHydration) => void;
   addMessage: (message: ChatMessage) => void;
   appendMessageContent: (messageId: string, delta: string) => void;
   setLoading: (loading: boolean) => void;
