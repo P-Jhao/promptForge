@@ -38,6 +38,10 @@ export interface CandidateState {
   baseHash: string;
   /** Hash of the files/resources supplied to the model for this candidate. */
   modelBaseHash: string;
+  /** Model name suggestion, applied only after the user applies a create candidate. */
+  suggestedProjectName?: string;
+  /** Project name captured before this request, used to preserve a manual rename. */
+  projectNameAtRequest?: string;
   /** Present together for a candidate repaired from another staged candidate. */
   sourceCandidateId?: string;
   sourceBaseHash?: string;

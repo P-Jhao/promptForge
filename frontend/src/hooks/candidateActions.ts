@@ -3,6 +3,7 @@ import { useChatStore } from "@/store/chatStore";
 import { useSandpackStore } from "@/store/sandpackStore";
 import { hashEditBase, toPlainFiles, validatePlainFiles } from "@/lib/changeContract";
 import { canApplyValidation } from "@/lib/validationReport";
+import { resolveCandidateProjectName } from "@/lib/candidateProjectName";
 
 /** Apply only a candidate whose validation and frozen workspace base still match. */
 export async function applyStagedCandidate(): Promise<void> {
@@ -36,6 +37,7 @@ export async function applyStagedCandidate(): Promise<void> {
     return;
   }
 
+  const projectNameAfterApply = resolveCandidateProjectName(candidate, useChatStore.getState().projectName);
   const versionNumber = chatState.incrementVersion();
   useSandpackStore.getState().setGeneratedFiles(candidate.files);
   useChatStore.getState().saveVersion({
@@ -53,6 +55,9 @@ export async function applyStagedCandidate(): Promise<void> {
       deleted: candidate.changes.filter((change) => change.operation === "delete").map((change) => change.path),
     },
   });
+  if (projectNameAfterApply !== undefined) {
+    useChatStore.getState().updateProjectName(projectNameAfterApply);
+  }
   useChatStore.getState().clearCandidate();
   useChatStore.getState().setGeneration({ status: "success", error: undefined, preservedResult: false });
 }

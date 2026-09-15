@@ -17,6 +17,7 @@ const validationConstants = loadTsModule(path.join(root, "frontend/src/constants
 const frontendContract = loadTsModule(path.join(root, "frontend/src/lib/changeContract.ts"), {
   "@/constants/validation": validationConstants,
 }).exports;
+const projectNameContract = loadTsModule(path.join(root, "frontend/src/lib/candidateProjectName.ts")).exports;
 
 const baseFiles = {
   "/src/App.tsx": "export default function App() { return <main>Keep</main>; }",
@@ -134,6 +135,31 @@ await assert.rejects(
 assert.equal(candidate.validation.preview, "not-verified");
 assert.equal(candidate.files["/src/keep.ts"], baseFiles["/src/keep.ts"]);
 
+const suggestedName = {
+  operation: "create",
+  suggestedProjectName: "任务板候选",
+  projectNameAtRequest: "新项目",
+};
+assert.equal(
+  projectNameContract.resolveCandidateProjectName(suggestedName, "新项目"),
+  "任务板候选",
+);
+assert.equal(
+  projectNameContract.resolveCandidateProjectName(suggestedName, "用户手动命名"),
+  undefined,
+);
+assert.equal(
+  projectNameContract.resolveCandidateProjectName({ ...suggestedName, operation: "edit" }, "新项目"),
+  undefined,
+);
+assert.equal(
+  projectNameContract.resolveCandidateProjectName({ operation: "create" }, "新项目"),
+  undefined,
+);
+const runnerSource = readFileSync(path.join(root, "frontend/src/hooks/chatRequestRunner.ts"), "utf8");
+assert.doesNotMatch(runnerSource, /updateProjectName\(productName\)/);
+assert.match(runnerSource, /suggestedProjectName/);
+
 console.log(JSON.stringify({
   baseHash: baseHash.slice(0, 12),
   freeze: base.projectId === "fixture-project" && base.versionId === "v3",
@@ -144,6 +170,8 @@ console.log(JSON.stringify({
   candidateIntegrityRejected: true,
   unorderedChangesAccepted: shuffledCandidate.status === "staged",
   candidateStagedWithoutApplying: candidate.status === "staged" && candidate.validation.preview === "not-verified",
+  candidateNameStaysStaged: projectNameContract.resolveCandidateProjectName(suggestedName, "用户手动命名") === undefined,
+  candidateNameAppliesOnConfirmation: projectNameContract.resolveCandidateProjectName(suggestedName, "新项目") === "任务板候选",
 }));
 
 function loadTsModule(filePath, replacements = {}, cache = new Map()) {

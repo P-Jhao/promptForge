@@ -67,13 +67,15 @@ export async function runChatRequest(
   let activeFlow: BackendFlowType | null = null;
   let latestFiles: Record<string, string> | null = null;
   let streamedCandidate: CandidateEventPayload | null = null;
+  let suggestedProjectName: string | undefined;
+  const projectNameAtRequest = chatState.projectName;
   let streamFailed = false;
   let streamCompleted = false;
   let lastStageAt: number | undefined = startedAt;
 
   const {
     addMessage, appendMessageContent, setLoading, addThought, updateThought,
-    archiveThoughts, updatePhaseProgress, collapsePhase, updateProjectName,
+    archiveThoughts, updatePhaseProgress, collapsePhase,
     setCurrentFlow, setGeneration, markPendingThoughts, stageCandidate, finishCandidateRepair,
   } = useChatStore.getState();
   const { setIsAssembling } = useSandpackStore.getState();
@@ -198,6 +200,7 @@ export async function runChatRequest(
             ? {
               candidateId: `${runId}:candidate`, runId, projectId: request.projectId,
               baseVersionId: request.base.versionId, baseHash: request.base.hash, modelBaseHash: request.base.hash,
+              suggestedProjectName, projectNameAtRequest,
               operation: "create", prompt: request.content, assistantMessageId: assistantId,
               files: { ...latestFiles }, resources: request.base.resources.map((resource) => ({ ...resource })),
               changes: calculateCandidateChanges(request.base.files, latestFiles),
@@ -230,7 +233,7 @@ export async function runChatRequest(
       }
       if (stepType === "intent") {
         const productName = getIntentProductName(stepData);
-        if (productName) updateProjectName(productName);
+        if (request.operation === "generate" && productName) suggestedProjectName = productName;
       }
       const details = getThoughtDetails(stepType, "success", stepData);
       updateThought(assistantId, stepType, { status: "success", description: details.description, content: JSON.stringify(stepData, null, 2) });
