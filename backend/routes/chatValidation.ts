@@ -17,7 +17,7 @@ export interface ChatRequestData {
   messages: ChatMessage[];
   projectId?: string;
   mockConfig: unknown;
-  operation: "generate" | "edit";
+  operation: "generate" | "edit" | "chat";
   base?: EditBaseSnapshot;
   runId?: string;
 }
@@ -60,10 +60,10 @@ function readProjectId(value: unknown): string | undefined {
   return projectId;
 }
 
-function readOperation(value: unknown): "generate" | "edit" {
+function readOperation(value: unknown): "generate" | "edit" | "chat" {
   if (value === undefined) return "generate";
-  if (value !== "generate" && value !== "edit") {
-    throw new ChatValidationError("operation must be generate or edit");
+  if (value !== "generate" && value !== "edit" && value !== "chat") {
+    throw new ChatValidationError("operation must be generate, edit, or chat");
   }
   return value;
 }

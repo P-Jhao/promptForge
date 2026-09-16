@@ -75,7 +75,9 @@ export function useChat() {
         addMessage(assistantMessage);
         return;
       }
-      const operation = classification.intent === "edit" ? "edit" : "generate";
+      const operation = classification.intent === "edit"
+        ? "edit"
+        : classification.intent === "chat" ? "chat" : "generate";
       const base = await createBaseSnapshot(
         state.currentProjectId,
         state.versions.at(-1)?.versionId ?? null,

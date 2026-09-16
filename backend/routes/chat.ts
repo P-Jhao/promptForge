@@ -1,7 +1,7 @@
 import express, { type Request, type Response } from "express";
 import { buildAgent } from "../agents/graphs/main.graph.js";
 import { resolveRouteAdapter } from "../agents/adapters/routeRegistry.js";
-import type { RouteFlow } from "../agents/adapters/routeTypes.js";
+import type { RouteAdapterResult, RouteFlow } from "../agents/adapters/routeTypes.js";
 import {
   DEFAULT_MOCK_PRESET,
   resolveMockConfig,
@@ -41,6 +41,17 @@ const agents: Record<RouteFlow, ReturnType<typeof buildAgent>> = {
   traditional: buildAgent("traditional"),
   chat: buildAgent("chat"),
 };
+
+function createExplicitChatRoute(
+  messages: ChatRequestData["messages"],
+  mockConfig: Record<string, boolean>,
+): RouteAdapterResult {
+  return {
+    flow: "chat",
+    input: { messages, mockConfig },
+    meta: { routeType: "explicit-operation", classifier: "client" },
+  };
+}
 
 router.post("/", async (req: Request, res: Response): Promise<void> => {
   let requestData: ChatRequestData | undefined;
@@ -168,7 +179,9 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const routeResult = await resolveRouteAdapter({ messages, mockConfig });
+    const routeResult: RouteAdapterResult = requestData.operation === "chat"
+      ? createExplicitChatRoute(messages, mockConfig)
+      : await resolveRouteAdapter({ messages, mockConfig });
     console.log(`📝 [Route] 使用 ${routeResult.flow} 流程`);
     console.log("Using mockConfig:", JSON.stringify(mockConfig));
 

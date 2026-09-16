@@ -8,10 +8,12 @@ import { fileURLToPath } from "node:url";
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const require = createRequire(import.meta.url);
+const backendRequire = createRequire(path.join(rootDir, "backend/package.json"));
 const typescript = require(path.join(rootDir, "frontend/node_modules/typescript"));
 const intent = loadTsModule(path.join(rootDir, "frontend/src/lib/requestIntent.ts"));
 const requestHistory = loadTsModule(path.join(rootDir, "frontend/src/lib/requestHistory.ts"));
 const guard = loadTsModule(path.join(rootDir, "frontend/src/lib/newProjectGuard.ts"));
+const backendValidation = loadTsModule(path.join(rootDir, "backend/routes/chatValidation.ts"), {}, backendRequire);
 
 const intentCases = [
   ["做一个支持搜索的任务看板", false, "generate"],
@@ -21,6 +23,7 @@ const intentCases = [
   ["请解释这段代码", true, "chat"],
   ["请问如何修改按钮", true, "chat"],
   ["这个页面怎么样", true, "chat"],
+  ["请用一句话说明当前页面有哪些功能，不要修改代码。", true, "chat"],
   ["请修复页面", false, "clarify"],
   ["帮我处理一下", true, "clarify"],
 ];
@@ -54,6 +57,22 @@ assert.deepEqual(
 );
 assert.equal(requestHistory.exports.MAX_EDIT_HISTORY, 6);
 
+const parsedChatRequest = backendValidation.exports.parseChatRequest({
+  messages: [{ role: "user", content: "请用一句话说明当前页面有哪些功能，不要修改代码。" }],
+  operation: "chat",
+  mockConfig: { global: false },
+});
+assert.equal(parsedChatRequest.operation, "chat");
+const parsedDefaultRequest = backendValidation.exports.parseChatRequest({
+  messages: [{ role: "user", content: "做一个页面" }],
+  mockConfig: { global: true },
+});
+assert.equal(parsedDefaultRequest.operation, "generate");
+assert.throws(() => backendValidation.exports.parseChatRequest({
+  messages: [{ role: "user", content: "unknown" }],
+  operation: "unsupported",
+}), /generate, edit, or chat/);
+
 assert.equal(
   guard.exports.evaluateNewProjectDecision({ dirty: false, isLoading: false, candidatePresent: false }),
   "allow",
@@ -79,6 +98,7 @@ const sandpackView = readFileSync(path.join(rootDir, "frontend/src/components/pr
 const sandpackStore = readFileSync(path.join(rootDir, "frontend/src/store/sandpackStore.ts"), "utf8");
 const previewToolbar = readFileSync(path.join(rootDir, "frontend/src/components/preview/PreviewToolbar.tsx"), "utf8");
 const persistenceSource = readFileSync(path.join(rootDir, "frontend/src/hooks/useProjectPersistence.ts"), "utf8");
+const chatRouteSource = readFileSync(path.join(rootDir, "backend/routes/chat.ts"), "utf8");
 assert.doesNotMatch(chatPanel, /chat-operation-toggle|首次生成|基于当前代码修改/);
 assert.match(chatPanel, /sendMessage\(content, undefined, mockConfig\)/);
 assert.match(chatPanel, /isNewProjectRequest/);
@@ -94,6 +114,7 @@ assert.match(projectManager, /evaluateNewProjectDecision/);
 assert.match(projectManager, /router\.replace\("\/workspace"\)/);
 assert.match(sandpackView, /previousFiles === null && !hasProjectFiles/);
 assert.match(chatRunner, /request\.intent === "chat"/);
+assert.match(chatRunner, /activeFlow !== "traditional" \|\| request\.operation !== "edit" \|\| request\.intent !== "edit"/);
 assert.match(chatRunner, /activeFlow === "traditional" && latestFiles !== null/);
 assert.match(chatRunner, /stageCandidate\(stagedCandidate\)/);
 assert.match(chatHook, /limitEditHistory\(state\.messages\)/);
@@ -107,6 +128,9 @@ assert.match(sandpackStore, /previewManifest/);
 assert.match(previewToolbar, /previewFiles \?\? currentFiles/);
 assert.match(previewToolbar, /previewManifest/);
 assert.doesNotMatch(persistenceSource, /__resourceManifest/);
+assert.match(chatHook, /classification\.intent === "edit"\s+\? "edit"\s+: classification\.intent === "chat" \? "chat" : "generate"/);
+assert.match(chatRouteSource, /function createExplicitChatRoute/);
+assert.match(chatRouteSource, /const routeResult: RouteAdapterResult = requestData\.operation === "chat"\s+\? createExplicitChatRoute\(messages, mockConfig\)\s+: await resolveRouteAdapter/);
 
 const fakeZustand = {
   create(initializer) {
@@ -139,11 +163,14 @@ console.log(JSON.stringify({
   singleChatInput: true,
   candidateOnlyForTraditional: true,
   editHistoryBounded: true,
+  explicitChatOperation: parsedChatRequest.operation === "chat",
   presetCaseIsolation: true,
 }));
 
-function loadTsModule(filePath, replacements = {}) {
-  const source = readFileSync(filePath, "utf8");
+function loadTsModule(filePath, replacements = {}, moduleRequire = require, cache = new Map()) {
+  const absolutePath = path.resolve(filePath);
+  if (cache.has(absolutePath)) return cache.get(absolutePath);
+  const source = readFileSync(absolutePath, "utf8");
   const output = typescript.transpileModule(source, {
     compilerOptions: {
       module: typescript.ModuleKind.CommonJS,
@@ -151,7 +178,15 @@ function loadTsModule(filePath, replacements = {}) {
     },
   }).outputText;
   const moduleRecord = { exports: {} };
-  const localRequire = (specifier) => replacements[specifier] ?? require(specifier);
+  cache.set(absolutePath, moduleRecord);
+  const localRequire = (specifier) => {
+    if (replacements[specifier] !== undefined) return replacements[specifier];
+    if (specifier.startsWith(".")) {
+      const localPath = specifier.replace(/\.js$/, "");
+      return loadTsModule(path.resolve(path.dirname(absolutePath), `${localPath}.ts`), replacements, moduleRequire, cache).exports;
+    }
+    return moduleRequire(specifier);
+  };
   new Function("require", "module", "exports", output)(localRequire, moduleRecord, moduleRecord.exports);
   return moduleRecord;
 }

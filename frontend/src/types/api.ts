@@ -3,6 +3,9 @@
 import type { BackendFlowType, StepType } from "./flow";
 import type { CandidateChange, CandidateResourceReference } from "./candidate";
 
+/** 客户端请求可以明确声明的处理操作。 */
+export type ChatOperation = "generate" | "edit" | "chat";
+
 /**
  * SSE 流式事件的基础结构
  */
@@ -16,7 +19,7 @@ export interface StreamErrorData {
 /** 后端 flow 事件载荷 */
 export interface FlowEventData {
   flow: BackendFlowType;
-  operation?: "generate" | "chat" | "edit";
+  operation?: ChatOperation;
 }
 
 /** Chat flow 的文本增量事件载荷 */

@@ -1,4 +1,4 @@
-import type { ErrorStreamEvent } from "@/types/api";
+import type { ChatOperation, ErrorStreamEvent } from "@/types/api";
 import type { ChatMessage } from "@/types/message";
 import type { StepType } from "@/types/flow";
 import type { MockConfig } from "@/types/mock";
@@ -16,7 +16,7 @@ export interface ActiveRequest {
   repair?: RepairRequestContext;
 }
 
-export type RequestOperation = "generate" | "edit";
+export type RequestOperation = ChatOperation;
 
 export type Attachment = { type: "image"; url: string };
 

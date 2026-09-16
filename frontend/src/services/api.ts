@@ -2,6 +2,7 @@
 import type { ChatMessage } from "@/types/message";
 import type {
   CandidateStreamEvent,
+  ChatOperation,
   ModeEventData,
   StreamErrorData,
   StreamEvent,
@@ -46,7 +47,7 @@ export async function generateAppStream(
     messages: ChatMessage[];
     projectId?: string;
     mockConfig: MockConfig;
-    operation?: "generate" | "edit";
+    operation?: ChatOperation;
     base?: EditBaseSnapshot;
     runId?: string;
   },
