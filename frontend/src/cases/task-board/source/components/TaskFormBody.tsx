@@ -32,6 +32,20 @@ const statusOptions: { value: TaskStatus; label: string }[] = [
   { value: 'done', label: '已完成' },
 ];
 
+interface ErrorMsgProps {
+  name: string;
+  errors: Record<string, string>;
+}
+
+function ErrorMsg({ name, errors }: ErrorMsgProps) {
+  return errors[name] ? (
+    <p className="flex items-center gap-1 text-xs text-red-500 mt-1">
+      <AlertCircle className="h-3 w-3" />
+      {errors[name]}
+    </p>
+  ) : null;
+}
+
 export default function TaskFormBody({ values, errors = {}, submitting = false, onChange, onSubmit, onCancel }: TaskFormBodyProps) {
   const v = values ?? ({} as TaskFormValues);
   const err = errors ?? {};
@@ -42,14 +56,6 @@ export default function TaskFormBody({ values, errors = {}, submitting = false, 
     `w-full px-3 py-2 border rounded-lg bg-gray-50 focus:bg-white outline-none focus:ring-1 transition-all ${
       err[name] ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-blue-500 focus:ring-blue-500'
     }`;
-
-  const ErrorMsg = ({ name }: { name: string }) =>
-    err[name] ? (
-      <p className="flex items-center gap-1 text-xs text-red-500 mt-1">
-        <AlertCircle className="h-3 w-3" />
-        {err[name]}
-      </p>
-    ) : null;
 
   return (
     <form
@@ -68,7 +74,7 @@ export default function TaskFormBody({ values, errors = {}, submitting = false, 
           placeholder="输入任务标题"
           className={inputCls('title')}
         />
-        <ErrorMsg name="title" />
+        <ErrorMsg name="title" errors={err} />
       </div>
 
       <div>
@@ -80,7 +86,7 @@ export default function TaskFormBody({ values, errors = {}, submitting = false, 
           placeholder="输入任务描述"
           className={inputCls('description')}
         />
-        <ErrorMsg name="description" />
+        <ErrorMsg name="description" errors={err} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -95,7 +101,7 @@ export default function TaskFormBody({ values, errors = {}, submitting = false, 
             placeholder="负责人姓名"
             className={inputCls('assignee')}
           />
-          <ErrorMsg name="assignee" />
+          <ErrorMsg name="assignee" errors={err} />
         </div>
         <div>
           <label className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-1">
@@ -107,7 +113,7 @@ export default function TaskFormBody({ values, errors = {}, submitting = false, 
             onChange={(e) => field('dueDate', e.target.value)}
             className={inputCls('dueDate')}
           />
-          <ErrorMsg name="dueDate" />
+          <ErrorMsg name="dueDate" errors={err} />
         </div>
       </div>
 

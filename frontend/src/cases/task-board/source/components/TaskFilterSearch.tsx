@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Search, X, SlidersHorizontal } from 'lucide-react';
 import { useTasks } from '../hooks/useTask';
 
@@ -31,12 +31,6 @@ export default function TaskFilterSearch({ onFilterChange, className = '' }: Tas
     setPriorityFilter,
     clearSearch,
   } = useTasks();
-  const [localKeyword, setLocalKeyword] = useState<string>(searchTerm ?? '');
-
-  useEffect(() => {
-    setLocalKeyword(searchTerm ?? '');
-  }, [searchTerm]);
-
   useEffect(() => {
     onFilterChange?.({
       keyword: searchTerm ?? '',
@@ -46,13 +40,12 @@ export default function TaskFilterSearch({ onFilterChange, className = '' }: Tas
   }, [searchTerm, statusFilter, priorityFilter, onFilterChange]);
 
   const handleClear = () => {
-    setLocalKeyword('');
     clearSearch();
     setStatusFilter(null);
     setPriorityFilter(null);
   };
 
-  const hasFilter = Boolean((localKeyword ?? '').trim() || statusFilter || priorityFilter);
+  const hasFilter = Boolean((searchTerm ?? '').trim() || statusFilter || priorityFilter);
 
   return (
     <div className={`flex flex-col gap-3 md:flex-row md:items-center ${className}`}>
@@ -60,18 +53,16 @@ export default function TaskFilterSearch({ onFilterChange, className = '' }: Tas
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
         <input
           type="text"
-          value={localKeyword}
+          value={searchTerm ?? ''}
           onChange={(e) => {
-            setLocalKeyword(e.target.value);
             setSearchTerm(e.target.value);
           }}
           placeholder="搜索任务标题、描述或负责人..."
           className="w-full pl-10 pr-10 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all text-sm"
         />
-        {(localKeyword ?? '').length > 0 && (
+        {(searchTerm ?? '').length > 0 && (
           <button
             onClick={() => {
-              setLocalKeyword('');
               clearSearch();
             }}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
