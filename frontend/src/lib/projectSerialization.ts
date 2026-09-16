@@ -144,6 +144,8 @@ export function toProjectVersion(version: ProjectVersionDraft): ProjectVersion {
       modified: [...version.changes.modified],
       deleted: [...version.changes.deleted],
     },
+    label: version.label,
+    notes: version.notes,
     parentVersionId: version.parentVersionId,
     restoredFromVersionId: version.restoredFromVersionId,
   };
@@ -185,6 +187,8 @@ function serializeVersion(version: ProjectVersion, projectId: string): ProjectVe
       modified: [...version.changes.modified],
       deleted: [...version.changes.deleted],
     },
+    label: version.label,
+    notes: version.notes,
     parentVersionId: version.parentVersionId,
     restoredFromVersionId: version.restoredFromVersionId,
   };

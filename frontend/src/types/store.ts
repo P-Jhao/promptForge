@@ -2,7 +2,7 @@
 import type { ReactNode } from "react";
 import type { ChatMessage } from "./message";
 import type { FlowType, Phase, StepType } from "./flow";
-import type { ProjectHydration } from "./project";
+import type { ProjectHydration, VersionMetadata } from "./project";
 import type { CandidateState } from "./candidate";
 import type { RepairAttempt, ValidationErrorCategory, ValidationReport, ValidationStatus } from "./validation";
 
@@ -94,6 +94,9 @@ export interface ProjectVersion {
 
   /** 变更记录（相对于上一版本） */
   changes?: VersionChanges;
+  /** 可编辑的展示元数据；不会改变版本快照、hash 或版本号。 */
+  label?: string;
+  notes?: string;
   /** 恢复或编辑时的来源版本，用于追溯，不改变旧版本内容 */
   parentVersionId?: string;
   restoredFromVersionId?: string;
@@ -149,6 +152,7 @@ export interface ChatState {
 
   /** Version Actions */
   saveVersion: (version: Omit<ProjectVersion, "versionId">) => void; // 保存版本快照
+  updateVersionMetadata: (versionId: string, metadata: VersionMetadata) => void;
   incrementVersion: () => number; // 递增版本号并返回新版本号
   getCurrentThreadId: () => string; // 获取当前版本的 threadId
 

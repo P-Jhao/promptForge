@@ -11,6 +11,7 @@ import { useSandpackStore } from "@/store/sandpackStore";
 import { useChatStore } from "@/store/chatStore";
 import { Eye, Code2 } from "lucide-react";
 import { ProjectManager } from "./ProjectManager";
+import { useProjectPersistence } from "@/hooks/useProjectPersistence";
 // import { Settings, LogOut } from "lucide-react";
 import type { LayoutMode, AppShellProps } from "@/types/components";
 
@@ -30,6 +31,7 @@ import type { LayoutMode, AppShellProps } from "@/types/components";
 export function AppShell({ children }: AppShellProps) {
   const { viewMode, setViewMode } = useSandpackStore();
   const projectId = useChatStore((state) => state.currentProjectId);
+  const persistence = useProjectPersistence();
 
   /**
    * 当前布局模式
@@ -90,7 +92,7 @@ export function AppShell({ children }: AppShellProps) {
           </Link>
         </div>
 
-        <ProjectManager />
+        <ProjectManager persistence={persistence} />
 
         {/* 中间 Toggle Controls */}
         <div className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
@@ -194,7 +196,7 @@ export function AppShell({ children }: AppShellProps) {
           }`}
         >
           <div className="flex-1 min-h-0 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-            <ChatPanel key={projectId} />
+            <ChatPanel key={projectId} persistence={persistence} />
           </div>
         </div>
 

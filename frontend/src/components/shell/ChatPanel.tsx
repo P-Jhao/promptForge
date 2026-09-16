@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowUpRight, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { useChat } from "@/hooks/useChat";
+import type { ProjectPersistenceApi } from "@/hooks/useProjectPersistence";
 import { useChatStore } from "@/store/chatStore";
 import { MockModeToggle } from "./MockModeToggle";
 import { ThoughtChain } from "./ThoughtChain";
@@ -19,10 +20,11 @@ const REQUEST_SUGGESTIONS = [
   "做一个面向前端开发者的项目管理后台",
 ];
 
-export function ChatPanel() {
+export function ChatPanel({ persistence }: { persistence: ProjectPersistenceApi }) {
   const { messages, isLoading, sendMessage, cancelMessage, retryLastMessage, canRetry, candidate, applyCandidate, repairCandidate, discardCandidate } = useChat();
   const thoughts = useChatStore((state) => state.messageThoughts);
   const versions = useChatStore((state) => state.versions);
+  const currentVersion = useChatStore((state) => state.currentVersion);
   const projectName = useChatStore((state) => state.projectName);
   const generation = useChatStore((state) => state.generation);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -103,7 +105,14 @@ export function ChatPanel() {
                 }]} />
               )}
               {message.role === "assistant" && messageThought.length > 0 && <div className="mt-2"><ThoughtChain thoughts={messageThought} /></div>}
-              {version && <VersionCard version={version} projectName={projectName} />}
+              {version && (
+                <VersionCard
+                  version={version}
+                  projectName={projectName}
+                  isCurrentVersion={version.versionNumber === currentVersion}
+                  onMetadataSave={persistence.updateVersionMetadata}
+                />
+              )}
             </div>
           );
         })}

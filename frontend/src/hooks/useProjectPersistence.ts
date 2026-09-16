@@ -12,7 +12,7 @@ import {
   snapshotToDraft,
   toProjectVersion,
 } from "@/lib/projectSerialization";
-import type { ProjectRepository, ProjectSnapshot, ProjectStorageStatus, ProjectSummary } from "@/types/project";
+import type { ProjectRepository, ProjectSnapshot, ProjectStorageStatus, ProjectSummary, VersionMetadata } from "@/types/project";
 import type { ProjectVersion } from "@/types/store";
 
 export interface ProjectPersistenceApi {
@@ -26,6 +26,7 @@ export interface ProjectPersistenceApi {
   saveAs: (name: string) => Promise<void>;
   openProject: (projectId: string) => Promise<void>;
   restoreVersion: (version: ProjectVersion) => Promise<void>;
+  updateVersionMetadata: (versionId: string, metadata: VersionMetadata) => Promise<void>;
   renameProject: (projectId: string, name: string, expectedRevision?: number) => Promise<void>;
   deleteProject: (projectId: string, expectedRevision?: number) => Promise<void>;
   refreshProjects: () => Promise<void>;
@@ -41,6 +42,7 @@ export function useProjectPersistence(): ProjectPersistenceApi {
   const setCurrentProject = useChatStore((state) => state.setCurrentProject);
   const hydrateProject = useChatStore((state) => state.hydrateProject);
   const saveVersion = useChatStore((state) => state.saveVersion);
+  const updateVersionMetadataInStore = useChatStore((state) => state.updateVersionMetadata);
   const incrementVersion = useChatStore((state) => state.incrementVersion);
   const getCurrentThreadId = useChatStore((state) => state.getCurrentThreadId);
   const currentFiles = useSandpackStore((state) => state.currentFiles ?? state.generatedFiles);
@@ -204,6 +206,37 @@ export function useProjectPersistence(): ProjectPersistenceApi {
     return revision;
   }, [projectId]);
 
+  const updateVersionMetadata = useCallback(async (versionId: string, metadata: VersionMetadata) => {
+    setStatus("saving");
+    setError(null);
+    try {
+      if (expectedRevisionRef.current === null) {
+        updateVersionMetadataInStore(versionId, metadata);
+        setStatus("idle");
+        return;
+      }
+      const result = await repositoryRef.current!.updateVersionMetadata(
+        projectId,
+        versionId,
+        metadata,
+        resolveRevision(projectId),
+      );
+      updateVersionMetadataInStore(versionId, { label: result.version.label, notes: result.version.notes });
+      const nextVersions = draft.versions.map((version) => version.versionId === versionId
+        ? { ...version, label: result.version.label, notes: result.version.notes }
+        : version);
+      savedFingerprintRef.current = projectDraftFingerprint({ ...draft, versions: nextVersions });
+      expectedRevisionRef.current = result.revision;
+      setWarning(null);
+      setStatus("saved");
+      await refreshProjects();
+    } catch (caught: unknown) {
+      setStatus("error");
+      setError(caught instanceof Error ? caught.message : "版本元数据更新失败，当前内容已保留");
+      throw caught;
+    }
+  }, [draft, projectId, refreshProjects, resolveRevision, updateVersionMetadataInStore]);
+
   const renameProject = useCallback(async (targetProjectId: string, name: string, expectedRevision?: number) => {
     setStatus("saving");
     setError(null);
@@ -246,5 +279,5 @@ export function useProjectPersistence(): ProjectPersistenceApi {
     }
   }, [projectId, refreshProjects, resolveRevision]);
 
-  return { status, dirty, error, warning, projects, listLoading, saveCurrentProject, saveAs, openProject, restoreVersion, renameProject, deleteProject, refreshProjects };
+  return { status, dirty, error, warning, projects, listLoading, saveCurrentProject, saveAs, openProject, restoreVersion, updateVersionMetadata, renameProject, deleteProject, refreshProjects };
 }

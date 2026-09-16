@@ -10,6 +10,7 @@ import type {
 import type { CandidateState } from "@/types/candidate";
 import { updateValidationLayer } from "@/lib/validationReport";
 import type { RepairAttempt, ValidationErrorCategory, ValidationStatus } from "@/types/validation";
+import type { VersionMetadata } from "@/types/project";
 
 // Re-export types for backward compatibility
 export type { ThoughtItem, ProjectVersion, VersionChanges };
@@ -229,7 +230,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
   // 递增版本号并返回新版本号
   incrementVersion: () => {
     const state = get();
-    const newVersion = state.currentVersion + 1;
+    const highestSavedVersion = state.versions.reduce(
+      (highest, version) => Math.max(highest, version.versionNumber),
+      0,
+    );
+    const newVersion = Math.max(state.currentVersion, highestSavedVersion) + 1;
     set({ currentVersion: newVersion });
     return newVersion;
   },
@@ -243,9 +248,25 @@ export const useChatStore = create<ChatState>((set, get) => ({
   // 保存版本快照
   saveVersion: (versionData) =>
     set((state) => {
+      if (!Number.isSafeInteger(versionData.versionNumber) || versionData.versionNumber < 1) {
+        throw new Error("版本号必须从 v1 开始");
+      }
+      const highestSavedVersion = state.versions.reduce(
+        (highest, version) => Math.max(highest, version.versionNumber),
+        0,
+      );
+      if (versionData.versionNumber <= highestSavedVersion) {
+        throw new Error(`版本 v${String(versionData.versionNumber)} 已存在或早于当前版本，拒绝覆盖历史快照`);
+      }
       const versionId = `v${versionData.versionNumber}`;
       const newVersion: ProjectVersion = {
         ...versionData,
+        files: versionData.files === null ? null : { ...versionData.files },
+        changes: versionData.changes === undefined ? undefined : {
+          added: [...versionData.changes.added],
+          modified: [...versionData.changes.modified],
+          deleted: [...versionData.changes.deleted],
+        },
         versionId,
       };
 
@@ -258,6 +279,20 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
       return {
         versions: [...state.versions, newVersion],
+        currentVersion: Math.max(state.currentVersion, versionData.versionNumber),
+      };
+    }),
+
+  updateVersionMetadata: (versionId: string, metadata: VersionMetadata) =>
+    set((state) => {
+      const version = state.versions.find((item) => item.versionId === versionId);
+      if (version === undefined) throw new Error(`版本 ${versionId} 不存在，无法更新元数据`);
+      if (metadata.label !== undefined && typeof metadata.label !== "string") throw new Error("版本标签必须是文本");
+      if (metadata.notes !== undefined && typeof metadata.notes !== "string") throw new Error("版本备注必须是文本");
+      return {
+        versions: state.versions.map((item) => item.versionId === versionId
+          ? { ...item, label: metadata.label, notes: metadata.notes }
+          : item),
       };
     }),
 

@@ -65,6 +65,8 @@ export function parseVersionRecord(value: unknown): VersionRecord {
     filesHash,
     fileCount: requireInteger(record.fileCount, "版本文件数"),
     changes,
+    label: optionalString(record.label),
+    notes: optionalString(record.notes),
     parentVersionId: optionalId(record.parentVersionId),
     restoredFromVersionId: optionalId(record.restoredFromVersionId),
   };

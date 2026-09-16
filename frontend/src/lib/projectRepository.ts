@@ -16,8 +16,14 @@ import {
   parseWorkspaceRecord,
   projectSummary,
 } from "./projectStorageCodec";
-import { deleteProjectInDatabase, findDeletedProject, parseDeletedProjectRecord, renameProjectInDatabase } from "./projectRepositoryMutations";
-import { PROJECT_SCHEMA_VERSION, type ProjectDraft, type ProjectRecord, type ProjectResourceDraft, type ProjectSnapshot, type ProjectRepository, type ProjectSummary, type ResourceRecord, type RunRecord, type VersionRecord, type WorkspaceRecord } from "@/types/project";
+import {
+  deleteProjectInDatabase,
+  findDeletedProject,
+  parseDeletedProjectRecord,
+  renameProjectInDatabase,
+  updateVersionMetadataInDatabase,
+} from "./projectRepositoryMutations";
+import { PROJECT_SCHEMA_VERSION, type ProjectDraft, type ProjectRecord, type ProjectResourceDraft, type ProjectSnapshot, type ProjectRepository, type ProjectSummary, type ResourceRecord, type RunRecord, type VersionMetadata, type VersionRecord, type WorkspaceRecord } from "@/types/project";
 
 type RawRecords = Record<(typeof PROJECT_STORES)[keyof typeof PROJECT_STORES], unknown[]>;
 type ProjectStoreKey = (typeof PROJECT_STORES)[keyof typeof PROJECT_STORES];
@@ -116,7 +122,7 @@ export class IndexedDbProjectRepository implements ProjectRepository {
           const existingVersions = (done.versions as unknown[]).filter((item) => rawId(item, "projectId") === draft.projectId).map(parseVersionRecord);
           for (const next of prepared.versions) {
             const previous = existingVersions.find((version) => version.versionId === next.versionId);
-            if (previous !== undefined && stableStringify(previous) !== stableStringify(next)) throw new ProjectStorageError("conflict", `不可变版本 ${next.versionId} 已被修改，保存已阻止。`);
+            if (previous !== undefined && immutableVersionFingerprint(previous) !== immutableVersionFingerprint(next)) throw new ProjectStorageError("conflict", `不可变版本 ${next.versionId} 已被修改，保存已阻止。`);
           }
           stores.projects.put(project);
           stores.workspaces.put(workspace);
@@ -146,6 +152,10 @@ export class IndexedDbProjectRepository implements ProjectRepository {
 
   async deleteProject(projectId: string, expectedRevision: number): Promise<void> {
     return deleteProjectInDatabase(await this.getDatabase(), projectId, expectedRevision);
+  }
+
+  async updateVersionMetadata(projectId: string, versionId: string, metadata: VersionMetadata, expectedRevision: number) {
+    return updateVersionMetadataInDatabase(await this.getDatabase(), projectId, versionId, metadata, expectedRevision);
   }
 
   private async readAll(): Promise<RawRecords> {
@@ -216,6 +226,13 @@ function mergeVersions(existing: VersionRecord[], next: VersionRecord[]): Versio
   const byId = new Map(existing.map((version) => [version.versionId, version]));
   for (const version of next) byId.set(version.versionId, version);
   return [...byId.values()].sort((first, second) => first.versionNumber - second.versionNumber);
+}
+
+function immutableVersionFingerprint(version: VersionRecord): string {
+  const snapshot = { ...version };
+  delete snapshot.label;
+  delete snapshot.notes;
+  return stableStringify(snapshot);
 }
 
 function rawId(value: unknown, field: string): string | null {

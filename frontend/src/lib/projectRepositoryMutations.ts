@@ -3,8 +3,15 @@ import {
   PROJECT_STORES,
   ProjectStorageError,
 } from "./projectStorage";
-import { parseProjectRecord, projectSummary } from "./projectStorageCodec";
-import type { DeletedProjectRecord, ProjectRecord, ProjectSummary } from "@/types/project";
+import { parseProjectRecord, parseVersionRecord, projectSummary } from "./projectStorageCodec";
+import type {
+  DeletedProjectRecord,
+  ProjectRecord,
+  ProjectSummary,
+  UpdateVersionMetadataResult,
+  VersionMetadata,
+  VersionRecord,
+} from "@/types/project";
 
 type ProjectStoreKey = (typeof PROJECT_STORES)[keyof typeof PROJECT_STORES];
 
@@ -118,6 +125,73 @@ export async function deleteProjectInDatabase(database: IDBDatabase, projectId: 
   });
 }
 
+export async function updateVersionMetadataInDatabase(
+  database: IDBDatabase,
+  projectId: string,
+  versionId: string,
+  metadata: VersionMetadata,
+  expectedRevision: number,
+): Promise<UpdateVersionMetadataResult> {
+  requireMutationId(projectId, "项目 ID");
+  requireMutationId(versionId, "版本 ID");
+  validateExpectedRevision(expectedRevision);
+  const normalized = normalizeVersionMetadata(metadata);
+  return new Promise<UpdateVersionMetadataResult>((resolve, reject) => {
+    let settled = false;
+    let result: UpdateVersionMetadataResult | null = null;
+    let transaction: IDBTransaction;
+    try {
+      transaction = database.transaction(
+        [PROJECT_STORES.projects, PROJECT_STORES.versions, PROJECT_STORES.deletedProjects],
+        "readwrite",
+      );
+      const projects = transaction.objectStore(PROJECT_STORES.projects);
+      const versions = transaction.objectStore(PROJECT_STORES.versions);
+      const deletedProjects = transaction.objectStore(PROJECT_STORES.deletedProjects);
+      const requests = {
+        project: projects.get(projectId),
+        version: versions.get(versionId),
+        deletedProject: deletedProjects.get(projectId),
+      };
+      transaction.oncomplete = () => {
+        if (settled) return;
+        settled = true;
+        if (result === null) reject(new ProjectStorageError("write", "版本元数据更新未完成，版本内容未改变。"));
+        else resolve(result);
+      };
+      transaction.onerror = () => failMutation(transaction.error, "更新版本元数据", transaction, settled, reject, () => { settled = true; });
+      transaction.onabort = () => failMutation(transaction.error, "更新版本元数据", transaction, settled, reject, () => { settled = true; });
+      let loaded = 0;
+      const inspect = (): void => {
+        loaded += 1;
+        if (loaded !== Object.keys(requests).length || settled) return;
+        try {
+          if (requests.deletedProject.result !== undefined) throw new ProjectStorageError("conflict", "项目已被删除，版本元数据更新已拒绝。" );
+          if (requests.project.result === undefined) throw new ProjectStorageError("conflict", "项目不存在或已被删除，版本元数据更新已拒绝。" );
+          if (requests.version.result === undefined) throw new ProjectStorageError("conflict", `版本 ${versionId} 不存在，元数据更新已拒绝。`);
+          const project = parseProjectRecord(requests.project.result);
+          const version = parseVersionRecordForMutation(requests.version.result);
+          if (project.revision !== expectedRevision) throw new ProjectStorageError("conflict", `项目修订号已变化（当前 ${project.revision}，页面基于 ${String(expectedRevision)}），版本元数据更新已阻止。`);
+          if (version.projectId !== projectId) throw new ProjectStorageError("conflict", `版本 ${versionId} 不属于当前项目，元数据更新已拒绝。`);
+          const nextVersion = withVersionMetadata(version, normalized);
+          const nextRevision = project.revision + 1;
+          versions.put(nextVersion);
+          projects.put({ ...project, updatedAt: Date.now(), revision: nextRevision });
+          result = { version: nextVersion, revision: nextRevision };
+        } catch (error: unknown) {
+          failMutation(error, "更新版本元数据", transaction, settled, reject, () => { settled = true; });
+        }
+      };
+      for (const request of Object.values(requests)) {
+        request.onsuccess = inspect;
+        request.onerror = () => failMutation(request.error, "更新版本元数据", transaction, settled, reject, () => { settled = true; });
+      }
+    } catch (error: unknown) {
+      reject(toStorageError(error, "更新版本元数据"));
+    }
+  });
+}
+
 function getStores(transaction: IDBTransaction): Record<ProjectStoreKey, IDBObjectStore> {
   return Object.fromEntries(Object.values(PROJECT_STORES).map((name) => [name, transaction.objectStore(name)])) as Record<ProjectStoreKey, IDBObjectStore>;
 }
@@ -136,6 +210,43 @@ function requireProjectName(value: string): string {
   const name = value.trim();
   if (name.length === 0 || name.length > 200) throw new ProjectStorageError("write", "项目名称必须为 1 到 200 个字符。" );
   return name;
+}
+
+function requireMutationId(value: string, label: string): void {
+  if (typeof value !== "string" || value.trim().length === 0 || value.length > 200 || value.includes("/")) {
+    throw new ProjectStorageError("conflict", `${label}无效，操作已拒绝。`);
+  }
+}
+
+function normalizeVersionMetadata(metadata: VersionMetadata): VersionMetadata {
+  if (typeof metadata !== "object" || metadata === null || Array.isArray(metadata)) {
+    throw new ProjectStorageError("write", "版本元数据格式无效。" );
+  }
+  return {
+    label: normalizeMetadataText(metadata.label, "版本标签", 200),
+    notes: normalizeMetadataText(metadata.notes, "版本备注", 4000),
+  };
+}
+
+function normalizeMetadataText(value: string | undefined, label: string, maxLength: number): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string") throw new ProjectStorageError("write", `${label}必须是文本。`);
+  const text = value.trim();
+  if (text.length > maxLength) throw new ProjectStorageError("write", `${label}不能超过 ${String(maxLength)} 个字符。`);
+  return text.length === 0 ? undefined : text;
+}
+
+function parseVersionRecordForMutation(value: unknown): VersionRecord {
+  return parseVersionRecord(value);
+}
+
+function withVersionMetadata(version: VersionRecord, metadata: VersionMetadata): VersionRecord {
+  const next: VersionRecord = { ...version };
+  if (metadata.label === undefined) delete next.label;
+  else next.label = metadata.label;
+  if (metadata.notes === undefined) delete next.notes;
+  else next.notes = metadata.notes;
+  return next;
 }
 
 function validateExpectedRevision(revision: number): void {

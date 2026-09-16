@@ -53,8 +53,15 @@ export interface ProjectVersionDraft {
     modified: string[];
     deleted: string[];
   };
+  label?: string;
+  notes?: string;
   parentVersionId?: string;
   restoredFromVersionId?: string;
+}
+
+export interface VersionMetadata {
+  label?: string;
+  notes?: string;
 }
 
 export interface ProjectRunDraft {
@@ -154,12 +161,18 @@ export interface SaveProjectResult {
   revision: number;
 }
 
+export interface UpdateVersionMetadataResult {
+  version: VersionRecord;
+  revision: number;
+}
+
 export interface ProjectRepository {
   listProjects(): Promise<ProjectSummary[]>;
   loadProject(projectId: string): Promise<ProjectSnapshot | null>;
   saveProject(draft: ProjectDraft, expectedRevision: number | null): Promise<SaveProjectResult>;
   renameProject(projectId: string, name: string, expectedRevision: number): Promise<ProjectSummary>;
   deleteProject(projectId: string, expectedRevision: number): Promise<void>;
+  updateVersionMetadata(projectId: string, versionId: string, metadata: VersionMetadata, expectedRevision: number): Promise<UpdateVersionMetadataResult>;
 }
 
 export interface ProjectHydration {

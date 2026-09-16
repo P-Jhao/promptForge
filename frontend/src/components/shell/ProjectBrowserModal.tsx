@@ -8,6 +8,7 @@ import type { ProjectMutationTarget } from "./ProjectMutationDialogs";
 interface ProjectBrowserModalProps {
   projects: ProjectSummary[];
   versions: ProjectVersion[];
+  currentVersion: number;
   listLoading: boolean;
   busy: boolean;
   isLoading: boolean;
@@ -21,7 +22,7 @@ interface ProjectBrowserModalProps {
   onDelete: (target: ProjectMutationTarget) => void;
 }
 
-export function ProjectBrowserModal({ projects, versions, listLoading, busy, isLoading, isAssembling, candidatePresent, storageSaving, onClose, onOpen, onRestore, onRename, onDelete }: ProjectBrowserModalProps) {
+export function ProjectBrowserModal({ projects, versions, currentVersion, listLoading, busy, isLoading, isAssembling, candidatePresent, storageSaving, onClose, onOpen, onRestore, onRename, onDelete }: ProjectBrowserModalProps) {
   const itemDisabled = busy || isLoading || isAssembling || candidatePresent || storageSaving;
   return (
     <div className="project-modal-backdrop" role="presentation">
@@ -39,7 +40,7 @@ export function ProjectBrowserModal({ projects, versions, listLoading, busy, isL
               <div className="project-list-item" key={project.projectId}>
                 <button type="button" className="project-list-open" onClick={() => onOpen(project.projectId)} disabled={itemDisabled}>
                   <strong>{project.name}</strong>
-                  <span>版本 {project.currentVersion} · 修订 {project.revision}</span>
+                  <span>已接受版本 {project.currentVersion > 0 ? `v${String(project.currentVersion)}` : "尚无"} · 诊断修订 {project.revision}</span>
                 </button>
                 <div className="project-list-actions" aria-label={`${project.name} 操作`}>
                   <button type="button" onClick={() => onRename(target)} disabled={itemDisabled} aria-label={`重命名 ${project.name}`}>重命名</button>
@@ -54,8 +55,8 @@ export function ProjectBrowserModal({ projects, versions, listLoading, busy, isL
           {versions.length === 0 && <p className="project-modal-note">尚无已接受版本。</p>}
           {[...versions].reverse().map((version) => (
             <button type="button" key={version.versionId} className="project-history-item" disabled={version.files === null || itemDisabled} onClick={() => onRestore(version)}>
-              <span>版本 {version.versionNumber} · {version.operation === "restore" ? "恢复" : version.operation === "create" ? "创建" : "编辑"}</span>
-              <small>{version.files === null ? "无文件快照" : `${version.fileCount} 个文件`}</small>
+              <span>{version.versionNumber === currentVersion ? "当前版本" : "历史版本"} · {version.operation === "restore" ? "恢复产生" : "已接受"} · v{version.versionNumber}</span>
+              <small>{version.files === null ? "无文件快照" : version.restoredFromVersionId === undefined ? `${version.fileCount} 个文件` : `恢复自 ${version.restoredFromVersionId} · ${version.fileCount} 个文件`}{version.label === undefined ? "" : ` · ${version.label}`}</small>
             </button>
           ))}
         </div>
