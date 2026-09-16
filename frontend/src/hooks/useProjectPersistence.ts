@@ -26,6 +26,8 @@ export interface ProjectPersistenceApi {
   saveAs: (name: string) => Promise<void>;
   openProject: (projectId: string) => Promise<void>;
   restoreVersion: (version: ProjectVersion) => Promise<void>;
+  renameProject: (projectId: string, name: string, expectedRevision?: number) => Promise<void>;
+  deleteProject: (projectId: string, expectedRevision?: number) => Promise<void>;
   refreshProjects: () => Promise<void>;
 }
 
@@ -196,5 +198,53 @@ export function useProjectPersistence(): ProjectPersistenceApi {
     setError(null);
   }, [getCurrentThreadId, incrementVersion, saveVersion, setGeneratedFiles]);
 
-  return { status, dirty, error, warning, projects, listLoading, saveCurrentProject, saveAs, openProject, restoreVersion, refreshProjects };
+  const resolveRevision = useCallback((targetProjectId: string, expectedRevision?: number): number => {
+    const revision = targetProjectId === projectId ? expectedRevisionRef.current ?? expectedRevision : expectedRevision;
+    if (revision === undefined || revision === null) throw new Error("项目尚未保存或缺少当前修订号，无法执行此操作。请先保存或刷新项目列表。" );
+    return revision;
+  }, [projectId]);
+
+  const renameProject = useCallback(async (targetProjectId: string, name: string, expectedRevision?: number) => {
+    setStatus("saving");
+    setError(null);
+    try {
+      const result = await repositoryRef.current!.renameProject(targetProjectId, name, resolveRevision(targetProjectId, expectedRevision));
+      if (targetProjectId === projectId) {
+        setCurrentProject(result.projectId, result.name);
+        expectedRevisionRef.current = result.revision;
+        savedFingerprintRef.current = projectDraftFingerprint({ ...draft, name: result.name });
+        setWarning(null);
+      }
+      setStatus(targetProjectId === projectId ? "saved" : "idle");
+      await refreshProjects();
+    } catch (caught: unknown) {
+      setStatus("error");
+      setError(caught instanceof Error ? caught.message : "重命名失败，当前内容已保留");
+      throw caught;
+    }
+  }, [draft, projectId, refreshProjects, resolveRevision, setCurrentProject]);
+
+  const deleteProject = useCallback(async (targetProjectId: string, expectedRevision?: number) => {
+    setStatus("saving");
+    setError(null);
+    try {
+      const revision = resolveRevision(targetProjectId, expectedRevision);
+      await repositoryRef.current!.deleteProject(targetProjectId, revision);
+      if (targetProjectId === projectId) {
+        expectedRevisionRef.current = null;
+        savedFingerprintRef.current = null;
+        setWarning(null);
+        setStatus("idle");
+      } else {
+        setStatus("saved");
+      }
+      await refreshProjects();
+    } catch (caught: unknown) {
+      setStatus("error");
+      setError(caught instanceof Error ? caught.message : "删除失败，当前内容已保留");
+      throw caught;
+    }
+  }, [projectId, refreshProjects, resolveRevision]);
+
+  return { status, dirty, error, warning, projects, listLoading, saveCurrentProject, saveAs, openProject, restoreVersion, renameProject, deleteProject, refreshProjects };
 }

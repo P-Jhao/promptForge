@@ -124,6 +124,13 @@ export interface ResourceRecord extends ProjectResourceDraft {
   schemaVersion: typeof PROJECT_SCHEMA_VERSION;
 }
 
+/** A tombstone prevents a stale tab from recreating a deleted project. */
+export interface DeletedProjectRecord {
+  projectId: string;
+  deletedAt: number;
+  deletedRevision: number;
+}
+
 export interface ProjectSnapshot {
   project: ProjectRecord;
   workspace: WorkspaceRecord;
@@ -151,6 +158,8 @@ export interface ProjectRepository {
   listProjects(): Promise<ProjectSummary[]>;
   loadProject(projectId: string): Promise<ProjectSnapshot | null>;
   saveProject(draft: ProjectDraft, expectedRevision: number | null): Promise<SaveProjectResult>;
+  renameProject(projectId: string, name: string, expectedRevision: number): Promise<ProjectSummary>;
+  deleteProject(projectId: string, expectedRevision: number): Promise<void>;
 }
 
 export interface ProjectHydration {

@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, FolderOpen, History, Plus, Save, X } from "lucide-react";
+import { Copy, FolderOpen, Plus, Save, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -10,6 +10,9 @@ import { useProjectPersistence } from "@/hooks/useProjectPersistence";
 import { storageStatusLabel } from "@/lib/projectStorage";
 import { evaluateNewProjectDecision } from "@/lib/newProjectGuard";
 import type { ProjectVersion } from "@/types/store";
+import { DeleteProjectDialog, RenameProjectDialog } from "./ProjectMutationDialogs";
+import { ProjectBrowserModal } from "./ProjectBrowserModal";
+import { useProjectManagerMutations } from "@/hooks/useProjectManagerMutations";
 
 type PendingAction =
   | { kind: "new" }
@@ -26,6 +29,7 @@ export function ProjectManager() {
   const createNewProject = useChatStore((state) => state.createNewProject);
   const updateProjectName = useChatStore((state) => state.updateProjectName);
   const clearGeneratedFiles = useSandpackStore((state) => state.clearGeneratedFiles);
+  const isAssembling = useSandpackStore((state) => state.isAssembling);
   const persistence = useProjectPersistence();
   const { refreshProjects } = persistence;
   const [showBrowser, setShowBrowser] = useState(false);
@@ -40,13 +44,20 @@ export function ProjectManager() {
   }, [refreshProjects]);
 
   const execute = async (action: PendingAction): Promise<void> => {
+    if (action.kind !== "new") {
+      const latestChat = useChatStore.getState();
+      if (latestChat.isLoading || latestChat.candidate !== null || useSandpackStore.getState().isAssembling) {
+        toast.info("当前请求或校验仍在进行，请完成后再切换项目");
+        return;
+      }
+    }
     if (action.kind === "new") {
       const decision = evaluateNewProjectDecision({
         dirty: false,
         isLoading: useChatStore.getState().isLoading,
         candidatePresent: useChatStore.getState().candidate !== null,
       });
-      if (decision !== "allow") {
+      if (decision !== "allow" || useSandpackStore.getState().isAssembling) {
         toast.info(decision === "blocked-loading" ? "当前请求仍在进行，请稍后再新建项目" : "请先应用或放弃当前候选");
         return;
       }
@@ -72,6 +83,10 @@ export function ProjectManager() {
   };
 
   const requestNewProject = (): void => {
+    if (isAssembling) {
+      toast.info("当前项目仍在写入预览，请稍后再新建项目");
+      return;
+    }
     const decision = evaluateNewProjectDecision({
       dirty: persistence.dirty,
       isLoading,
@@ -93,9 +108,32 @@ export function ProjectManager() {
       setShowBrowser(false);
       return;
     }
+    if (isLoading || isAssembling || candidate !== null || busy) {
+      toast.info("当前请求或校验仍在进行，请完成后再切换项目");
+      return;
+    }
     if (persistence.dirty) setPending(action);
     else void execute(action);
   };
+
+  const mutations = useProjectManagerMutations({
+    projectId,
+    isLoading,
+    isAssembling,
+    candidatePresent: candidate !== null,
+    dirty: persistence.dirty,
+    storageSaving: persistence.status === "saving",
+    busy,
+    setBusy,
+    setShowBrowser,
+    persistence,
+    onCurrentProjectDeleted: () => {
+      createNewProject();
+      clearGeneratedFiles();
+      setShowBrowser(false);
+      router.replace("/workspace");
+    },
+  });
 
   const save = (): void => {
     void persistence.saveCurrentProject().catch(() => undefined);
@@ -183,34 +221,21 @@ export function ProjectManager() {
       {persistence.warning !== null && <p className="project-storage-warning" role="status">{persistence.warning}</p>}
 
       {showBrowser && (
-        <div className="project-modal-backdrop" role="presentation">
-          <section className="project-modal" role="dialog" aria-modal="true" aria-labelledby="project-browser-title">
-            <div className="project-modal-head">
-              <h2 id="project-browser-title">打开本地项目</h2>
-              <button type="button" onClick={() => setShowBrowser(false)} aria-label="关闭项目列表"><X size={16} /></button>
-            </div>
-            {persistence.listLoading && <p className="project-modal-note">正在读取本地项目…</p>}
-            {!persistence.listLoading && persistence.projects.length === 0 && <p className="project-modal-note">未找到本地项目，可能是首次访问、浏览器变化或站点数据已被清除。</p>}
-            <div className="project-list">
-              {persistence.projects.map((project) => (
-                <button type="button" key={project.projectId} className="project-list-item" onClick={() => requestAction({ kind: "open", projectId: project.projectId })}>
-                  <strong>{project.name}</strong>
-                  <span>版本 {project.currentVersion} · 修订 {project.revision}</span>
-                </button>
-              ))}
-            </div>
-            <div className="project-history">
-              <h3><History size={14} /> 当前项目版本历史</h3>
-              {versions.length === 0 && <p className="project-modal-note">尚无已接受版本。</p>}
-              {[...versions].reverse().map((version) => (
-                <button type="button" key={version.versionId} className="project-history-item" disabled={version.files === null || busy || isLoading || candidateBlocksSwitch} onClick={() => requestAction({ kind: "restore", version })}>
-                  <span>版本 {version.versionNumber} · {version.operation === "restore" ? "恢复" : version.operation === "create" ? "创建" : "编辑"}</span>
-                  <small>{version.files === null ? "无文件快照" : `${version.fileCount} 个文件`}</small>
-                </button>
-              ))}
-            </div>
-          </section>
-        </div>
+        <ProjectBrowserModal
+          projects={persistence.projects}
+          versions={versions}
+          listLoading={persistence.listLoading}
+          busy={busy}
+          isLoading={isLoading}
+          isAssembling={isAssembling}
+          candidatePresent={candidateBlocksSwitch}
+          storageSaving={persistence.status === "saving"}
+          onClose={() => setShowBrowser(false)}
+          onOpen={(targetProjectId) => requestAction({ kind: "open", projectId: targetProjectId })}
+          onRestore={(version) => requestAction({ kind: "restore", version })}
+          onRename={mutations.requestRename}
+          onDelete={mutations.requestDelete}
+        />
       )}
 
       {showSaveAs && (
@@ -228,6 +253,26 @@ export function ProjectManager() {
             </div>
           </section>
         </div>
+      )}
+
+      {mutations.renameTarget !== null && (
+        <RenameProjectDialog
+          target={mutations.renameTarget}
+          name={mutations.renameName}
+          busy={busy}
+          onNameChange={mutations.setRenameName}
+          onCancel={() => mutations.setRenameTarget(null)}
+          onConfirm={() => void mutations.confirmRename()}
+        />
+      )}
+
+      {mutations.deleteTarget !== null && (
+        <DeleteProjectDialog
+          target={mutations.deleteTarget}
+          busy={busy}
+          onCancel={() => mutations.setDeleteTarget(null)}
+          onConfirm={() => void mutations.confirmDelete()}
+        />
       )}
 
       {pending !== null && (

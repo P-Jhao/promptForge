@@ -1,7 +1,7 @@
 import { PROJECT_SCHEMA_VERSION, type ProjectStorageStatus } from "@/types/project";
 
 export const PROJECT_DB_NAME = "promptforge-projects";
-export const PROJECT_DB_VERSION = 1;
+export const PROJECT_DB_VERSION = 2;
 
 export const PROJECT_STORES = {
   projects: "projects",
@@ -9,6 +9,7 @@ export const PROJECT_STORES = {
   versions: "versions",
   runs: "runs",
   resources: "resources",
+  deletedProjects: "deletedProjects",
 } as const;
 
 export type ProjectStoreName = (typeof PROJECT_STORES)[keyof typeof PROJECT_STORES];
@@ -51,6 +52,7 @@ export function openProjectDatabase(): Promise<IDBDatabase> {
       createStore(database, PROJECT_STORES.versions, "versionId", "projectId");
       createStore(database, PROJECT_STORES.runs, "runId", "projectId");
       createStore(database, PROJECT_STORES.resources, "resourceKey", "projectId");
+      createStore(database, PROJECT_STORES.deletedProjects, "projectId");
     };
     request.onsuccess = () => {
       const database = request.result;

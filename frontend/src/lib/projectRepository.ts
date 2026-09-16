@@ -16,9 +16,11 @@ import {
   parseWorkspaceRecord,
   projectSummary,
 } from "./projectStorageCodec";
+import { deleteProjectInDatabase, findDeletedProject, parseDeletedProjectRecord, renameProjectInDatabase } from "./projectRepositoryMutations";
 import { PROJECT_SCHEMA_VERSION, type ProjectDraft, type ProjectRecord, type ProjectResourceDraft, type ProjectSnapshot, type ProjectRepository, type ProjectSummary, type ResourceRecord, type RunRecord, type VersionRecord, type WorkspaceRecord } from "@/types/project";
 
 type RawRecords = Record<(typeof PROJECT_STORES)[keyof typeof PROJECT_STORES], unknown[]>;
+type ProjectStoreKey = (typeof PROJECT_STORES)[keyof typeof PROJECT_STORES];
 
 export class IndexedDbProjectRepository implements ProjectRepository {
   private databasePromise: Promise<IDBDatabase> | null = null;
@@ -26,7 +28,12 @@ export class IndexedDbProjectRepository implements ProjectRepository {
   async listProjects(): Promise<ProjectSummary[]> {
     const records = await this.readAll();
     try {
+      const deletedIds = new Set(records.deletedProjects.map(parseDeletedProjectRecord).map((record) => record.projectId));
       return records.projects
+        .filter((item) => {
+          const id = rawId(item, "projectId");
+          return id === null || !deletedIds.has(id);
+        })
         .map(parseProjectRecord)
         .map(projectSummary)
         .sort((first, second) => second.updatedAt - first.updatedAt);
@@ -37,6 +44,13 @@ export class IndexedDbProjectRepository implements ProjectRepository {
 
   async loadProject(projectId: string): Promise<ProjectSnapshot | null> {
     const records = await this.readAll();
+    try {
+      if (findDeletedProject(records.deletedProjects, projectId) !== undefined) {
+        throw new ProjectStorageError("conflict", "项目已被删除，读取已拒绝；请刷新项目列表。" );
+      }
+    } catch (error: unknown) {
+      throw asCorrupt(error, "读取项目列表");
+    }
     let project: ProjectRecord | null = null;
     try {
       const raw = records.projects.find((item) => rawId(item, "projectId") === projectId);
@@ -67,6 +81,7 @@ export class IndexedDbProjectRepository implements ProjectRepository {
       const stores = Object.fromEntries(Object.values(PROJECT_STORES).map((name) => [name, transaction.objectStore(name)])) as Record<ProjectStoreKey, IDBObjectStore>;
       const requests = {
         project: stores.projects.get(draft.projectId),
+        deletedProject: stores.deletedProjects.get(draft.projectId),
         workspace: stores.workspaces.getAll(),
         versions: stores.versions.getAll(),
       };
@@ -82,9 +97,10 @@ export class IndexedDbProjectRepository implements ProjectRepository {
       const accept = (key: string, value: unknown): void => {
         done[key] = value;
         loaded += 1;
-        if (loaded !== 3 || settled) return;
+        if (loaded !== 4 || settled) return;
         try {
           const existing = done.project === undefined ? null : parseProjectRecord(done.project);
+          if (done.deletedProject !== undefined) throw new ProjectStorageError("conflict", "项目已被删除，保存已拒绝；请刷新项目列表或另存为。" );
           const workspaceRecords = (done.workspace as unknown[]).filter((item) => rawId(item, "projectId") === draft.projectId);
           const currentWorkspaceRaw = existing === null
             ? undefined
@@ -115,12 +131,21 @@ export class IndexedDbProjectRepository implements ProjectRepository {
         }
       };
       requests.project.onsuccess = () => accept("project", requests.project.result);
+      requests.deletedProject.onsuccess = () => accept("deletedProject", requests.deletedProject.result);
       requests.workspace.onsuccess = () => accept("workspace", requests.workspace.result);
       requests.versions.onsuccess = () => accept("versions", requests.versions.result);
       for (const request of Object.values(requests)) request.onerror = () => fail(request.error);
       transaction.onerror = () => fail(transaction.error);
       transaction.onabort = () => { if (!settled) fail(transaction.error); };
     });
+  }
+
+  async renameProject(projectId: string, name: string, expectedRevision: number): Promise<ProjectSummary> {
+    return renameProjectInDatabase(await this.getDatabase(), projectId, name, expectedRevision);
+  }
+
+  async deleteProject(projectId: string, expectedRevision: number): Promise<void> {
+    return deleteProjectInDatabase(await this.getDatabase(), projectId, expectedRevision);
   }
 
   private async readAll(): Promise<RawRecords> {
@@ -153,9 +178,7 @@ export class IndexedDbProjectRepository implements ProjectRepository {
     }
     return result;
   }
-}
-
-type ProjectStoreKey = (typeof PROJECT_STORES)[keyof typeof PROJECT_STORES];
+  }
 
 async function prepareRecords(draft: ProjectDraft) {
   const now = Date.now();
