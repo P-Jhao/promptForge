@@ -18,25 +18,40 @@ interface PromptForgePreviewGuardState { hasError: boolean; }
 class PromptForgePreviewGuard extends PromptForgeReact.Component<PromptForgePreviewGuardProps, PromptForgePreviewGuardState> {
   state: PromptForgePreviewGuardState = { hasError: false };
   static getDerivedStateFromError(error: unknown): PromptForgePreviewGuardState {
+    previewApplicationMounted = false;
     window.parent.postMessage({ source: "${PREVIEW_BRIDGE_SOURCE}", type: "runtime-error", message: describePreviewError(error) }, "*");
     return { hasError: true };
   }
   componentDidCatch(error: unknown, _info: ErrorInfo): void {
+    previewApplicationMounted = false;
     window.parent.postMessage({ source: "${PREVIEW_BRIDGE_SOURCE}", type: "runtime-error", message: describePreviewError(error) }, "*");
   }
   componentDidMount(): void {
     if (!this.state.hasError) reportPreviewMounted();
+    else previewApplicationMounted = false;
   }
   componentDidUpdate(): void {
     if (!this.state.hasError) reportPreviewMounted();
+    else previewApplicationMounted = false;
   }
   render(): ReactNode { return this.props.children; }
 }
+let previewApplicationMounted = false;
 function describePreviewError(value: unknown): string {
   return value instanceof Error ? value.message : String(value);
 }
 function reportPreviewMounted(): void {
+  previewApplicationMounted = true;
   window.parent.postMessage({ source: "${PREVIEW_BRIDGE_SOURCE}", type: "app-mounted" }, "*");
+}
+window.addEventListener("message", (event: MessageEvent<unknown>) => {
+  if (event.source !== window.parent || !isPreviewMountRequest(event.data) || !previewApplicationMounted) return;
+  reportPreviewMounted();
+});
+function isPreviewMountRequest(value: unknown): boolean {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+  const message = value as { source?: unknown; type?: unknown };
+  return message.source === "${PREVIEW_BRIDGE_SOURCE}" && message.type === "app-mounted-request";
 }
 function reportPreviewRuntimeError(error: unknown): void {
   window.parent.postMessage({ source: "${PREVIEW_BRIDGE_SOURCE}", type: "runtime-error", message: describePreviewError(error) }, "*");
@@ -152,6 +167,12 @@ function findGuardEnd(source: string, guardStart: number): number {
 export interface PreviewBridgeEvent {
   type: "app-mounted" | "runtime-error";
   message?: string;
+}
+
+export function requestPreviewMount(iframe: HTMLIFrameElement | null): void {
+  const target = iframe?.contentWindow;
+  if (target === null || target === undefined) return;
+  target.postMessage({ source: PREVIEW_BRIDGE_SOURCE, type: "app-mounted-request" }, "*");
 }
 
 export function readPreviewBridgeEvent(value: unknown): PreviewBridgeEvent | null {

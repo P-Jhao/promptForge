@@ -6,6 +6,7 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
+import { assertPreviewDiagnostics } from "./lib/previewDiagnosticsFixture.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const require = createRequire(import.meta.url);
@@ -14,6 +15,9 @@ const constants = loadTsModule(path.join(root, "frontend/src/constants/validatio
 const validation = loadTsModule(
   path.join(root, "frontend/src/lib/validationReport.ts"),
   { "@/constants/validation": constants },
+).exports;
+const previewDiagnostics = loadTsModule(
+  path.join(root, "frontend/src/components/preview/previewDiagnosticsState.ts"),
 ).exports;
 const serialization = loadTsModule(path.join(root, "frontend/src/lib/projectSerialization.ts")).exports;
 const frontendContract = loadTsModule(path.join(root, "frontend/src/lib/changeContract.ts"), {
@@ -25,6 +29,8 @@ assert.equal(initial.report.layers.length, 6);
 assert.deepEqual(initial.report.layers.map((layer) => layer.id), ["L0", "L1", "L2", "L3", "L4", "L5"]);
 assert.equal(initial.report.overall, "not-verified");
 assert.equal(validation.canApplyValidation(initial), false);
+
+assertPreviewDiagnostics(previewDiagnostics);
 
 const ready = validation.updateValidationLayer(
   validation.updateValidationLayer(initial, "L2", "pass", "done + app-mounted", "sandpack:done;bridge:app-mounted"),

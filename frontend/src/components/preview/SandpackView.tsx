@@ -13,6 +13,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { BuildingLoadingOverlay } from "@/components/preview/BuildingLoadingOverlay";
 import { createPreviewFiles, stripPreviewFiles } from "@/components/preview/previewBridge";
 import { usePreviewDiagnostics } from "@/components/preview/usePreviewDiagnostics";
+import { isPreviewDiagnosticsReady } from "@/components/preview/previewDiagnosticsState";
 import { getReactTS_Template } from "@/services/api";
 import { areSandpackFilesEqual, useSandpackStore } from "@/store/sandpackStore";
 import { useChatStore } from "@/store/chatStore";
@@ -188,6 +189,7 @@ function PreviewContent({ syncEditor, templateError }: { syncEditor: boolean; te
     void sandpack.runSandpack().catch(() => undefined);
   };
   const hasError = buildError !== null || diagnostics.runtimeError !== null;
+  const diagnosticsReady = isPreviewDiagnosticsReady(diagnostics);
   const waiting = diagnostics.buildState !== "success" || diagnostics.mountState !== "ready";
   const showCentralLoading = waiting && !diagnostics.hasRenderedBefore && !hasError && !diagnostics.timedOut;
 
@@ -211,9 +213,9 @@ function PreviewContent({ syncEditor, templateError }: { syncEditor: boolean; te
       );
       return;
     }
-    const previewStatus = diagnostics.buildState === "success" && diagnostics.mountState === "ready" ? "pass" : "not-verified";
+    const previewStatus = diagnosticsReady ? "pass" : "not-verified";
     setCandidatePreviewStatus(candidateId, previewStatus, undefined, previewStatus === "pass" ? "Sandpack 构建完成且应用已挂载" : "等待真实构建与应用挂载", diagnostics.lastEvent ?? undefined);
-  }, [candidateId, diagnostics.buildState, diagnostics.errorCategory, diagnostics.lastEvent, diagnostics.mountState, diagnostics.runtimeError, diagnostics.timedOut, hasError, buildError, setCandidatePreviewStatus, syncEditor, templateError]);
+  }, [candidateId, diagnostics.buildState, diagnostics.errorCategory, diagnostics.lastEvent, diagnostics.mountState, diagnostics.runtimeError, diagnostics.timedOut, diagnosticsReady, hasError, buildError, setCandidatePreviewStatus, syncEditor, templateError]);
 
   return (
     <div ref={previewRootRef} className="relative h-full w-full bg-white">

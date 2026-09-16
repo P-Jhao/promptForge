@@ -11,7 +11,7 @@
 | 统一资源清单、封面交付 | [`resourceManifest.ts`](../../frontend/src/cases/resourceManifest.ts)、[`novelCoverUrls.mjs`](../../scripts/lib/novelCoverUrls.mjs)、[`novelCase.ts`](../../frontend/src/cases/novelCase.ts)、[`assembleNovelCase.mjs`](../../scripts/assembleNovelCase.mjs) | 六个固定 Unsplash URL 由 `externalResources` 登记，运行时直接由小说数据引用；Sandpack 文件 map 不伪造远程文件，导出 manifest 保留 URL、类型和 allowlist 来源，不下载或写入远程图片字节。外链不可用时保留资源错误卡。 |
 | R-COVER-01 / R-EXPORT-01 | [`downloadCode.ts`](../../frontend/src/lib/downloadCode.ts)、[`CasePreview.tsx`](../../frontend/src/components/cases/CasePreview.tsx) | 首页检查六个固定外链；导出写入 `promptforge-resource-manifest.json` 的 `externalResources`，不把远程图片当作本地 ZIP 条目。联网运行和完整导出构建仍待现场验收。 |
 | 模板、动态组件、沙盒启动提示 | [`SandpackView.tsx`](../../frontend/src/components/preview/SandpackView.tsx)、[`BuildingLoadingOverlay.tsx`](../../frontend/src/components/preview/BuildingLoadingOverlay.tsx) | 模板加载失败可重试；首次启动使用中央覆盖层；已有画面重新编译时只显示轻量更新提示。等待阈值默认 30 秒/120 秒，可由 `NEXT_PUBLIC_PREVIEW_LONG_WAIT_MS`、`NEXT_PUBLIC_PREVIEW_TIMEOUT_MS`（兼容 `NEXT_PUBLIC_SANDPACK_*`）配置。 |
-| R-PREVIEW-01 / R-VALIDATE-01 | [`usePreviewDiagnostics.ts`](../../frontend/src/components/preview/usePreviewDiagnostics.ts) | 监听当前 Sandpack `listen` 原始消息；`done` 且 `compilatonError=false` 只记录构建成功，必须再收到应用入口的 `app-mounted` 才 ready。构建错误、运行时错误和外部超时分开显示。 |
+| R-PREVIEW-01 / R-VALIDATE-01 | [`usePreviewDiagnostics.ts`](../../frontend/src/components/preview/usePreviewDiagnostics.ts)、[`previewDiagnosticsState.ts`](../../frontend/src/components/preview/previewDiagnosticsState.ts) | 在 layout effect 中订阅当前 Sandpack `listen` 和对应 iframe 的窗口消息；`done` 且 `compilatonError=false` 只记录构建成功，必须再收到应用入口真实 `app-mounted` 才 ready。若挂载一次性消息早于订阅，使用父子 bridge 握手请求重发；构建错误、运行时错误和外部超时分开显示，iframe load/status 不参与通过判定。 |
 | 桥接只作用于预览副本 | [`previewBridge.ts`](../../frontend/src/components/preview/previewBridge.ts)、[`SandpackView.tsx`](../../frontend/src/components/preview/SandpackView.tsx) | 预览副本才注入 bridge 和入口 ErrorBoundary；写入 `currentFiles`、编辑器和导出前调用 `stripPreviewFiles`。入口注入/剥离的 round-trip fixture 已通过。 |
 | 预置案例身份 | [`SandpackView.tsx`](../../frontend/src/components/preview/SandpackView.tsx)、[`PreviewToolbar.tsx`](../../frontend/src/components/preview/PreviewToolbar.tsx) | 只有 store 中的生成文件仍与 `initialFiles` 完全相同才挂载小说 manifest。关闭示例体验并收到真实生成文件后清除 manifest，避免把小说资源清单误用于任意生成结果；通用生成结果仍需自己的资源清单。 |
 | R-FAIL-01 / 记录真实运行 | [`recordRealTaskBoard.mjs`](../../scripts/recordRealTaskBoard.mjs)、[`realRunRecorder.mjs`](../../scripts/lib/realRunRecorder.mjs) | 固定 EVAL-01 prompt 发送 `/api/chat`，记录脱敏 raw SSE、files、白名单配置摘要和终态；编辑候选的 `candidate.data.files` 另由 `candidateEvidence` 摘要记录。必须收到 `mode={mode:"real",forced:false}`；缺失、mock 或 forced 均拒绝真实记录。成功 runID 复用，失败/中断下次使用新 attempt。 |
@@ -29,6 +29,8 @@ node scripts/checkPhaseA.mjs
 ```
 
 `checkPhaseA.mjs` 是可执行的 URL/manifest/导出 fixture：核对六个固定外链、生成文件无 `/book-cover.svg` 运行时引用、allowlist 对恶意 URL 的拒绝、缺本地资源拒绝、bridge 剥离和 ZIP 中只保留外链 manifest 元数据；这些 fixture 都不是 Sandpack 运行通过证据。
+
+此前候选 iframe 曾能显示页面但因一次性 `app-mounted` 消息在被动订阅建立前到达而保持 `not-verified`；当前 bridge 提供真实挂载后的握手重发，`checkPhaseD.mjs` 通过纯 reducer fixture 覆盖事件先后和错误/超时，浏览器仍需确认真实 `done`、`app-mounted` 与图片加载。
 
 主代理此前现场确认本地占位封面在首页可显示，但工作台 Sandpack 在 `/public/book-cover.svg` 和 `/book-cover.svg` 两种文件键下都出现 `complete=true`、`naturalWidth=0`，并报告资源加载失败。当前方案改为六个固定 Unsplash URL；主代理已取得六个 URL 的 `200 image/jpeg` HTTP 证据，工作台 iframe 重载后的 `naturalWidth>0` 仍需现场复验。资源错误卡继续保留，静态 manifest/ZIP fixture 不能替代浏览器资源请求或真实 Sandpack ready 证据。
 

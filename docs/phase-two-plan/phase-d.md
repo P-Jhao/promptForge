@@ -9,7 +9,7 @@
 | 需求/计划条目 | 代码证据 | 行为和边界 |
 | --- | --- | --- |
 | L0-L5 分层报告 | [`validation.ts`](../../frontend/src/types/validation.ts)、[`validationReport.ts`](../../frontend/src/lib/validationReport.ts)、[`CandidatePanel.tsx`](../../frontend/src/components/shell/CandidatePanel.tsx) | 候选携带可序列化 `ValidationReport`，逐层记录协议、源码、预览、固定功能、保存恢复和有限修复；每层只能是 `pass`、`fail`、`skipped` 或 `not-verified`。L0-L2 是当前应用门槛，任何未验证状态都不能启用应用按钮；L3-L5 可按场景绑定并单独展示。 |
-| Sandpack 构建与挂载诊断 | [`usePreviewDiagnostics.ts`](../../frontend/src/components/preview/usePreviewDiagnostics.ts)、[`SandpackView.tsx`](../../frontend/src/components/preview/SandpackView.tsx) | 监听已安装 Sandpack 的原始 `start`/`compile`/`state`/`done`/`action` 事件；`done` 且 `compilatonError=false` 仅写入构建通过，入口 bridge 的 `app-mounted` 才写入 ready。运行、资源、网络、模板和外部超时分别归类，iframe load、代码可见和 `status=running` 不会替代 ready。 |
+| Sandpack 构建与挂载诊断 | [`usePreviewDiagnostics.ts`](../../frontend/src/components/preview/usePreviewDiagnostics.ts)、[`previewDiagnosticsState.ts`](../../frontend/src/components/preview/previewDiagnosticsState.ts)、[`SandpackView.tsx`](../../frontend/src/components/preview/SandpackView.tsx) | 监听已安装 Sandpack 的原始 `start`/`compile`/`state`/`done`/`action` 事件；诊断在 layout effect 中先建立窗口订阅，`done` 且 `compilatonError=false` 只写入构建通过，入口 bridge 的真实 `app-mounted` 才写入 ready。若一次性挂载消息先到，父页会向已挂载入口发握手请求让 bridge 重发；构建、运行、资源、网络、模板和外部超时分别归类，iframe load、代码可见和 `status=running` 不会替代 ready。 |
 | 候选分层展示和隔离 | [`chatStore.ts`](../../frontend/src/store/chatStore.ts)、[`candidateActions.ts`](../../frontend/src/hooks/candidateActions.ts) | 面板可展开变更路径并显示每层状态、摘要、证据和错误类别；候选预览仍使用独立文件副本，应用前重新检查当前文件 hash。失败、取消、冲突、EOF 和未验证候选保留在候选区，不覆盖工作副本。 |
 | 修复候选双基线契约 | [`editGeneration.ts`](../../backend/routes/editGeneration.ts)、[`editContract.ts`](../../backend/routes/editContract.ts)、[`changeContract.ts`](../../frontend/src/lib/changeContract.ts)、[`checkPhaseD.mjs`](../../scripts/checkPhaseD.mjs) | `baseHash` 只表示本轮模型收到的文件/资源快照；`acceptanceBaseHash` 和成对的 `sourceCandidateId/sourceBaseHash` 表示原工作副本接受基线。普通编辑两者相同，修复结果继承原接受基线；应用门槛核对 `CandidateState.baseHash`，不把内部修复基线当作外部冲突基线。缺少成对来源字段或来源不匹配会拒绝候选。 |
 | 有限修复入口 | [`useChat.ts`](../../frontend/src/hooks/useChat.ts)、[`chatRequestRunner.ts`](../../frontend/src/hooks/chatRequestRunner.ts)、[`validationReport.ts`](../../frontend/src/lib/validationReport.ts)、[`constants/validation.ts`](../../frontend/src/constants/validation.ts) | “尝试修复”仅对候选的 `build`、`runtime` 或 `resource` 错误显示；请求继续走 `operation=edit`，携带候选文件、资源、本轮模型 `baseHash`、原接受 `sourceBaseHash`、来源 candidateId 和新的 runId，结果重新进入隔离候选。默认最多 2 次、总预算 10 分钟、单轮验证 120 秒；相同错误签名、达到次数/时间边界时提前停止。网络、供应商限流、模板、存储、基线冲突、取消和超时不触发代码修复。 |
@@ -18,7 +18,7 @@
 
 ## 检查证据
 
-本阶段使用纯协议 fixture 验证报告门槛、构建+挂载才可应用、可修复错误类别、网络阻断、重复错误停止和次数/时间预算。固定任务板的单元/集成或人工证据尚未补齐；可选页面脚本缺少 Playwright 或 URL 时逐条输出 `not-verified`，不能以空页面或代码存在替代功能通过。
+本阶段使用纯协议 fixture 验证报告门槛、构建+挂载才可应用、预览事件先后顺序、构建/运行错误、外部超时、可修复错误类别、网络阻断、重复错误停止和次数/时间预算。固定任务板的单元/集成或人工证据尚未补齐；可选页面脚本缺少 Playwright 或 URL 时逐条输出 `not-verified`，不能以空页面或代码存在替代功能通过。
 
 本次收口还用 `checkPhaseD.mjs` 构造了独立修复候选：内部模型基线与原接受基线不同，候选状态保留 `sourceCandidateId/sourceBaseHash`，未变化的原工作副本能通过应用前 hash 门槛；把接受基线篡改为内部 hash 的事件会被拒绝。该证据仍是协议 fixture，不代表真实供应商修复或真实预览成功。
 
@@ -54,6 +54,7 @@ git diff --check
 - 阶段 E 已记录一次 EVAL-01 真实成功、EVAL-02 首次协议误判及修复后的 EVAL-02 重跑成功，并保留 raw SSE；真实供应商输出、成本和模型耗时仍未完成三次评测与完整功能验收。
 - 当前没有固定任务板的单元/集成或人工确认来源，因此八条辅助页面断言均为 `not-verified`。阶段 D 不固化任务看板，也不宣称形成成功率。
 - 真实 Sandpack ready 仍需主代理在浏览器确认 `done`、`compilatonError=false` 和入口 `app-mounted`；外部 `TIME_OUT`/模板或依赖网络失败应保留为环境分类。
+- 2026-09-16 现场曾观察候选 iframe 页面可见但 L2 长时间为 `not-verified`；根因是被动 effect 建立窗口订阅存在一次性 `app-mounted` 消息竞态。现已改为 layout effect 加真实 bridge 握手，并以 `scripts/lib/previewDiagnosticsFixture.mjs` 覆盖 done 先到、挂载先到、构建/运行错误和超时；浏览器仍需重测，fixture 不替代现场证据。
 - L3 固定功能、L4 保存恢复和导出构建没有被协议 fixture 冒充通过；L4 继续由阶段 B 的手动 IndexedDB 语义负责。原生 ZIP 下载和第五类 IndexedDB 故障场景由用户手动确认，当前代理不因其阻塞，证据保持未验证。有限修复预算和验证超时是客户端可读默认值，真实环境仍需现场核对实际等待。
 - 不实现 Vue、自动修复循环、云同步、ZIP 导入或通用运行数据恢复；修复结果不会绕过候选应用按钮的验证门槛。
 

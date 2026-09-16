@@ -77,6 +77,15 @@ assert.throws(
 
 const previewFiles = bridgeModule.exports.createPreviewFiles(files);
 assert.ok(previewFiles["/__promptforge_preview_bridge.js"]);
+assert.match(previewFiles["/index.tsx"].code, /app-mounted-request/);
+const transpiledPreviewEntry = typescript.transpileModule(previewFiles["/index.tsx"].code, {
+  compilerOptions: {
+    jsx: typescript.JsxEmit.ReactJSX,
+    module: typescript.ModuleKind.CommonJS,
+    target: typescript.ScriptTarget.ES2020,
+  },
+});
+assert.equal(transpiledPreviewEntry.diagnostics?.length ?? 0, 0);
 const exportFiles = bridgeModule.exports.stripPreviewFiles(previewFiles);
 assert.equal(exportFiles["/__promptforge_preview_bridge.js"], undefined);
 assert.equal(exportFiles["/index.tsx"].code, files["/index.tsx"].code);

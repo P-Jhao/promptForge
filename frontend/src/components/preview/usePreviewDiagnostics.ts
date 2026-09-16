@@ -1,33 +1,16 @@
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { PREVIEW_TIMINGS } from "@/constants/preview";
-import { readPreviewBridgeEvent } from "./previewBridge";
+import { readPreviewBridgeEvent, requestPreviewMount } from "./previewBridge";
+import {
+  INITIAL_PREVIEW_DIAGNOSTICS,
+  reducePreviewDiagnostics,
+  type PreviewDiagnosticsState,
+} from "./previewDiagnosticsState";
 import type { ValidationErrorCategory } from "@/types/validation";
 
 type SandpackListen = (listener: (message: unknown) => void) => () => void;
 
-export interface PreviewDiagnostics {
-  buildState: "waiting" | "success" | "error";
-  mountState: "waiting" | "ready";
-  buildError: string | null;
-  runtimeError: string | null;
-  errorCategory: ValidationErrorCategory | null;
-  longWait: boolean;
-  timedOut: boolean;
-  hasRenderedBefore: boolean;
-  lastEvent: string | null;
-}
-
-const INITIAL_STATE: PreviewDiagnostics = {
-  buildState: "waiting",
-  mountState: "waiting",
-  buildError: null,
-  runtimeError: null,
-  errorCategory: null,
-  longWait: false,
-  timedOut: false,
-  hasRenderedBefore: false,
-  lastEvent: null,
-};
+export type PreviewDiagnostics = PreviewDiagnosticsState;
 
 export function usePreviewDiagnostics(
   listen: SandpackListen,
@@ -35,14 +18,16 @@ export function usePreviewDiagnostics(
   retryKey: number,
 ): PreviewDiagnostics {
   const mountedBeforeRef = useRef(false);
+  const buildSucceededRef = useRef(false);
+  const mountReadyRef = useRef(false);
   const listenRef = useRef(listen);
-  const [diagnostics, setDiagnostics] = useState(INITIAL_STATE);
+  const [diagnostics, setDiagnostics] = useState(INITIAL_PREVIEW_DIAGNOSTICS);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     listenRef.current = listen;
   }, [listen]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     let disposed = false;
     let longWaitTimer: number | undefined;
     let timeoutTimer: number | undefined;
@@ -51,17 +36,14 @@ export function usePreviewDiagnostics(
       if (longWaitTimer !== undefined) window.clearTimeout(longWaitTimer);
       if (timeoutTimer !== undefined) window.clearTimeout(timeoutTimer);
     };
+    const clearTimersWhenReady = (): void => {
+      if (buildSucceededRef.current && mountReadyRef.current) clearTimers();
+    };
     const beginWaiting = (): void => {
-      setDiagnostics((current) => ({
-        ...current,
-        buildState: "waiting",
-        mountState: "waiting",
-        buildError: null,
-        runtimeError: null,
-        errorCategory: null,
-        longWait: false,
-        timedOut: false,
-        lastEvent: "start",
+      buildSucceededRef.current = false;
+      mountReadyRef.current = false;
+      setDiagnostics((current) => reducePreviewDiagnostics(current, {
+        type: "restart",
         hasRenderedBefore: mountedBeforeRef.current,
       }));
       clearTimers();
@@ -69,7 +51,7 @@ export function usePreviewDiagnostics(
         if (!disposed) setDiagnostics((current) => ({ ...current, longWait: true }));
       }, PREVIEW_TIMINGS.longWaitMs);
       timeoutTimer = window.setTimeout(() => {
-        if (!disposed) setDiagnostics((current) => ({ ...current, timedOut: true }));
+        if (!disposed) setDiagnostics((current) => reducePreviewDiagnostics(current, { type: "external-timeout" }));
       }, PREVIEW_TIMINGS.timeoutMs);
     };
 
@@ -83,29 +65,31 @@ export function usePreviewDiagnostics(
         return;
       }
       if (eventType === "success") {
-        setDiagnostics((current) => ({ ...current, lastEvent: eventType }));
+        setDiagnostics((current) => reducePreviewDiagnostics(current, { type: "sandpack-success" }));
         return;
       }
       if (eventType === "state") {
-        setDiagnostics((current) => ({ ...current, lastEvent: eventType }));
+        setDiagnostics((current) => reducePreviewDiagnostics(current, { type: "sandpack-state" }));
         return;
       }
       if (eventType === "done") {
         if (message.compilatonError !== false) {
+          buildSucceededRef.current = false;
           clearTimers();
           const buildError = message.compilatonError === true
             ? readSandpackError(message)
             : "Sandpack 完成事件缺少编译结果，无法确认预览构建成功。";
-          setDiagnostics((current) => ({
-            ...current,
-            buildState: "error",
-            buildError,
+          setDiagnostics((current) => reducePreviewDiagnostics(current, {
+            type: "build-error",
+            message: buildError,
             errorCategory: classifyPreviewError(buildError, "build"),
-            lastEvent: eventType,
           }));
           return;
         }
-        setDiagnostics((current) => ({ ...current, buildState: "success", errorCategory: null, lastEvent: eventType }));
+        buildSucceededRef.current = true;
+        setDiagnostics((current) => reducePreviewDiagnostics(current, { type: "sandpack-done", compilationError: false }));
+        clearTimersWhenReady();
+        requestPreviewMount(getPreviewIframe(previewRootRef));
         return;
       }
       if (
@@ -113,14 +97,14 @@ export function usePreviewDiagnostics(
         (message.action === "show-error" ||
           (message.action === "notification" && message.notificationType === "error"))
       ) {
+        buildSucceededRef.current = false;
         clearTimers();
         const errorMessage = readSandpackError(message);
-        setDiagnostics((current) => ({
-          ...current,
-          buildState: "error",
-          buildError: errorMessage,
-          errorCategory: classifyPreviewError(errorMessage, message.action === "notification" ? "runtime" : "build"),
-          lastEvent: "action/show-error",
+        const errorCategory = classifyPreviewError(errorMessage, message.action === "notification" ? "runtime" : "build");
+        setDiagnostics((current) => reducePreviewDiagnostics(current, {
+          type: "build-error",
+          message: errorMessage,
+          errorCategory,
         }));
       }
     };
@@ -131,23 +115,24 @@ export function usePreviewDiagnostics(
       const bridgeEvent = readPreviewBridgeEvent(event.data);
       if (bridgeEvent === null) return;
       if (bridgeEvent.type === "app-mounted") {
+        mountReadyRef.current = true;
         mountedBeforeRef.current = true;
-        clearTimers();
-        setDiagnostics((current) => ({ ...current, mountState: "ready", hasRenderedBefore: true, timedOut: false, lastEvent: "app-mounted" }));
+        setDiagnostics((current) => reducePreviewDiagnostics(current, { type: "app-mounted" }));
+        clearTimersWhenReady();
         return;
       }
       clearTimers();
       const errorMessage = bridgeEvent.message ?? "预览应用发生运行时错误";
-      setDiagnostics((current) => ({
-        ...current,
-        runtimeError: errorMessage,
+      setDiagnostics((current) => reducePreviewDiagnostics(current, {
+        type: "runtime-error",
+        message: errorMessage,
         errorCategory: classifyPreviewError(errorMessage, "runtime"),
-        lastEvent: "runtime-error",
       }));
     };
 
     const unsubscribe = listenRef.current(handleSandpackMessage);
     window.addEventListener("message", handleWindowMessage);
+    requestPreviewMount(getPreviewIframe(previewRootRef));
     return () => {
       disposed = true;
       clearTimers();
@@ -157,6 +142,10 @@ export function usePreviewDiagnostics(
   }, [previewRootRef, retryKey]);
 
   return diagnostics;
+}
+
+function getPreviewIframe(previewRootRef: RefObject<HTMLDivElement | null>): HTMLIFrameElement | null {
+  return previewRootRef.current?.querySelector<HTMLIFrameElement>("iframe") ?? null;
 }
 
 function readSandpackError(message: Record<string, unknown>): string {
