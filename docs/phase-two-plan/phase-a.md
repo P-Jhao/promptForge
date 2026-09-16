@@ -8,7 +8,7 @@
 
 | 需求/计划条目 | 代码证据 | 行为和边界 |
 | --- | --- | --- |
-| 统一资源清单、封面交付 | [`resourceManifest.ts`](../../frontend/src/cases/resourceManifest.ts)、[`novelCase.ts`](../../frontend/src/cases/novelCase.ts)、[`assembleNovelCase.mjs`](../../scripts/assembleNovelCase.mjs) | `/book-cover.svg` 同时进入案例文件映射、宿主检查和导出清单；缺少或为空时抛出明确错误。生成清单还记录大小和 SHA-256。 |
+| 统一资源清单、封面交付 | [`resourceManifest.ts`](../../frontend/src/cases/resourceManifest.ts)、[`novelCase.ts`](../../frontend/src/cases/novelCase.ts)、[`assembleNovelCase.mjs`](../../scripts/assembleNovelCase.mjs) | 宿主与应用 URL 继续使用 `/book-cover.svg`；Sandpack 文件映射使用 `/public/book-cover.svg`，导出清单使用 `public/book-cover.svg`。缺少或为空时抛出明确错误，生成清单还记录大小和 SHA-256。 |
 | R-COVER-01 / R-EXPORT-01 | [`downloadCode.ts`](../../frontend/src/lib/downloadCode.ts)、[`CasePreview.tsx`](../../frontend/src/components/cases/CasePreview.tsx) | 导出前校验必需资源并写入 `promptforge-resource-manifest.json`；首页案例显示资源检查状态。完整导出构建仍待现场验收。 |
 | 模板、动态组件、沙盒启动提示 | [`SandpackView.tsx`](../../frontend/src/components/preview/SandpackView.tsx)、[`BuildingLoadingOverlay.tsx`](../../frontend/src/components/preview/BuildingLoadingOverlay.tsx) | 模板加载失败可重试；首次启动使用中央覆盖层；已有画面重新编译时只显示轻量更新提示。等待阈值默认 30 秒/120 秒，可由 `NEXT_PUBLIC_PREVIEW_LONG_WAIT_MS`、`NEXT_PUBLIC_PREVIEW_TIMEOUT_MS`（兼容 `NEXT_PUBLIC_SANDPACK_*`）配置。 |
 | R-PREVIEW-01 / R-VALIDATE-01 | [`usePreviewDiagnostics.ts`](../../frontend/src/components/preview/usePreviewDiagnostics.ts) | 监听当前 Sandpack `listen` 原始消息；`done` 且 `compilatonError=false` 只记录构建成功，必须再收到应用入口的 `app-mounted` 才 ready。构建错误、运行时错误和外部超时分开显示。 |

@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -24,8 +24,8 @@ function createResourceMetadata(content) {
     kind: "image",
     required: true,
     hostPath: "/book-cover.svg",
-    sandpackPath: "/book-cover.svg",
-    exportPath: "book-cover.svg",
+    sandpackPath: "/public/book-cover.svg",
+    exportPath: "public/book-cover.svg",
     contentType: "image/svg+xml",
     sizeBytes: Buffer.byteLength(content, "utf8"),
     sha256: createHash("sha256").update(content, "utf8").digest("hex"),
@@ -251,7 +251,7 @@ async function main() {
   const files = {};
   add(files, "/index.tsx", patchCaseEntry(index));
   add(files, "/styles.css", templateStyles);
-  add(files, "/book-cover.svg", coverAsset);
+  add(files, "/public/book-cover.svg", coverAsset);
   add(files, app.path, app.content);
   addFileList(files, utils.files, "code");
   if (generatedStyles.path !== undefined && generatedStyles.content !== undefined) {
@@ -287,6 +287,7 @@ async function main() {
   }
 
   await mkdir(generatedDir, { recursive: true });
+  await rm(join(generatedDir, "book-cover.svg"), { force: true });
   for (const [path, content] of Object.entries(files)) {
     const output = join(generatedDir, path.slice(1));
     await mkdir(dirname(output), { recursive: true });

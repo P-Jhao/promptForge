@@ -67,5 +67,5 @@ Assembled 48 novel case files from backend/mock
 
 ### 针对图片与预览加载反馈的基线补充
 
-- `frontend/public/book-cover.svg` 确实存在，案例数据引用 `/book-cover.svg`；但当前案例的 Sandpack 文件映射没有把该资源作为文件条目带入。`downloadCode.ts` 另有根路径 `fetch` 并尝试把资源写入 ZIP，因此这是图片异常的高概率代码原因；尚未完成网络复现，不能把它写成已经证实的 HTTP 404。
+- `frontend/public/book-cover.svg` 确实存在，案例数据和宿主继续引用 `/book-cover.svg`；阶段 A 已将 Sandpack 文件映射修正为 `/public/book-cover.svg`，导出 ZIP 条目为 `public/book-cover.svg`。`checkPhaseA.mjs` 已覆盖映射、缺失资源拒绝和 ZIP 条目；真实 Sandpack 资源请求与导出后的 Vite 构建仍待现场验证，不能把它写成已通过。
 - `SandpackView.tsx` 在 `sandpack.status` 为 `initial` 或 `running` 时显示等待文案；当前没有以真实运行 ready 事件确认预览已经启动。代码已经渲染而状态仍为 `running` 时可能持续等待，外部 Sandpack 运行还曾出现 `TIME_OUT`，所以该反馈仍属于待修正、待验证状态。

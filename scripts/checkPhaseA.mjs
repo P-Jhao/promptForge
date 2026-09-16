@@ -22,12 +22,20 @@ const manifestResource = generatedManifest.resources.find((resource) => resource
 assert.ok(manifestResource, "generated manifest lacks book-cover");
 assert.equal(manifestResource.sizeBytes, Buffer.byteLength(cover, "utf8"));
 assert.equal(manifestResource.sha256, createHash("sha256").update(cover).digest("hex"));
-assert.ok(generatedManifest.files.includes("/book-cover.svg"));
+assert.equal(manifestResource.hostPath, "/book-cover.svg");
+assert.equal(manifestResource.sandpackPath, "/public/book-cover.svg");
+assert.equal(manifestResource.exportPath, "public/book-cover.svg");
+assert.ok(generatedManifest.files.includes("/public/book-cover.svg"));
+assert.equal(generatedManifest.files.includes("/book-cover.svg"), false);
+const generatedNovelData = await readFile(path.join(rootDir, "frontend/src/cases/generated/data/novels.ts"), "utf8");
+assert.match(generatedNovelData, /coverImage: '\/book-cover\.svg'/);
+const generatedCover = await readFile(path.join(rootDir, "frontend/src/cases/generated/public/book-cover.svg"), "utf8");
+assert.equal(generatedCover, cover);
 
 const files = {
   "/index.tsx": { code: "import { createRoot } from 'react-dom/client'; const root = createRoot(document.getElementById('root')); root.render(<App />);" },
   "/App.tsx": { code: "export default function App() { return null; }" },
-  "/book-cover.svg": { code: cover },
+  "/public/book-cover.svg": { code: cover },
 };
 runtimeManifestModule.exports.validateResourceManifest(files, runtimeManifest);
 assert.throws(
@@ -71,7 +79,8 @@ try {
 assert.ok(capturedBlob instanceof Blob);
 assert.match(capturedFilename, /^promptforge-project-.*\.zip$/);
 const archive = await JSZip.loadAsync(Buffer.from(await capturedBlob.arrayBuffer()));
-assert.ok(archive.files["book-cover.svg"]);
+assert.ok(archive.files["public/book-cover.svg"]);
+assert.equal(archive.files["book-cover.svg"], undefined);
 assert.ok(archive.files["promptforge-resource-manifest.json"]);
 assert.equal(archive.files["/__promptforge_preview_bridge.js"], undefined);
 console.log(JSON.stringify({ manifest: true, missingResourceRejected: true, export: true, bridgeExcluded: true }));
