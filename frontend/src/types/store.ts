@@ -5,6 +5,7 @@ import type { FlowType, Phase, StepType } from "./flow";
 import type { ProjectHydration, VersionMetadata } from "./project";
 import type { CandidateState } from "./candidate";
 import type { RepairAttempt, ValidationErrorCategory, ValidationReport, ValidationStatus } from "./validation";
+import type { CaseResourceManifest } from "@/cases/resourceManifest";
 
 // ============================================================================
 // Sandpack Store 类型
@@ -30,6 +31,9 @@ export interface SandpackStore {
   /** 预置案例专用的展示文件，不属于当前项目工作副本。 */
   previewFiles: SandpackFiles | null;
   setPreviewFiles: (files: SandpackFiles | null) => void;
+  /** 预置案例专用的资源清单，不参与项目草稿、版本或消息持久化。 */
+  previewManifest: CaseResourceManifest | undefined;
+  setPreviewManifest: (manifest: CaseResourceManifest | undefined) => void;
   clearGeneratedFiles: () => void;
 
   /** 组装状态 */

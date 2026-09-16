@@ -24,6 +24,7 @@ export interface ProjectDraftInput {
   files: SandpackFiles | null;
   generation: GenerationState;
   resourceManifest?: CaseResourceManifest;
+  resourceRecords?: readonly ProjectResourceDraft[];
 }
 
 export function createProjectId(): string {
@@ -55,7 +56,9 @@ export function createProjectDraft(input: ProjectDraftInput): ProjectDraft {
     files,
     versions,
     run: serializeRun(input.generation, input.projectId),
-    resources: serializeResources(input.resourceManifest, input.projectId, files),
+    resources: input.resourceManifest === undefined
+      ? serializeResourceRecords(input.resourceRecords, input.projectId, files)
+      : serializeResources(input.resourceManifest, input.projectId, files),
   };
 }
 
@@ -251,6 +254,19 @@ function serializeResources(
     exportPath: resource.exportPath,
     contentType: resource.contentType,
     source: "case-manifest",
+    status: files[resource.sandpackPath] === undefined ? "missing" : "available",
+  }));
+}
+
+function serializeResourceRecords(
+  records: readonly ProjectResourceDraft[] | undefined,
+  projectId: string,
+  files: SerializableFileMap,
+): ProjectResourceDraft[] {
+  return (records ?? []).map((resource) => ({
+    ...resource,
+    resourceKey: `${requireId(projectId, "项目 ID")}:${requireId(resource.id, "资源 ID")}`,
+    projectId: requireId(projectId, "项目 ID"),
     status: files[resource.sandpackPath] === undefined ? "missing" : "available",
   }));
 }

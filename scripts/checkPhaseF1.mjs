@@ -78,6 +78,7 @@ const chatRunner = readFileSync(path.join(rootDir, "frontend/src/hooks/chatReque
 const sandpackView = readFileSync(path.join(rootDir, "frontend/src/components/preview/SandpackView.tsx"), "utf8");
 const sandpackStore = readFileSync(path.join(rootDir, "frontend/src/store/sandpackStore.ts"), "utf8");
 const previewToolbar = readFileSync(path.join(rootDir, "frontend/src/components/preview/PreviewToolbar.tsx"), "utf8");
+const persistenceSource = readFileSync(path.join(rootDir, "frontend/src/hooks/useProjectPersistence.ts"), "utf8");
 assert.doesNotMatch(chatPanel, /chat-operation-toggle|首次生成|基于当前代码修改/);
 assert.match(chatPanel, /sendMessage\(content, undefined, mockConfig\)/);
 assert.match(chatPanel, /isNewProjectRequest/);
@@ -102,7 +103,35 @@ assert.match(sandpackView, /initialFiles === undefined && !candidatePreview/);
 assert.doesNotMatch(sandpackView, /setGeneratedFiles\(toPlainFiles\(initialFiles\)\)/);
 assert.match(sandpackView, /: initialFiles;/);
 assert.match(sandpackStore, /previewFiles/);
+assert.match(sandpackStore, /previewManifest/);
 assert.match(previewToolbar, /previewFiles \?\? currentFiles/);
+assert.match(previewToolbar, /previewManifest/);
+assert.doesNotMatch(persistenceSource, /__resourceManifest/);
+
+const fakeZustand = {
+  create(initializer) {
+    let state;
+    const set = (update) => {
+      const next = typeof update === "function" ? update(state) : update;
+      state = { ...state, ...next };
+    };
+    state = initializer(set);
+    const store = () => state;
+    store.getState = () => state;
+    return store;
+  },
+};
+const runtimeSandpackStore = loadTsModule(path.join(rootDir, "frontend/src/store/sandpackStore.ts"), { zustand: fakeZustand }).exports.useSandpackStore;
+runtimeSandpackStore.getState().setGeneratedFiles({ "/App.tsx": "saved project" });
+const beforeCaseMount = runtimeSandpackStore.getState();
+const caseFiles = { "/App.tsx": { code: "preset case" } };
+runtimeSandpackStore.getState().setPreviewFiles(caseFiles);
+runtimeSandpackStore.getState().setPreviewManifest({ version: 1, caseId: "fixture-case", resources: [], externalResources: [] });
+const afterCaseMount = runtimeSandpackStore.getState();
+assert.deepEqual(afterCaseMount.currentFiles, beforeCaseMount.currentFiles);
+assert.deepEqual(afterCaseMount.generatedFiles, beforeCaseMount.generatedFiles);
+assert.deepEqual(afterCaseMount.previewFiles, caseFiles);
+assert.equal(afterCaseMount.previewManifest?.caseId, "fixture-case");
 
 console.log(JSON.stringify({
   requestIntent: true,
@@ -113,7 +142,7 @@ console.log(JSON.stringify({
   presetCaseIsolation: true,
 }));
 
-function loadTsModule(filePath) {
+function loadTsModule(filePath, replacements = {}) {
   const source = readFileSync(filePath, "utf8");
   const output = typescript.transpileModule(source, {
     compilerOptions: {
@@ -122,6 +151,7 @@ function loadTsModule(filePath) {
     },
   }).outputText;
   const moduleRecord = { exports: {} };
-  new Function("module", "exports", output)(moduleRecord, moduleRecord.exports);
+  const localRequire = (specifier) => replacements[specifier] ?? require(specifier);
+  new Function("require", "module", "exports", output)(localRequire, moduleRecord, moduleRecord.exports);
   return moduleRecord;
 }

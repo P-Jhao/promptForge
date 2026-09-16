@@ -147,6 +147,7 @@ const replacements = {
 const serialization = loadTsModule(path.join(root, "frontend/src/lib/projectSerialization.ts"), replacements).exports;
 const storage = loadTsModule(path.join(root, "frontend/src/lib/projectStorage.ts"), replacements).exports;
 const repositoryModule = loadTsModule(path.join(root, "frontend/src/lib/projectRepository.ts"), replacements).exports;
+const baselineCache = loadTsModule(path.join(root, "frontend/src/lib/projectBaselineCache.ts"), replacements).exports;
 const repository = new repositoryModule.IndexedDbProjectRepository();
 
 const targetDraft = makeDraft("project-f2-target", "F2 原项目");
@@ -155,6 +156,31 @@ const targetSave = await repository.saveProject(targetDraft, null);
 const otherSave = await repository.saveProject(otherDraft, null);
 assert.equal(targetSave.revision, 1);
 assert.equal(otherSave.revision, 1);
+
+baselineCache.clearProjectBaselineCache();
+const targetFingerprint = serialization.projectDraftFingerprint(targetDraft);
+baselineCache.setProjectBaseline({ projectId: targetDraft.projectId, revision: targetSave.revision, fingerprint: targetFingerprint, draft: targetDraft });
+const remountedBaseline = baselineCache.getProjectBaseline(targetDraft.projectId);
+assert.ok(remountedBaseline);
+assert.equal(remountedBaseline.revision, targetSave.revision);
+assert.equal(remountedBaseline.fingerprint, targetFingerprint);
+assert.equal(remountedBaseline.draft.files["/App.tsx"], targetDraft.files["/App.tsx"]);
+const preservedResourceDraft = serialization.createProjectDraft({
+  projectId: targetDraft.projectId,
+  projectName: targetDraft.name,
+  createdAt: targetDraft.createdAt,
+  workspaceId: targetDraft.workspaceId,
+  currentVersion: targetDraft.currentVersion,
+  versions: targetDraft.versions,
+  messages: targetDraft.messages,
+  files: targetDraft.files,
+  generation: { status: "idle", completedSteps: [], stageTimings: {}, preservedResult: false },
+  resourceRecords: targetDraft.resources,
+});
+assert.deepEqual(preservedResourceDraft.resources, targetDraft.resources);
+assert.equal(baselineCache.isCurrentBaselineRead(4, 4, targetDraft.projectId, targetDraft.projectId), true);
+assert.equal(baselineCache.isCurrentBaselineRead(4, 5, targetDraft.projectId, targetDraft.projectId), false);
+assert.equal(baselineCache.isCurrentBaselineRead(4, 4, targetDraft.projectId, otherDraft.projectId), false);
 
 const renamed = await repository.renameProject(targetDraft.projectId, "F2 重命名", 1);
 assert.equal(renamed.projectId, targetDraft.projectId);
@@ -199,10 +225,15 @@ await assert.rejects(() => repository.renameProject(rollbackDraft.projectId, "",
 const managerSource = readFileSync(path.join(root, "frontend/src/components/shell/ProjectManager.tsx"), "utf8");
 const mutationsSource = readFileSync(path.join(root, "frontend/src/hooks/useProjectManagerMutations.ts"), "utf8");
 const browserSource = readFileSync(path.join(root, "frontend/src/components/shell/ProjectBrowserModal.tsx"), "utf8");
+const persistenceSource = readFileSync(path.join(root, "frontend/src/hooks/useProjectPersistence.ts"), "utf8");
 assert.match(managerSource, /const storageBusy = persistence\.status === "saving" \|\| persistence\.status === "loading"/);
 assert.match(managerSource, /disabled=\{busy \|\| storageBusy/);
 assert.match(mutationsSource, /storageBusy/);
 assert.match(browserSource, /candidatePresent \|\| storageBusy/);
+assert.match(persistenceSource, /getProjectBaseline\(projectId\)/);
+assert.match(persistenceSource, /setProjectBaseline\(\{ projectId: targetProjectId/);
+assert.match(persistenceSource, /removeProjectBaseline\(targetProjectId\)/);
+assert.match(persistenceSource, /resourceRecords: savedDraftRef\.current\?\.resources/);
 
 console.log(JSON.stringify({
   dbVersion: storage.PROJECT_DB_VERSION,
@@ -211,6 +242,8 @@ console.log(JSON.stringify({
   rollbackGuard: true,
   staleWriteRejection: true,
   legacySchemaLoad: true,
+  routeRemountBaseline: true,
+  resourceBaselinePreserved: true,
   storageOperationGuard: true,
 }));
 

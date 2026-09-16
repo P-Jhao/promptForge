@@ -40,7 +40,7 @@ interface TemplateLoadState {
 }
 
 export function SandpackView({ initialFiles, initialManifest }: SandpackViewProps) {
-  const { viewMode, generatedFiles, currentFiles, setPreviewFiles } = useSandpackStore();
+  const { viewMode, generatedFiles, currentFiles, setPreviewFiles, setPreviewManifest } = useSandpackStore();
   const candidate = useChatStore((state) => state.candidate);
   const [templateFiles, setTemplateFiles] = useState<SandpackFiles>({});
   const [templateRetryCount, setTemplateRetryCount] = useState(0);
@@ -55,17 +55,15 @@ export function SandpackView({ initialFiles, initialManifest }: SandpackViewProp
     key: templateRequestKey,
     status: initialFiles === undefined ? "loading" : "ready",
   }));
-  const isPresetCase = initialFiles !== undefined && candidate === null;
-
   useEffect(() => {
     setPreviewFiles(initialFiles ?? null);
     return () => setPreviewFiles(null);
   }, [initialFiles, setPreviewFiles]);
 
   useEffect(() => {
-    window.__resourceManifest = isPresetCase ? initialManifest : undefined;
-    return () => { window.__resourceManifest = undefined; };
-  }, [initialManifest, isPresetCase]);
+    setPreviewManifest(initialFiles === undefined ? undefined : initialManifest);
+    return () => setPreviewManifest(undefined);
+  }, [initialFiles, initialManifest, setPreviewManifest]);
 
   useEffect(() => {
     if (initialFiles !== undefined) return;

@@ -11,6 +11,7 @@ export const useSandpackStore = create<SandpackStore>((set) => ({
   generatedFiles: null,
   currentFiles: null,
   previewFiles: null,
+  previewManifest: undefined,
   setGeneratedFiles: (files) => {
     // 转换为 Sandpack 格式: { "/App.tsx": "code" } -> { "/App.tsx": { code: "code" } }
     const sandpackFiles: SandpackFiles = {};
@@ -25,7 +26,8 @@ export const useSandpackStore = create<SandpackStore>((set) => ({
       : { currentFiles: files }
   )),
   setPreviewFiles: (files) => set((state) => state.previewFiles === files ? state : { previewFiles: files }),
-  clearGeneratedFiles: () => set({ generatedFiles: null, currentFiles: null, previewFiles: null }),
+  setPreviewManifest: (manifest) => set((state) => state.previewManifest === manifest ? state : { previewManifest: manifest }),
+  clearGeneratedFiles: () => set({ generatedFiles: null, currentFiles: null, previewFiles: null, previewManifest: undefined }),
 
   isAssembling: false,
   setIsAssembling: (isAssembling) => set({ isAssembling }),

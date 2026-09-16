@@ -80,7 +80,7 @@ export function useChat() {
         state.currentProjectId,
         state.versions.at(-1)?.versionId ?? null,
         files,
-        typeof window === "undefined" ? undefined : window.__resourceManifest,
+        undefined,
       );
       if (operation === "edit" && Object.keys(base.files).length === 0) {
         throw new Error("编辑请求需要当前编辑器文件作为基线");

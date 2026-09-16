@@ -110,7 +110,7 @@ try {
   assert.match(landingPage, /workspace\?case=task-board-real-eval/);
   assert.doesNotMatch(landingPage, /\/api\/chat/);
   assert.match(sandpackView, /initialManifest\?: CaseResourceManifest/);
-  assert.match(sandpackView, /window\.__resourceManifest = isPresetCase \? initialManifest/);
+  assert.match(sandpackView, /setPreviewManifest\(initialFiles === undefined \? undefined : initialManifest\)/);
   assert.match(await readFile(path.join(ROOT_DIR, "frontend", "src", "components", "cases", "CasePreview.tsx"), "utf8"), /workspace\?case=novel&scene=/);
 
   const caseProvenance = await evaluateCaseProvenance(CASE_DIR, RUNS_DIR);

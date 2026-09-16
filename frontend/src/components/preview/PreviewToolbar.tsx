@@ -24,14 +24,12 @@ export function PreviewToolbar({
   onEnterFullScreen,
   onExitFullScreen,
 }: PreviewToolbarProps) {
-  const { generatedFiles, currentFiles, previewFiles, viewMode } = useSandpackStore();
+  const { generatedFiles, currentFiles, previewFiles, previewManifest, viewMode } = useSandpackStore();
   const [isDownloading, setIsDownloading] = useState(false);
 
   // 从全局获取 templateFiles（由 SandpackView 设置）
   const templateFiles =
     typeof window !== "undefined" ? window.__templateFiles ?? {} : {};
-  const resourceManifest =
-    typeof window !== "undefined" ? window.__resourceManifest : undefined;
   const filesToDownload = previewFiles ?? currentFiles ?? generatedFiles;
   const hasDownloadableFiles =
     (filesToDownload !== null && Object.keys(filesToDownload).length > 0) ||
@@ -45,7 +43,7 @@ export function PreviewToolbar({
 
     setIsDownloading(true);
     try {
-      await downloadGeneratedCode(filesToDownload ?? templateFiles, templateFiles, resourceManifest);
+      await downloadGeneratedCode(filesToDownload ?? templateFiles, templateFiles, previewManifest);
       toast.success("代码下载成功");
     } catch (error) {
       console.error("下载失败:", error);
