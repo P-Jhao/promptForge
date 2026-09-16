@@ -17,7 +17,7 @@ import { isPreviewDiagnosticsReady } from "@/components/preview/previewDiagnosti
 import { getReactTS_Template } from "@/services/api";
 import { areSandpackFilesEqual, useSandpackStore } from "@/store/sandpackStore";
 import { useChatStore } from "@/store/chatStore";
-import { NOVEL_CASE_MANIFEST } from "@/cases/novelCase";
+import type { CaseResourceManifest } from "@/cases/resourceManifest";
 import type { SandpackFiles, ViewMode } from "@/types/store";
 import { formatSandpackError, sameFiles, toPlainFiles, toSandpackFiles, toStoreFiles } from "./sandpackFileUtils";
 
@@ -29,6 +29,8 @@ const SandpackProvider = dynamic(
 interface SandpackViewProps {
   /** A preassembled case bypasses both chat and the template API. */
   initialFiles?: SandpackFiles;
+  /** The manifest belongs to the selected case and is used by save/export checks. */
+  initialManifest?: CaseResourceManifest;
 }
 
 interface TemplateLoadState {
@@ -37,7 +39,7 @@ interface TemplateLoadState {
   error?: string;
 }
 
-export function SandpackView({ initialFiles }: SandpackViewProps) {
+export function SandpackView({ initialFiles, initialManifest }: SandpackViewProps) {
   const { viewMode, generatedFiles, currentFiles, setGeneratedFiles } = useSandpackStore();
   const candidate = useChatStore((state) => state.candidate);
   const [templateFiles, setTemplateFiles] = useState<SandpackFiles>({});
@@ -67,8 +69,8 @@ export function SandpackView({ initialFiles }: SandpackViewProps) {
   }, [caseLoadedSignature, caseSignature, initialFiles, setGeneratedFiles]);
 
   useEffect(() => {
-    window.__resourceManifest = isPresetCase ? NOVEL_CASE_MANIFEST : undefined;
-  }, [isPresetCase]);
+    window.__resourceManifest = isPresetCase ? initialManifest : undefined;
+  }, [initialManifest, isPresetCase]);
 
   useEffect(() => {
     if (initialFiles !== undefined) return;

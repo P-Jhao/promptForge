@@ -16,6 +16,7 @@
     "tailwindPipeline": true,
     "tailwindCss": "pass",
     "realSourcesResolved": true,
+    "caseEntrypoints": true,
     "typeCheck": "pass",
     "build": "pass",
     "hostIndexFixture": "temporary-only"

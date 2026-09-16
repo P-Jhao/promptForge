@@ -1,6 +1,6 @@
 # PromptForge 第二阶段规格（讨论稿）
 
-状态：阶段 A 代码与资源清单已实现，阶段 B 代码已实现，阶段 C 最小候选隔离切片已实现，阶段 D 分层校验/有限修复切片与固定任务板验收工具已实现，阶段 E 评测/来源门槛工具已实现；2026-09-16 已完成串行 EVAL-01 3/3、EVAL-02 3/3 的真实 recorder 记录，并保留 EVAL-02 首次协议误判及修复原因。独立任务看板案例 `task-board-real-eval` 已根据真实来源、构建检查和主代理 Edge 临时 Vite 人工 EVAL-03 证据标为 `READY`。该 `READY` 不代表 Sandpack、导出构建、离线使用、原生 ZIP、第五类 IndexedDB 故障或主工作台入口已验证；固定远程封面只有 URL/HTTP 证据，Sandpack iframe 资源交付仍待现场复验。
+状态：阶段 A 代码与资源清单已实现，阶段 B 代码已实现，阶段 C 最小候选隔离切片已实现，阶段 D 分层校验/有限修复切片与固定任务板验收工具已实现，阶段 E 评测/来源门槛工具已实现；2026-09-16 已完成串行 EVAL-01 3/3、EVAL-02 3/3 的真实 recorder 记录，并保留 EVAL-02 首次协议误判及修复原因。独立任务看板案例 `task-board-real-eval` 已根据真实来源、构建检查和主代理 Edge 临时 Vite 人工 EVAL-03 证据标为 `READY`，首页链接和 `/workspace?case=task-board-real-eval` 的静态接入也已完成。该 `READY` 不代表 Sandpack、导出构建、离线使用、原生 ZIP、第五类 IndexedDB 故障或这些入口的浏览器运行已验证；固定远程封面只有 URL/HTTP 证据，Sandpack iframe 资源交付仍待现场复验。
 更新时间：2026-09-16
 
 本目录把第二阶段要解决的问题、产品判断、当前能力基线、用户体验状态、项目与变更语义、验证口径和待决问题拆开记录。它是执行计划的输入，不是执行计划本身；执行记录见 [`docs/phase-two-plan/`](../phase-two-plan/)。
@@ -13,11 +13,11 @@
 - 阶段 B 已建立 IndexedDB 项目仓储、可序列化工作副本/版本/运行摘要和保存/打开/恢复界面；实现与未验证项见 [`phase-b.md`](../phase-two-plan/phase-b.md)。
 - 阶段 C 已建立明确的生成/聊天/编辑 operation、当前文件 base 快照、结构化编辑合并和候选隔离预览/确认应用；实现与未验证项见 [`phase-c.md`](../phase-two-plan/phase-c.md)。
 - 阶段 D 已建立 L0-L5 可序列化验证报告、真实 Sandpack 构建/挂载诊断、候选有限修复入口和固定任务板交互检查工具；实现与未验证项见 [`phase-d.md`](../phase-two-plan/phase-d.md)。
-- 阶段 E 已建立固定 EVAL-01/EVAL-02 prompt 契约、REAL-EVAL/PROTOCOL-FIXTURE/FIXED-INTERACTION 分池报告、真实 run 复用和独立案例来源门槛；实现与未验证项见 [`phase-e.md`](../phase-two-plan/phase-e.md)。2026-09-16 的固定 run `task-board-eval-01-001`、`task-board-eval-01-002`、`task-board-eval-01-003` 和 `task-board-eval-02-001`、`task-board-eval-02-002`、`task-board-eval-02-003` 均记录为真实模式成功，EVAL-02 的候选文件从 `candidate.data.files` 读取；另有历史 EVAL-02 协议误判和 Mock 拒绝证据。混合目录报告不能当作固定三次成功率。独立案例 `task-board-real-eval` 已固化为 `READY`，但该状态仅覆盖真实来源、构建检查和 Edge 临时 Vite EVAL-03，不覆盖 Sandpack、导出、离线、ZIP、IndexedDB 或主工作台接入。
+- 阶段 E 已建立固定 EVAL-01/EVAL-02 prompt 契约、REAL-EVAL/PROTOCOL-FIXTURE/FIXED-INTERACTION 分池报告、真实 run 复用和独立案例来源门槛；实现与未验证项见 [`phase-e.md`](../phase-two-plan/phase-e.md)。2026-09-16 的固定 run `task-board-eval-01-001`、`task-board-eval-01-002`、`task-board-eval-01-003` 和 `task-board-eval-02-001`、`task-board-eval-02-002`、`task-board-eval-02-003` 均记录为真实模式成功，EVAL-02 的候选文件从 `candidate.data.files` 读取；另有历史 EVAL-02 协议误判和 Mock 拒绝证据。混合目录报告不能当作固定三次成功率。独立案例 `task-board-real-eval` 已固化为 `READY`，并完成首页/工作台静态入口接入；该状态仅覆盖真实来源、构建检查和 Edge 临时 Vite EVAL-03，不覆盖 Sandpack、导出、离线、ZIP、IndexedDB 或入口目标环境的浏览器验收。
 - 预览 ready 的判定是 Sandpack `done` 且 `compilatonError=false`，并收到入口内 `app-mounted`；模板收到、代码可见、iframe `load` 或 `status=running` 都不能单独宣称 ready。
 - 资源清单同时约束宿主案例、Sandpack 文件和 Vite 导出；小说案例的六个固定 Unsplash 封面放在 `externalResources`，导出只保留 URL 元数据，不把远程字节伪造为本地文件。缺少必需本地资源必须失败，真实生成结果没有对应 manifest 时不沿用小说案例 manifest。
 - 真实生成记录必须收到明确的 `mode={mode:"real",forced:false}`，不允许缺失 mode 或强制 Mock 结果被记录为真实；成功 run ID 复用，中断/失败产生新 attempt。
-- 固定任务板不要求 Playwright E2E，使用单元/集成检查或用户人工确认；独立案例当前以真实来源和 Edge 临时 Vite EVAL-03 人工证据达到 `READY`。原生 ZIP 下载和第五类 IndexedDB 故障场景由用户手动完成，当前证据保持未验证；任务板案例没有接入首页或 `/workspace`。
+- 固定任务板不要求 Playwright E2E，使用单元/集成检查或用户人工确认；独立案例当前以真实来源和 Edge 临时 Vite EVAL-03 人工证据达到 `READY`，并已接入首页链接和 `/workspace?case=task-board-real-eval`。原生 ZIP 下载和第五类 IndexedDB 故障场景由用户手动完成，当前证据保持未验证；任务板入口的 Sandpack 浏览器运行仍待验收。
 - 工作台 Sandpack 曾因本地 `/book-cover.svg` 文件键交付失败：6 个 iframe 图片 `complete=true` 但 `naturalWidth=0`。现已切换为六个固定 Unsplash URL，主代理已取得六个 URL 的 `200 image/jpeg` HTTP 证据；重载后的 Sandpack iframe 资源结果仍未完成复验，静态 URL/manifest fixture 不能替代浏览器资源交付证据。
 
 ## 已确认的阶段边界

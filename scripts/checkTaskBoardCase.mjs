@@ -12,6 +12,11 @@ const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const CASE_DIR = path.join(ROOT_DIR, "frontend", "src", "cases", "task-board");
 const SOURCE_DIR = path.join(CASE_DIR, "source");
 const RUNS_DIR = path.join(ROOT_DIR, "artifacts", "real-runs", "task-board");
+const GENERATED_MAP_FILE = path.join(CASE_DIR, "generatedFiles.ts");
+const CASE_ADAPTER_FILE = path.join(CASE_DIR, "taskBoardCase.ts");
+const WORKSPACE_PAGE = path.join(ROOT_DIR, "frontend", "src", "app", "workspace", "page.tsx");
+const LANDING_PAGE = path.join(ROOT_DIR, "frontend", "src", "components", "landing", "LandingPage.tsx");
+const SANDPACK_VIEW = path.join(ROOT_DIR, "frontend", "src", "components", "preview", "SandpackView.tsx");
 const PACKAGE_MANAGER = "pnpm";
 const FIXTURE_INDEX = `<!doctype html>
 <html lang="zh-CN">
@@ -53,6 +58,11 @@ try {
   }
 
   const sourceFiles = await collectFiles(SOURCE_DIR);
+  const generatedMap = await readFile(GENERATED_MAP_FILE, "utf8");
+  const caseAdapter = await readFile(CASE_ADAPTER_FILE, "utf8");
+  const workspacePage = await readFile(WORKSPACE_PAGE, "utf8");
+  const landingPage = await readFile(LANDING_PAGE, "utf8");
+  const sandpackView = await readFile(SANDPACK_VIEW, "utf8");
   const sourceTexts = await Promise.all(sourceFiles.filter((filePath) => /\.(ts|tsx)$/.test(filePath)).map(async (filePath) => [
     filePath,
     await readFile(filePath, "utf8"),
@@ -87,6 +97,21 @@ try {
   assert.match(styles, /@tailwind utilities;/);
   assert.match(tailwindConfig, /content:/);
   assert.match(postcssConfig, /tailwindcss:/);
+  assert.match(generatedMap, /TASK_BOARD_CASE_FILES/);
+  assert.match(generatedMap, /"\/index\.tsx"/);
+  assert.match(caseAdapter, /caseId: "task-board-real-eval"/);
+  assert.match(caseAdapter, /resources: \[\]/);
+  assert.match(caseAdapter, /externalResources: \[\]/);
+  assert.doesNotMatch(caseAdapter, /node:fs|NOVEL_CASE_MANIFEST/);
+  assert.match(workspacePage, /caseName === "task-board-real-eval"/);
+  assert.match(workspacePage, /createTaskBoardCaseFiles/);
+  assert.match(workspacePage, /TASK_BOARD_CASE_MANIFEST/);
+  assert.doesNotMatch(workspacePage, /\/api\/chat/);
+  assert.match(landingPage, /workspace\?case=task-board-real-eval/);
+  assert.doesNotMatch(landingPage, /\/api\/chat/);
+  assert.match(sandpackView, /initialManifest\?: CaseResourceManifest/);
+  assert.match(sandpackView, /window\.__resourceManifest = isPresetCase \? initialManifest/);
+  assert.match(await readFile(path.join(ROOT_DIR, "frontend", "src", "components", "cases", "CasePreview.tsx"), "utf8"), /workspace\?case=novel&scene=/);
 
   const caseProvenance = await evaluateCaseProvenance(CASE_DIR, RUNS_DIR);
   assert.equal(caseProvenance.status, descriptor.status);
@@ -112,6 +137,7 @@ try {
       tailwindPipeline: true,
       tailwindCss: build.tailwindCss,
       realSourcesResolved: true,
+      caseEntrypoints: true,
       typeCheck: build.typeCheck.status === 0 ? "pass" : "fail",
       build: build.build.status === 0 ? "pass" : "fail",
       hostIndexFixture: "temporary-only",

@@ -7,8 +7,13 @@ import { AppShell } from "@/components/shell/AppShell";
 import { SandpackView } from "@/components/preview/SandpackView";
 import {
   createNovelCaseFiles,
+  NOVEL_CASE_MANIFEST,
   type NovelCaseScene,
 } from "@/cases/novelCase";
+import {
+  createTaskBoardCaseFiles,
+  TASK_BOARD_CASE_MANIFEST,
+} from "@/cases/task-board/taskBoardCase";
 
 function readScene(value: string | null): NovelCaseScene {
   if (value === "library" || value === "notes") {
@@ -23,13 +28,22 @@ function WorkspaceContent() {
   const caseName = searchParams.get("case");
   const scene = readScene(searchParams.get("scene"));
   const caseFiles = useMemo(
-    () => caseName === "novel" ? createNovelCaseFiles(scene) : undefined,
+    () => {
+      if (caseName === "novel") return createNovelCaseFiles(scene);
+      if (caseName === "task-board-real-eval") return createTaskBoardCaseFiles();
+      return undefined;
+    },
     [caseName, scene],
   );
+  const caseManifest = caseName === "novel"
+    ? NOVEL_CASE_MANIFEST
+    : caseName === "task-board-real-eval"
+      ? TASK_BOARD_CASE_MANIFEST
+      : undefined;
 
   return (
     <AppShell>
-      <SandpackView initialFiles={caseFiles} />
+      <SandpackView initialFiles={caseFiles} initialManifest={caseManifest} />
     </AppShell>
   );
 }

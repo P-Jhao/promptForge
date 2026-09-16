@@ -53,7 +53,7 @@ EVAL-01 的 prompt 文本来自既有 `recordRealTaskBoard.mjs` 固定需求；�
 
 主代理使用 Edge 在临时 Vite 页 `http://127.0.0.1:4176/#/` 完成 EVAL-03 人工验收：初始页面显示看板三列和 4 条任务；关键词“登录”得到 1 条，优先级“高”得到 2 条，均可清除/重置；空标题保存显示“标题不能为空”；新建“验收任务”返回 `/tasks`；进入新任务编辑页字段正确加载，修改描述保存后显示“已验证新增后编辑流程”；状态改为“进行中”后任务从待办列移入进行中列。截图确认 Tailwind utility 样式正常呈现。
 
-上述三项来源证据和构建检查使 `evaluateCaseProvenance` 返回 `READY`，案例 metadata 与 validation report 已同步为 `READY`。这里的 `READY` 只表示真实来源、固定模板构建和临时 Vite 人工 EVAL-03 已满足独立案例固化门槛；任务板仍未接入首页或 `/workspace`，不代表 Sandpack 运行、离线可用、原生 ZIP 或第五类 IndexedDB 故障场景已验证。
+上述三项来源证据和构建检查使 `evaluateCaseProvenance` 返回 `READY`，案例 metadata 与 validation report 已同步为 `READY`。案例现已通过首页链接和 `/workspace?case=task-board-real-eval` 的静态入口接入检查，示例体验直接读取已固化文件，不发送 `/api/chat`。这里的 `READY` 只表示真实来源、固定模板构建和临时 Vite 人工 EVAL-03 已满足独立案例固化门槛；不代表任务板在 Sandpack 中运行、离线可用、原生 ZIP 或第五类 IndexedDB 故障场景已验证。
 
 ## 负向 recorder 证据（2026-09-16）
 

@@ -1,6 +1,6 @@
 # 07 验收映射与待决问题
 
-本文件把稳定需求映射到可审查的验收条目。阶段 A/B/C/D 已有代码和 fixture 证据；2026-09-16 已完成 EVAL-01、EVAL-02 各 3 次真实 recorder 记录，并保留 EVAL-02 首次协议误判；独立任务看板案例 `task-board-real-eval` 已以真实来源、构建检查和 Edge 临时 Vite EVAL-03 人工证据标为 `READY`。该状态不覆盖外部 Sandpack、导出构建、离线、原生 ZIP、第五类 IndexedDB 故障或主工作台入口；相关项目仍需现场或用户手动验证。阶段 A-E 的实现与证据边界见 [`phase-a.md`](../phase-two-plan/phase-a.md)、[`phase-b.md`](../phase-two-plan/phase-b.md)、[`phase-c.md`](../phase-two-plan/phase-c.md)、[`phase-d.md`](../phase-two-plan/phase-d.md) 和 [`phase-e.md`](../phase-two-plan/phase-e.md)。
+本文件把稳定需求映射到可审查的验收条目。阶段 A/B/C/D 已有代码和 fixture 证据；2026-09-16 已完成 EVAL-01、EVAL-02 各 3 次真实 recorder 记录，并保留 EVAL-02 首次协议误判；独立任务看板案例 `task-board-real-eval` 已以真实来源、构建检查和 Edge 临时 Vite EVAL-03 人工证据标为 `READY`，首页链接和 `/workspace?case=task-board-real-eval` 的静态入口代码已接入。该状态不覆盖入口在外部 Sandpack、导出构建、离线、原生 ZIP、第五类 IndexedDB 或目标工作台浏览器中的运行；相关项目仍需现场或用户手动验证。阶段 A-E 的实现与证据边界见 [`phase-a.md`](../phase-two-plan/phase-a.md)、[`phase-b.md`](../phase-two-plan/phase-b.md)、[`phase-c.md`](../phase-two-plan/phase-c.md)、[`phase-d.md`](../phase-two-plan/phase-d.md) 和 [`phase-e.md`](../phase-two-plan/phase-e.md)。
 
 ## 需求到验收映射
 
@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | A-CASE-01 | R-COVER-01 | 固定 Unsplash allowlist 和 manifest 已检查，六个 URL 均有 `200 image/jpeg` HTTP 证据；Sandpack iframe 重新加载、导出解压后的资源引用和离线行为仍未验证。 |
 | A-CASE-02 | R-PREVIEW-01、R-GEN-01 | 人为拉长模板/沙盒启动并制造运行错误；代码可见但未 ready 时保持启动状态；真实 ready 后才显示可用；超时/错误可重试且不清除已有结果。 |
-| A-CASE-03 | R-CASE-01、R-CASE-02、R-CASE-03 | **固化门槛已完成：** `frontend/src/cases/task-board/` 的 `caseId=task-board-real-eval`、manifest、provenance、真实来源 `task-board-eval-01-003`/`task-board-case-edit-20260916` 和 EVAL-03 证据均已核对，evaluator 返回 `READY`，且不是小说 48 文件或 Mock 新回放。**仍需验证：** 案例尚未接入首页或 `/workspace`，Sandpack、导出、离线和 ZIP 边界未覆盖。 |
+| A-CASE-03 | R-CASE-01、R-CASE-02、R-CASE-03 | **固化门槛已完成：** `frontend/src/cases/task-board/` 的 `caseId=task-board-real-eval`、manifest、provenance、真实来源 `task-board-eval-01-003`/`task-board-case-edit-20260916` 和 EVAL-03 证据均已核对，evaluator 返回 `READY`，且不是小说 48 文件或 Mock 新回放；首页链接和 `/workspace?case=task-board-real-eval` 的静态接入代码已检查。**仍需验证：** 入口在目标 Sandpack/工作台浏览器中的运行、导出、离线和 ZIP 边界未覆盖。 |
 | A-PROJECT-01 | R-PROJECT-01、R-PROJECT-02 | **Edge 现场已完成桌面主路径：** 项目名和 `App.tsx` 手改保存、刷新、重开后恢复，列表显示修订号；**仍需用户手动验证：** 保存失败、配额、损坏数据、多标签冲突和刷新/移动端边界。 |
 | A-VERSION-01 | R-VERSION-01 | **Edge 现场已完成基本恢复：** 打开列表显示 `Version 1`，恢复后出现 `Version 2·恢复` 并保留 `Version 1`；dirty 状态下四个保护分支和第五类 IndexedDB 故障仍需用户手动验证。 |
 | A-EDIT-01 | R-EDIT-01、R-CHANGE-01 | **Edge 现场已完成一次真实候选：** `operation=edit` 候选收到 50 个文件，应用后书架出现优先级筛选并实际筛出 3 行；完整工作台重复评测和 EVAL-02 保留率仍不能由一次候选代替。 |
@@ -38,7 +38,7 @@
 | 自动修复上限 | 实现前以配置固定次数、时间、文件/资源大小和错误类别 | 成本、用户等待、供应商限流和是否允许再次生成 |
 | 验证命令和依赖网络 | 为 React 固定类型检查/构建和 Sandpack 运行环境，分别记录外网可用性 | 无网环境是否允许只做源码验收，如何分类“环境阻断” |
 | 任务看板的真实生成来源 | 已有 2026-09-16 的 EVAL-01/EVAL-02 各 3 次 `REAL-EVAL` 记录；独立案例使用 `task-board-eval-01-003` 和 `task-board-case-edit-20260916`，经人工修正与 Edge 临时 Vite EVAL-03 后为 `READY` | 真实模型成本、密钥使用、生成内容是否可公开、后续版本的人工修正是否允许；该 READY 不覆盖 Sandpack、ZIP 或离线 |
-| 固化案例的存放和入口 | `frontend/src/cases/task-board/` 已使用独立 manifest、provenance 和 `caseId=task-board-real-eval`；暂不接入首页或 `/workspace` | 构建打包、案例资源、版本更新、入口设计和来源追溯；当前 READY 不表示主工作台或 Sandpack 已通过 |
+| 固化案例的存放和入口 | `frontend/src/cases/task-board/` 已使用独立 manifest、provenance 和 `caseId=task-board-real-eval`，并接入首页链接和 `/workspace?case=task-board-real-eval`；入口目标环境仍需验收 | 构建打包、案例资源、版本更新、入口设计和来源追溯；当前 READY 不表示主工作台浏览器或 Sandpack 已通过 |
 | 任务运行数据 | 独立案例已确认固定初始任务和会话内新增/编辑/状态切换；不宣称跨刷新保存运行数据，也没有单独 seed 配置 | 是否需要运行时 store、数据迁移和与项目源码的关联 |
 | 导出资源 | 导出前解析资源引用和实际条目，缺失时阻断或显式标记 | Vite `public` 路径、Sandpack 资源路径和部署基路径 |
 | 本地项目不可见的提示 | 能检测到存储清除时说明已清除；否则显示“未找到本地项目”并列出可能原因，不声称确切原因或关页后仍保留内存 | 首次访问、换浏览器、无痕窗口和清站点数据的区分能力 |
@@ -50,7 +50,7 @@
 以下项目按截至 2026-09-16 的证据标记；“已完成”只覆盖括号中的范围，剩余项仍需在目标环境留下证据：
 
 1. **已完成（真实协议/来源）**：EVAL-01 的 `task-board-eval-01-001`、`task-board-eval-01-002`、`task-board-eval-01-003` 和 EVAL-02 的 `task-board-eval-02-001`、`task-board-eval-02-002`、`task-board-eval-02-003` 均已保存真实 run、可读文件或候选文件和 `done`；完整应用预览与功能通过仍未由 recorder 记录代替。
-2. **已完成（独立案例固化）**：`task-board-real-eval` 已检查真实来源、人工修正、依赖、manifest 和 provenance，EVAL-03 已在 Edge 临时 Vite 页完成；案例未接入首页或 `/workspace`，Sandpack 和导出边界仍未验证。
+2. **已完成（独立案例固化与静态入口）**：`task-board-real-eval` 已检查真实来源、人工修正、依赖、manifest 和 provenance，EVAL-03 已在 Edge 临时 Vite 页完成；首页链接和 `/workspace?case=task-board-real-eval` 已接入并可直接选取静态文件，入口在 Sandpack、导出和离线环境中的运行仍未验证。
 3. **已完成（Edge 桌面主路径）**：项目名和 `App.tsx` 手改保存、刷新、重新打开后恢复，列表显示修订号；任务看板临时 Vite 页的新增、编辑、描述保存和状态移动也已完成人工确认。
 4. **部分完成，仍需用户手动验证**：版本列表的 `Version 1`、`Version 2·恢复` 和旧版本保留已在 Edge 确认；先制造 dirty 编辑后执行保存/另存为/放弃/取消四个保护分支，以及多标签冲突仍需验证。
 5. **已完成（一次真实候选现场）**：当前编辑文件请求增加优先级筛选后，标题、已有交互和优先级筛选的候选应用/冲突保护已在 Edge 观察；该一次候选不替代 EVAL-02 三次的功能保留率。
