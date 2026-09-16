@@ -63,6 +63,7 @@ try {
   const taskList = await readFile(path.join(SOURCE_DIR, "components", "TaskList.tsx"), "utf8");
   const filter = await readFile(path.join(SOURCE_DIR, "components", "TaskFilterSearch.tsx"), "utf8");
   const toolbar = await readFile(path.join(SOURCE_DIR, "components", "CreateTaskNav.tsx"), "utf8");
+  const taskHook = await readFile(path.join(SOURCE_DIR, "hooks", "useTask.ts"), "utf8");
   const styles = await readFile(path.join(SOURCE_DIR, "styles.css"), "utf8");
   const tailwindConfig = await readFile(path.join(SOURCE_DIR, "tailwind.config.cjs"), "utf8");
   const postcssConfig = await readFile(path.join(SOURCE_DIR, "postcss.config.cjs"), "utf8");
@@ -72,6 +73,8 @@ try {
   assert.match(filter, /按优先级筛选/);
   assert.match(toolbar, /任务看板/);
   assert.match(toolbar, /\/tasks\/new/);
+  assert.match(taskHook, /state\.allTasks\.find/);
+  assert.doesNotMatch(taskHook, /getTaskById/);
   assert.match(styles, /@tailwind base;/);
   assert.match(styles, /@tailwind components;/);
   assert.match(styles, /@tailwind utilities;/);

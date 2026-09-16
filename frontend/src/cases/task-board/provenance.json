@@ -72,6 +72,11 @@
       "source": "EVAL-01/EVAL-02 functional requirement"
     },
     {
+      "paths": ["source/hooks/useTask.ts"],
+      "reason": "编辑页改为订阅 useTasks 共用的外部任务 store，按 ID 读取新增和更新后的任务，避免只从静态 MOCK_TASKS 查找。",
+      "source": "EVAL-03 browser finding and EVAL-01/EVAL-02 source files"
+    },
+    {
       "paths": ["source/App.tsx", "source/pages/TaskForm.tsx", "source/components/TaskList.tsx"],
       "reason": "补齐 /tasks 与 /tasks/new 路由语义、已有任务编辑入口，并将任务呈现整理为待办/进行中/已完成三列。",
       "source": "EVAL-01/EVAL-02 functional requirement"

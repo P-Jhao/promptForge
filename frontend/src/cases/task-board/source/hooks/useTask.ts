@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { type Task } from '../types/task';
-import { getAllTasks, getTaskById } from '../services/taskService';
+import { getAllTasks } from '../services/taskService';
 import { normalizePriority } from '../lib/utils';
 
 interface TaskStoreState {
@@ -47,9 +47,9 @@ function getSnapshot() {
 
 let loadPromise: Promise<void> | null = null;
 
-function ensureLoaded(force = false) {
-  if (loadPromise) return;
-  if (!force && store.loaded) return;
+function ensureLoaded(force = false): Promise<void> {
+  if (loadPromise) return loadPromise;
+  if (!force && store.loaded) return Promise.resolve();
   setStore({ loading: true, error: null });
   loadPromise = (async () => {
     try {
@@ -65,6 +65,7 @@ function ensureLoaded(force = false) {
       loadPromise = null;
     }
   })();
+  return loadPromise;
 }
 
 function matchesFilters(task: Task, state: TaskStoreState) {
@@ -169,9 +170,7 @@ export function useTasks() {
     setStore({ priorityFilter: value ?? null });
   };
 
-  const refresh = async () => {
-    ensureLoaded(true);
-  };
+  const refresh = () => ensureLoaded(true);
 
   return {
     data,
@@ -193,29 +192,15 @@ export function useTasks() {
 }
 
 export function useTask(id: string) {
-  const [data, setData] = useState<Task | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchTask = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      await new Promise(resolve => setTimeout(resolve, 200));
-      const task = getTaskById(id);
-      setData(task ? { ...task, priority: normalizePriority(task.priority) } : null);
-    } catch (err) {
-      setError('Failed to load task');
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
+  const state = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
   useEffect(() => {
-    if (id) {
-      fetchTask();
-    }
-  }, [id, fetchTask]);
+    ensureLoaded();
+  }, []);
 
-  return { data, loading, error, refresh: fetchTask };
+  const data = id ? state.allTasks.find((task) => task.id === id) ?? null : null;
+  const loading = Boolean(id) && (!state.loaded || state.loading);
+  const refresh = () => ensureLoaded(true);
+
+  return { data, loading, error: state.error, refresh };
 }
