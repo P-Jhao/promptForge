@@ -1,6 +1,6 @@
 # 阶段 D 交接：分层校验与有限修复
 
-状态：阶段 D 的 React 候选校验和有限修复最小切片已实现，主代理仍需在真实 Sandpack、真实后端和固定任务看板页面上现场验收。阶段 E 已记录 EVAL-01 真实生成成功、EVAL-02 首次协议误判及修复后的 EVAL-02 重跑成功；固定任务看板不要求 Playwright E2E，采用单元/集成检查或用户人工确认；缺少 Playwright 或外部预览超时都不能写成通过。
+状态：阶段 D 的 React 候选校验和有限修复最小切片已实现，主代理已在 2026-09-16 Edge 完成一次真实编辑候选的 L0-L2、应用门槛和基线冲突现场验收。阶段 E 已记录 EVAL-01 真实生成成功、EVAL-02 首次协议误判及修复后的 EVAL-02 重跑成功；固定任务看板不要求 Playwright E2E，采用单元/集成检查或用户人工确认；缺少 Playwright 或外部预览超时都不能写成通过。
 
 权威范围见[第二阶段执行计划](../phase-two-spec/plan.md)的“阶段 D”，本记录只描述实现和证据，不替代计划。
 
@@ -42,20 +42,28 @@ git diff --check
 
 ## 2026-09-16 本地现场 / Mock smoke
 
-- 390px 首页和工作台未见横向溢出；旧本地占位封面路径的首页 smoke 可显示，搜索“星辰”只剩一行，详情和阅读数据可达。固定远程封面切换后的工作台 iframe 图片仍待复验。
+- 390px 首页和工作台未见横向溢出；旧本地占位封面路径的首页 smoke 可显示，搜索“星辰”只剩一行，详情和阅读数据可达。固定远程封面已在 Edge Sandpack iframe 中验证真实图片尺寸。
 - 工作台示例体验与真实模式可切换，中心预览加载提示可见。强制 Mock 首次生成进入候选且项目名保持“新项目”，放弃候选后名称未改变；编辑请求明确失败、保留已有结果并显示“重新执行原始请求”。
 - 项目管理 smoke 已保存并重新打开项目，dirty 保护弹窗分支已出现；这是单标签观察。导出按钮可见，但 CUA 未捕获原生 `download` 事件，导出仍未验证。
 - 控制台 MutationObserver 错误证据指向 `@ant-design/x` 依赖内部滚动 hook；项目没有对应调用，本轮未修改 `node_modules`。
 
 以上是本地 Mock smoke，不是付费模型、真实 Sandpack ready、固定任务板、导出 ZIP 下载或多标签故障通过证据。
 
+## 2026-09-16 Edge 浏览器现场验收
+
+- Edge 现场观察到详情页 Sandpack iframe 封面为 `complete=true`、`naturalWidth=400`、`naturalHeight=560`；`src` 为 `NOVEL_COVER_URLS` allowlist 中的远程外链，六个固定 URL 均另有 HTTP 200 证据。
+- 真实 `operation=edit` 候选收到 50 个文件，L0、L1、L2 均为 `pass`，`应用修改` 按钮启用；应用后书架页出现优先级筛选，点击“高优先级”实际得到 3 行。
+- 第二候选 L2 通过期间修改当前 `App.tsx`，再点应用被标为基线冲突，L0 为 `fail`、按钮禁用，工作副本未被候选覆盖。
+- 一次本地验收曾误用虚拟化编辑器的 `innerText`，造成截短语法错误；候选预览按预期报告 build fail。之后修复预览握手代码，并用有效候选复验 L2 `pass`。该错误来自验收取值方式，不是产品源码缺陷。
+
 ## 未验证和明确限制
 
 - 阶段 E 已记录一次 EVAL-01 真实成功、EVAL-02 首次协议误判及修复后的 EVAL-02 重跑成功，并保留 raw SSE；真实供应商输出、成本和模型耗时仍未完成三次评测与完整功能验收。
 - 当前没有固定任务板的单元/集成或人工确认来源，因此八条辅助页面断言均为 `not-verified`。阶段 D 不固化任务看板，也不宣称形成成功率。
-- 真实 Sandpack ready 仍需主代理在浏览器确认 `done`、`compilatonError=false` 和入口 `app-mounted`；外部 `TIME_OUT`/模板或依赖网络失败应保留为环境分类。
-- 2026-09-16 现场曾观察候选 iframe 页面可见但 L2 长时间为 `not-verified`；根因是被动 effect 建立窗口订阅存在一次性 `app-mounted` 消息竞态。现已改为 layout effect 加真实 bridge 握手，并以 `scripts/lib/previewDiagnosticsFixture.mjs` 覆盖 done 先到、挂载先到、构建/运行错误和超时；浏览器仍需重测，fixture 不替代现场证据。
+- 本次有效编辑候选已在浏览器确认 `done`、`compilatonError=false` 和入口 `app-mounted`；其他新候选仍需逐次取得同样证据，外部 `TIME_OUT`/模板或依赖网络失败应保留为环境分类。
+- 2026-09-16 现场曾观察候选 iframe 页面可见但 L2 长时间为 `not-verified`；根因是被动 effect 建立窗口订阅存在一次性 `app-mounted` 消息竞态。现已改为 layout effect 加真实 bridge 握手，并以 `scripts/lib/previewDiagnosticsFixture.mjs` 覆盖 done 先到、挂载先到、构建/运行错误和超时；随后使用有效候选复验 L2 `pass`，fixture 不替代现场证据。
 - L3 固定功能、L4 保存恢复和导出构建没有被协议 fixture 冒充通过；L4 继续由阶段 B 的手动 IndexedDB 语义负责。原生 ZIP 下载和第五类 IndexedDB 故障场景由用户手动确认，当前代理不因其阻塞，证据保持未验证。有限修复预算和验证超时是客户端可读默认值，真实环境仍需现场核对实际等待。
+- 真实修复候选的重新验证没有独立现场证据，仍标为未验证；本次有效编辑候选不据此替代修复候选验收。
 - 不实现 Vue、自动修复循环、云同步、ZIP 导入或通用运行数据恢复；修复结果不会绕过候选应用按钮的验证门槛。
 
 ## 主代理现场验收
