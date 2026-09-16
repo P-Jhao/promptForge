@@ -14,7 +14,7 @@ interface ProjectBrowserModalProps {
   isLoading: boolean;
   isAssembling: boolean;
   candidatePresent: boolean;
-  storageSaving: boolean;
+  storageBusy: boolean;
   onClose: () => void;
   onOpen: (projectId: string) => void;
   onRestore: (version: ProjectVersion) => void;
@@ -22,8 +22,8 @@ interface ProjectBrowserModalProps {
   onDelete: (target: ProjectMutationTarget) => void;
 }
 
-export function ProjectBrowserModal({ projects, versions, currentVersion, listLoading, busy, isLoading, isAssembling, candidatePresent, storageSaving, onClose, onOpen, onRestore, onRename, onDelete }: ProjectBrowserModalProps) {
-  const itemDisabled = busy || isLoading || isAssembling || candidatePresent || storageSaving;
+export function ProjectBrowserModal({ projects, versions, currentVersion, listLoading, busy, isLoading, isAssembling, candidatePresent, storageBusy, onClose, onOpen, onRestore, onRename, onDelete }: ProjectBrowserModalProps) {
+  const itemDisabled = busy || isLoading || isAssembling || candidatePresent || storageBusy;
   return (
     <div className="project-modal-backdrop" role="presentation">
       <section className="project-modal" role="dialog" aria-modal="true" aria-labelledby="project-browser-title">

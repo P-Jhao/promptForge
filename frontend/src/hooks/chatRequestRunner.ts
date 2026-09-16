@@ -14,6 +14,7 @@ import {
   type CandidateEventPayload,
 } from "@/lib/changeContract";
 import { createCandidateValidation } from "@/lib/validationReport";
+import { limitEditHistory } from "@/lib/requestHistory";
 import { FLOW_CONFIG, NEXT_STEP_MAP, getPhaseByNode } from "@/constants/chat";
 import {
   findPendingThoughtKey,
@@ -56,12 +57,15 @@ export async function runChatRequest(
   };
   const assistantId = assistantMessage.id;
   context.activeRequestRef.current = { id: requestId, controller, assistantMessageId: assistantId, startedAt, repair: request.repair };
-  context.lastRequestRef.current = { ...request, history: [...request.history] };
+  const requestHistory = request.operation === "edit"
+    ? limitEditHistory(request.history)
+    : [...request.history];
+  context.lastRequestRef.current = { ...request, history: requestHistory };
 
   const previousAssistantId = [...useChatStore.getState().messages]
     .reverse().find((message) => message.role === "assistant")?.id;
   const previousFiles = useSandpackStore.getState().generatedFiles !== null;
-  const currentHistory = [...request.history, userMessage];
+  const currentHistory = [...requestHistory, userMessage];
   const runId = request.runId ?? `run-${crypto.randomUUID()}`;
   const repairContext = request.repair === undefined ? undefined : { ...request.repair, runId };
   let activeFlow: BackendFlowType | null = null;

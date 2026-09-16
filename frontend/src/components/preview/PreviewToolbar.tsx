@@ -24,7 +24,7 @@ export function PreviewToolbar({
   onEnterFullScreen,
   onExitFullScreen,
 }: PreviewToolbarProps) {
-  const { generatedFiles, currentFiles, viewMode } = useSandpackStore();
+  const { generatedFiles, currentFiles, previewFiles, viewMode } = useSandpackStore();
   const [isDownloading, setIsDownloading] = useState(false);
 
   // 从全局获取 templateFiles（由 SandpackView 设置）
@@ -32,7 +32,7 @@ export function PreviewToolbar({
     typeof window !== "undefined" ? window.__templateFiles ?? {} : {};
   const resourceManifest =
     typeof window !== "undefined" ? window.__resourceManifest : undefined;
-  const filesToDownload = currentFiles ?? generatedFiles;
+  const filesToDownload = previewFiles ?? currentFiles ?? generatedFiles;
   const hasDownloadableFiles =
     (filesToDownload !== null && Object.keys(filesToDownload).length > 0) ||
     Object.keys(templateFiles).length > 0;

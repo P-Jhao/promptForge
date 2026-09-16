@@ -19,7 +19,7 @@ import { areSandpackFilesEqual, useSandpackStore } from "@/store/sandpackStore";
 import { useChatStore } from "@/store/chatStore";
 import type { CaseResourceManifest } from "@/cases/resourceManifest";
 import type { SandpackFiles, ViewMode } from "@/types/store";
-import { formatSandpackError, sameFiles, toPlainFiles, toSandpackFiles, toStoreFiles } from "./sandpackFileUtils";
+import { formatSandpackError, toSandpackFiles, toStoreFiles } from "./sandpackFileUtils";
 
 const SandpackProvider = dynamic(
   () => import("@codesandbox/sandpack-react").then((mod) => mod.SandpackProvider),
@@ -40,7 +40,7 @@ interface TemplateLoadState {
 }
 
 export function SandpackView({ initialFiles, initialManifest }: SandpackViewProps) {
-  const { viewMode, generatedFiles, currentFiles, setGeneratedFiles } = useSandpackStore();
+  const { viewMode, generatedFiles, currentFiles, setPreviewFiles } = useSandpackStore();
   const candidate = useChatStore((state) => state.candidate);
   const [templateFiles, setTemplateFiles] = useState<SandpackFiles>({});
   const [templateRetryCount, setTemplateRetryCount] = useState(0);
@@ -48,7 +48,6 @@ export function SandpackView({ initialFiles, initialManifest }: SandpackViewProp
     () => initialFiles === undefined ? null : JSON.stringify(initialFiles),
     [initialFiles],
   );
-  const [caseLoadedSignature, setCaseLoadedSignature] = useState<string | null>(null);
   const templateRequestKey = initialFiles === undefined
     ? `template:${templateRetryCount}`
     : "case";
@@ -56,18 +55,16 @@ export function SandpackView({ initialFiles, initialManifest }: SandpackViewProp
     key: templateRequestKey,
     status: initialFiles === undefined ? "loading" : "ready",
   }));
-  const isPresetCase = initialFiles !== undefined && candidate === null && generatedFiles !== null && sameFiles(generatedFiles, initialFiles);
+  const isPresetCase = initialFiles !== undefined && candidate === null;
 
   useEffect(() => {
-    if (initialFiles === undefined) return;
-    if (caseLoadedSignature === caseSignature) return;
-    setGeneratedFiles(toPlainFiles(initialFiles));
-    const timer = window.setTimeout(() => setCaseLoadedSignature(caseSignature), 0);
-    return () => window.clearTimeout(timer);
-  }, [caseLoadedSignature, caseSignature, initialFiles, setGeneratedFiles]);
+    setPreviewFiles(initialFiles ?? null);
+    return () => setPreviewFiles(null);
+  }, [initialFiles, setPreviewFiles]);
 
   useEffect(() => {
     window.__resourceManifest = isPresetCase ? initialManifest : undefined;
+    return () => { window.__resourceManifest = undefined; };
   }, [initialManifest, isPresetCase]);
 
   useEffect(() => {
@@ -97,7 +94,7 @@ export function SandpackView({ initialFiles, initialManifest }: SandpackViewProp
     ? toSandpackFiles(candidate.files)
     : initialFiles === undefined
       ? (currentFiles ?? generatedFiles)
-      : (caseLoadedSignature === caseSignature ? (currentFiles ?? generatedFiles) : initialFiles);
+      : initialFiles;
   const hasResultFiles = resultFiles !== null && resultFiles !== undefined && Object.keys(resultFiles).length > 0;
   const templateStatus = templateLoad.key === templateRequestKey ? templateLoad.status : "loading";
   const templateError = templateStatus === "error" ? templateLoad.error ?? "React 模板加载失败" : null;
@@ -144,7 +141,7 @@ export function SandpackView({ initialFiles, initialManifest }: SandpackViewProp
       >
         <div className="relative h-full w-full border-none sandpack-wrapper">
           <SandpackLayout style={{ height: "100%", border: "none", borderRadius: 0 }}>
-            <SandpackContent viewMode={viewMode} syncEditor={!candidatePreview} templateError={templateError} hasProjectFiles={hasResultFiles} templateFiles={templateFiles} />
+            <SandpackContent viewMode={viewMode} syncEditor={initialFiles === undefined && !candidatePreview} templateError={templateError} hasProjectFiles={hasResultFiles} templateFiles={templateFiles} />
           </SandpackLayout>
         </div>
       </SandpackProvider>
@@ -161,7 +158,7 @@ export function SandpackView({ initialFiles, initialManifest }: SandpackViewProp
 function SandpackContent({ viewMode, syncEditor, templateError, hasProjectFiles, templateFiles }: { viewMode: ViewMode; syncEditor: boolean; templateError: string | null; hasProjectFiles: boolean; templateFiles: SandpackFiles }) {
   return viewMode === "preview"
     ? <PreviewContent syncEditor={syncEditor} templateError={templateError} hasProjectFiles={hasProjectFiles} templateFiles={templateFiles} />
-    : <CodeContent hasProjectFiles={hasProjectFiles} templateFiles={templateFiles} />;
+    : <CodeContent syncEditor={syncEditor} hasProjectFiles={hasProjectFiles} templateFiles={templateFiles} />;
 }
 
 function PreviewContent({ syncEditor, templateError, hasProjectFiles, templateFiles }: { syncEditor: boolean; templateError: string | null; hasProjectFiles: boolean; templateFiles: SandpackFiles }) {
@@ -247,7 +244,7 @@ function PreviewContent({ syncEditor, templateError, hasProjectFiles, templateFi
   );
 }
 
-function CodeContent({ hasProjectFiles, templateFiles }: { hasProjectFiles: boolean; templateFiles: SandpackFiles }) {
+function CodeContent({ syncEditor, hasProjectFiles, templateFiles }: { syncEditor: boolean; hasProjectFiles: boolean; templateFiles: SandpackFiles }) {
   const { sandpack } = useSandpack();
   const { setCurrentFiles } = useSandpackStore();
   const [isFileTreeOpen, setIsFileTreeOpen] = useState(true);
@@ -260,8 +257,8 @@ function CodeContent({ hasProjectFiles, templateFiles }: { hasProjectFiles: bool
     if (previousFiles === null && !hasProjectFiles) return;
     if (!hasProjectFiles && areSandpackFilesEqual(templateFiles, files)) return;
     if (previousFiles !== null && areSandpackFilesEqual(previousFiles, files)) return;
-    setCurrentFiles(files);
-  }, [hasProjectFiles, sandpack.files, setCurrentFiles, templateFiles]);
+    if (syncEditor) setCurrentFiles(files);
+  }, [hasProjectFiles, sandpack.files, setCurrentFiles, syncEditor, templateFiles]);
 
   return (
     <div className="relative h-full w-full bg-white">

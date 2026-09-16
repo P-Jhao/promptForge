@@ -9,7 +9,7 @@ interface ProjectManagerMutationInput {
   isAssembling: boolean;
   candidatePresent: boolean;
   dirty: boolean;
-  storageSaving: boolean;
+  storageBusy: boolean;
   busy: boolean;
   setBusy: Dispatch<SetStateAction<boolean>>;
   setShowBrowser: Dispatch<SetStateAction<boolean>>;
@@ -17,13 +17,13 @@ interface ProjectManagerMutationInput {
   onCurrentProjectDeleted: () => void;
 }
 
-export function useProjectManagerMutations({ projectId, isLoading, isAssembling, candidatePresent, dirty, storageSaving, busy, setBusy, setShowBrowser, persistence, onCurrentProjectDeleted }: ProjectManagerMutationInput) {
+export function useProjectManagerMutations({ projectId, isLoading, isAssembling, candidatePresent, dirty, storageBusy, busy, setBusy, setShowBrowser, persistence, onCurrentProjectDeleted }: ProjectManagerMutationInput) {
   const [renameTarget, setRenameTarget] = useState<ProjectMutationTarget | null>(null);
   const [renameName, setRenameName] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<ProjectMutationTarget | null>(null);
 
   const canStartMutation = (): boolean => {
-    if (busy || isLoading || isAssembling || storageSaving) {
+    if (busy || isLoading || isAssembling || storageBusy) {
       toast.info("当前项目仍在生成、写入或校验，请稍后再操作");
       return false;
     }

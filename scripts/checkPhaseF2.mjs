@@ -196,6 +196,14 @@ assert.equal(database.stores.get("deletedProjects").values.has(rollbackDraft.pro
 database.stores.get("workspaces").values.delete("broken-workspace");
 await assert.rejects(() => repository.renameProject(rollbackDraft.projectId, "", 1), /项目名称/);
 
+const managerSource = readFileSync(path.join(root, "frontend/src/components/shell/ProjectManager.tsx"), "utf8");
+const mutationsSource = readFileSync(path.join(root, "frontend/src/hooks/useProjectManagerMutations.ts"), "utf8");
+const browserSource = readFileSync(path.join(root, "frontend/src/components/shell/ProjectBrowserModal.tsx"), "utf8");
+assert.match(managerSource, /const storageBusy = persistence\.status === "saving" \|\| persistence\.status === "loading"/);
+assert.match(managerSource, /disabled=\{busy \|\| storageBusy/);
+assert.match(mutationsSource, /storageBusy/);
+assert.match(browserSource, /candidatePresent \|\| storageBusy/);
+
 console.log(JSON.stringify({
   dbVersion: storage.PROJECT_DB_VERSION,
   renameIdentity: true,
@@ -203,6 +211,7 @@ console.log(JSON.stringify({
   rollbackGuard: true,
   staleWriteRejection: true,
   legacySchemaLoad: true,
+  storageOperationGuard: true,
 }));
 
 function makeDraft(projectId, projectName) {

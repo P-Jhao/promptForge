@@ -13,6 +13,7 @@ import {
   snapshotToDraft,
   toProjectVersion,
 } from "@/lib/projectSerialization";
+import { runRecordToGeneration } from "@/lib/projectRunHydration";
 import type { ProjectDraft, ProjectRepository, ProjectSnapshot, ProjectStorageStatus, ProjectSummary, VersionMetadata, VersionMetadataSaveMode } from "@/types/project";
 import type { ProjectVersion } from "@/types/store";
 
@@ -153,6 +154,8 @@ export function useProjectPersistence(): ProjectPersistenceApi {
 
   const applySnapshot = useCallback((snapshot: ProjectSnapshot): void => {
     const sortedVersions = [...snapshot.versions].sort((first, second) => first.versionNumber - second.versionNumber);
+    const latestRun = snapshot.runs.find((run) => run.runId === snapshot.project.latestRunId)
+      ?? [...snapshot.runs].sort((first, second) => first.startedAt - second.startedAt).at(-1);
     identityRef.current = {
       projectId: snapshot.project.projectId,
       createdAt: snapshot.workspace.createdAt,
@@ -164,6 +167,7 @@ export function useProjectPersistence(): ProjectPersistenceApi {
       currentVersion: snapshot.project.currentVersion,
       versions: sortedVersions.map(toProjectVersion),
       messages: snapshot.project.messages,
+      generation: runRecordToGeneration(latestRun),
     });
     setGeneratedFiles(snapshot.workspace.files);
     expectedRevisionRef.current = snapshot.project.revision;

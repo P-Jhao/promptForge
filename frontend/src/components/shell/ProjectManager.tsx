@@ -38,12 +38,17 @@ export function ProjectManager({ persistence }: { persistence: ProjectPersistenc
   const [pending, setPending] = useState<PendingAction | null>(null);
   const [pendingAfterSaveAs, setPendingAfterSaveAs] = useState<PendingAction | null>(null);
   const [busy, setBusy] = useState(false);
+  const storageBusy = persistence.status === "saving" || persistence.status === "loading";
 
   useEffect(() => {
     void refreshProjects();
   }, [refreshProjects]);
 
   const execute = async (action: PendingAction): Promise<void> => {
+    if (persistence.status === "saving" || persistence.status === "loading") {
+      toast.info("当前项目仍在读取或保存，请稍后再操作");
+      return;
+    }
     if (action.kind !== "new") {
       const latestChat = useChatStore.getState();
       if (latestChat.isLoading || latestChat.candidate !== null || useSandpackStore.getState().isAssembling) {
@@ -83,6 +88,10 @@ export function ProjectManager({ persistence }: { persistence: ProjectPersistenc
   };
 
   const requestNewProject = (): void => {
+    if (storageBusy) {
+      toast.info("当前项目仍在读取或保存，请稍后再新建项目");
+      return;
+    }
     if (isAssembling) {
       toast.info("当前项目仍在写入预览，请稍后再新建项目");
       return;
@@ -108,7 +117,7 @@ export function ProjectManager({ persistence }: { persistence: ProjectPersistenc
       setShowBrowser(false);
       return;
     }
-    if (isLoading || isAssembling || candidate !== null || busy) {
+    if (storageBusy || isLoading || isAssembling || candidate !== null || busy) {
       toast.info("当前请求或校验仍在进行，请完成后再切换项目");
       return;
     }
@@ -122,7 +131,7 @@ export function ProjectManager({ persistence }: { persistence: ProjectPersistenc
     isAssembling,
     candidatePresent: candidate !== null,
     dirty: persistence.dirty,
-    storageSaving: persistence.status === "saving",
+    storageBusy,
     busy,
     setBusy,
     setShowBrowser,
@@ -136,6 +145,10 @@ export function ProjectManager({ persistence }: { persistence: ProjectPersistenc
   });
 
   const save = (): void => {
+    if (storageBusy) {
+      toast.info("当前项目仍在读取或保存，请稍后再保存");
+      return;
+    }
     void persistence.saveCurrentProject().catch(() => undefined);
   };
 
@@ -146,6 +159,10 @@ export function ProjectManager({ persistence }: { persistence: ProjectPersistenc
   };
 
   const submitSaveAs = async (): Promise<void> => {
+    if (persistence.status === "saving" || persistence.status === "loading") {
+      toast.info("当前项目仍在读取或保存，请稍后再另存为");
+      return;
+    }
     setBusy(true);
     try {
       await persistence.saveAs(saveAsName);
@@ -203,17 +220,17 @@ export function ProjectManager({ persistence }: { persistence: ProjectPersistenc
           title="项目名称"
         />
         <span className={statusClass} role="status">{acceptedVersion === undefined ? "尚无已接受版本" : `已接受版本 v${String(acceptedVersion.versionNumber)}`} · {statusText}</span>
-        <button type="button" onClick={requestNewProject} disabled={busy || isLoading || candidateBlocksSwitch} title={isLoading ? "生成进行中，暂不能新建项目" : candidateBlocksSwitch ? "请先应用或放弃候选" : "新建空白项目"}>
+        <button type="button" onClick={requestNewProject} disabled={busy || storageBusy || isLoading || candidateBlocksSwitch} title={isLoading ? "生成进行中，暂不能新建项目" : candidateBlocksSwitch ? "请先应用或放弃候选" : "新建空白项目"}>
           <Plus size={13} /> 新建项目
         </button>
-        <button type="button" onClick={save} disabled={busy || persistence.status === "saving"} title="保存当前工作副本">
+        <button type="button" onClick={save} disabled={busy || storageBusy} title="保存当前工作副本">
           <Save size={13} /> 保存
         </button>
-        <button type="button" onClick={() => setShowBrowser(true)} disabled={busy || isLoading || candidateBlocksSwitch} title={isLoading ? "生成进行中，暂不能切换项目" : candidateBlocksSwitch ? "请先应用或放弃候选" : "打开本地项目"}>
+        <button type="button" onClick={() => setShowBrowser(true)} disabled={busy || storageBusy || isLoading || candidateBlocksSwitch} title={isLoading ? "生成进行中，暂不能切换项目" : candidateBlocksSwitch ? "请先应用或放弃候选" : "打开本地项目"}>
           <FolderOpen size={13} /> 打开
         </button>
-        <button type="button" onClick={() => setShowBrowser(true)} disabled={busy || isLoading || candidateBlocksSwitch} title="查看当前项目版本历史"><History size={13} /> 版本历史</button>
-        <button type="button" onClick={beginSaveAs} disabled={busy || isLoading || candidateBlocksSwitch} title={isLoading ? "生成进行中，暂不能另存为" : candidateBlocksSwitch ? "请先应用或放弃候选" : "另存为新项目"}>
+        <button type="button" onClick={() => setShowBrowser(true)} disabled={busy || storageBusy || isLoading || candidateBlocksSwitch} title="查看当前项目版本历史"><History size={13} /> 版本历史</button>
+        <button type="button" onClick={beginSaveAs} disabled={busy || storageBusy || isLoading || candidateBlocksSwitch} title={isLoading ? "生成进行中，暂不能另存为" : candidateBlocksSwitch ? "请先应用或放弃候选" : "另存为新项目"}>
           <Copy size={13} /> 另存为
         </button>
       </div>
@@ -231,7 +248,7 @@ export function ProjectManager({ persistence }: { persistence: ProjectPersistenc
           isLoading={isLoading}
           isAssembling={isAssembling}
           candidatePresent={candidateBlocksSwitch}
-          storageSaving={persistence.status === "saving"}
+          storageBusy={storageBusy}
           onClose={() => setShowBrowser(false)}
           onOpen={(targetProjectId) => requestAction({ kind: "open", projectId: targetProjectId })}
           onRestore={(version) => requestAction({ kind: "restore", version })}

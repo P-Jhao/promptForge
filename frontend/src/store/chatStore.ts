@@ -99,7 +99,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
       messageThoughts: {},
       phaseCompletion: {},
       currentFlow: null,
-      generation: { ...initialGeneration },
+      generation: project.generation === undefined ? { ...initialGeneration } : {
+        ...project.generation,
+        completedSteps: [...project.generation.completedSteps],
+        stageTimings: { ...project.generation.stageTimings },
+      },
       isLoading: false,
       candidate: null,
     }),

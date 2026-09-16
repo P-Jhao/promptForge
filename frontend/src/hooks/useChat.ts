@@ -10,6 +10,7 @@ import { createBaseSnapshot, hashEditBase, hashResourceReferences } from "@/lib/
 import { canAttemptRepair, repairErrorSignature } from "@/lib/validationReport";
 import type { RepairRequestContext } from "@/lib/validationReport";
 import { classifyRequestIntent, isNewProjectRequest } from "@/lib/requestIntent";
+import { limitEditHistory } from "@/lib/requestHistory";
 import { applyStagedCandidate } from "./candidateActions";
 import { runChatRequest } from "./chatRequestRunner";
 import type { ActiveRequest, Attachment, RetryableRequest } from "./chatStreamUtils";
@@ -91,8 +92,11 @@ export function useChat() {
       if (latestState.isLoading || latestState.candidate !== null) {
         throw new Error("当前项目正在处理其他请求，请稍后再试");
       }
+      const requestHistory = classification.intent === "edit"
+        ? limitEditHistory(state.messages)
+        : [...state.messages];
       await runRequest({
-        content, attachments, mockConfig, history: [...state.messages],
+        content, attachments, mockConfig, history: requestHistory,
         projectId: state.currentProjectId, operation, intent: classification.intent, base,
       });
     } catch (error: unknown) {
@@ -106,7 +110,11 @@ export function useChat() {
       toast.error("没有可重新执行的请求");
       return;
     }
-    await runRequest({ ...request, runId: undefined, history: [...request.history] });
+    await runRequest({
+      ...request,
+      runId: undefined,
+      history: request.operation === "edit" ? limitEditHistory(request.history) : [...request.history],
+    });
   }, [runRequest]);
 
   const repairCandidate = useCallback(async () => {
@@ -155,7 +163,7 @@ export function useChat() {
         content: `请修复当前候选中的代码或运行问题，仅保留现有功能并返回最小结构化文件变更。诊断签名：${errorSignature}`,
         attachments: undefined,
         mockConfig: { global: false },
-        history: [...state.messages],
+        history: limitEditHistory(state.messages),
         projectId: currentCandidate.projectId,
         operation: "edit",
         intent: "edit",

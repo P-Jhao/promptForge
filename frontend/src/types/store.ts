@@ -27,6 +27,9 @@ export interface SandpackStore {
   /** Sandpack 当前文件内容（包含编辑器中的本地改动） */
   currentFiles: SandpackFiles | null;
   setCurrentFiles: (files: SandpackFiles) => void;
+  /** 预置案例专用的展示文件，不属于当前项目工作副本。 */
+  previewFiles: SandpackFiles | null;
+  setPreviewFiles: (files: SandpackFiles | null) => void;
   clearGeneratedFiles: () => void;
 
   /** 组装状态 */

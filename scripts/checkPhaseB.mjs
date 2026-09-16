@@ -147,6 +147,7 @@ const replacements = {
   "@/types/validation": validationTypeModule.exports,
 };
 const serialization = loadTsModule(path.join(root, "frontend/src/lib/projectSerialization.ts"), replacements).exports;
+const runHydration = loadTsModule(path.join(root, "frontend/src/lib/projectRunHydration.ts"), replacements).exports;
 const repositoryModule = loadTsModule(path.join(root, "frontend/src/lib/projectRepository.ts"), replacements).exports;
 const repository = new repositoryModule.IndexedDbProjectRepository();
 const validationReport = validationReportModule.createCandidateValidation("candidate-b-fixture", "run-b-fixture").report;
@@ -171,6 +172,18 @@ assert.equal(loaded.versions.length, 1);
 assert.equal(loaded.project.messages[0].content, "hello");
 assert.equal(loaded.runs[0].validationReport?.candidateId, "candidate-b-fixture");
 assert.equal(loaded.runs[0].validationReport?.layers.length, 6);
+const restoredGeneration = runHydration.runRecordToGeneration(loaded.runs[0]);
+assert.equal(restoredGeneration.status, "success");
+assert.equal(restoredGeneration.runId, "run-b-fixture");
+assert.equal(restoredGeneration.mode, "real");
+assert.equal(restoredGeneration.validationReport?.candidateId, "candidate-b-fixture");
+const interruptedGeneration = runHydration.runRecordToGeneration({ ...loaded.runs[0], status: "running", endedAt: undefined });
+assert.equal(interruptedGeneration.status, "cancelled");
+assert.match(interruptedGeneration.error, /页面关闭前未完成/);
+const persistenceSource = readFileSync(path.join(root, "frontend/src/hooks/useProjectPersistence.ts"), "utf8");
+const chatStoreSource = readFileSync(path.join(root, "frontend/src/store/chatStore.ts"), "utf8");
+assert.match(persistenceSource, /generation: runRecordToGeneration\(latestRun\)/);
+assert.match(chatStoreSource, /project\.generation === undefined/);
 assert.equal(JSON.stringify(loaded.project).includes("ReactNode"), false);
 assert.equal(serialization.projectDraftFingerprint(draft), serialization.projectDraftFingerprint(serialization.snapshotToDraft(loaded)));
 
@@ -187,7 +200,7 @@ await assert.rejects(() => repository.saveProject(mutatedVersion, 2), /不可变
 const database = globalThis.indexedDB.databases.get("promptforge-projects");
 database.stores.get("workspaces").values.get("workspace-fixture").filesHash = "broken";
 await assert.rejects(() => repository.loadProject("project-fixture"), /工作副本 hash 格式无效/);
-console.log(JSON.stringify({ save: true, reload: true, conflict: true, immutableVersion: true, corruptData: true, validationRunRecord: true }));
+console.log(JSON.stringify({ save: true, reload: true, conflict: true, immutableVersion: true, corruptData: true, validationRunRecord: true, runHydration: true }));
 
 function loadTsModule(filePath, replacements = {}, cache = new Map()) {
   const absolutePath = path.resolve(filePath);

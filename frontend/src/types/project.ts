@@ -183,6 +183,8 @@ export interface ProjectHydration {
   currentVersion: number;
   versions: ProjectVersion[];
   messages: SerializableMessage[];
+  /** 仅恢复可序列化的最近运行摘要；加载态和候选由当前会话重新初始化。 */
+  generation?: GenerationState;
 }
 
 export function isSandpackFiles(value: unknown): value is SandpackFiles {

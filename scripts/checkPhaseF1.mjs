@@ -10,6 +10,7 @@ const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const require = createRequire(import.meta.url);
 const typescript = require(path.join(rootDir, "frontend/node_modules/typescript"));
 const intent = loadTsModule(path.join(rootDir, "frontend/src/lib/requestIntent.ts"));
+const requestHistory = loadTsModule(path.join(rootDir, "frontend/src/lib/requestHistory.ts"));
 const guard = loadTsModule(path.join(rootDir, "frontend/src/lib/newProjectGuard.ts"));
 
 const intentCases = [
@@ -42,6 +43,17 @@ for (const [content, expected] of newProjectCases) {
   assert.equal(intent.exports.isNewProjectRequest(content), expected, content);
 }
 
+const messages = Array.from({ length: 8 }, (_, index) => ({
+  id: `message-${index + 1}`,
+  role: index % 2 === 0 ? "user" : "assistant",
+  content: `message ${index + 1}`,
+}));
+assert.deepEqual(
+  requestHistory.exports.limitEditHistory(messages).map((message) => message.id),
+  ["message-3", "message-4", "message-5", "message-6", "message-7", "message-8"],
+);
+assert.equal(requestHistory.exports.MAX_EDIT_HISTORY, 6);
+
 assert.equal(
   guard.exports.evaluateNewProjectDecision({ dirty: false, isLoading: false, candidatePresent: false }),
   "allow",
@@ -64,6 +76,8 @@ const chatHook = readFileSync(path.join(rootDir, "frontend/src/hooks/useChat.ts"
 const projectManager = readFileSync(path.join(rootDir, "frontend/src/components/shell/ProjectManager.tsx"), "utf8");
 const chatRunner = readFileSync(path.join(rootDir, "frontend/src/hooks/chatRequestRunner.ts"), "utf8");
 const sandpackView = readFileSync(path.join(rootDir, "frontend/src/components/preview/SandpackView.tsx"), "utf8");
+const sandpackStore = readFileSync(path.join(rootDir, "frontend/src/store/sandpackStore.ts"), "utf8");
+const previewToolbar = readFileSync(path.join(rootDir, "frontend/src/components/preview/PreviewToolbar.tsx"), "utf8");
 assert.doesNotMatch(chatPanel, /chat-operation-toggle|首次生成|基于当前代码修改/);
 assert.match(chatPanel, /sendMessage\(content, undefined, mockConfig\)/);
 assert.match(chatPanel, /isNewProjectRequest/);
@@ -81,12 +95,22 @@ assert.match(sandpackView, /previousFiles === null && !hasProjectFiles/);
 assert.match(chatRunner, /request\.intent === "chat"/);
 assert.match(chatRunner, /activeFlow === "traditional" && latestFiles !== null/);
 assert.match(chatRunner, /stageCandidate\(stagedCandidate\)/);
+assert.match(chatHook, /limitEditHistory\(state\.messages\)/);
+assert.match(chatRunner, /limitEditHistory\(request\.history\)/);
+assert.match(sandpackView, /setPreviewFiles/);
+assert.match(sandpackView, /initialFiles === undefined && !candidatePreview/);
+assert.doesNotMatch(sandpackView, /setGeneratedFiles\(toPlainFiles\(initialFiles\)\)/);
+assert.match(sandpackView, /: initialFiles;/);
+assert.match(sandpackStore, /previewFiles/);
+assert.match(previewToolbar, /previewFiles \?\? currentFiles/);
 
 console.log(JSON.stringify({
   requestIntent: true,
   newProjectGuards: true,
   singleChatInput: true,
   candidateOnlyForTraditional: true,
+  editHistoryBounded: true,
+  presetCaseIsolation: true,
 }));
 
 function loadTsModule(filePath) {
