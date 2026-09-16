@@ -109,51 +109,153 @@ export function stripPreviewFiles(files: SandpackFiles): SandpackFiles {
   }
   return stripped;
 }
-
 function addMountGuard(source: string): string {
-  const renderCall = "root.render(";
   const sourceWithBoundary = addBoundaryRuntimeReporter(source);
-  const renderIndex = sourceWithBoundary.indexOf(renderCall);
-  if (renderIndex < 0) return `${PREVIEW_BRIDGE_IMPORT}\n${source}`;
-  const closeIndex = sourceWithBoundary.lastIndexOf(");");
-  if (closeIndex <= renderIndex) return `${PREVIEW_BRIDGE_IMPORT}\n${source}`;
-  return `${PREVIEW_BRIDGE_IMPORT}\n${PREVIEW_GUARD_CODE}${sourceWithBoundary.slice(0, renderIndex + renderCall.length)}${PREVIEW_GUARD_OPEN}\n${sourceWithBoundary.slice(renderIndex + renderCall.length, closeIndex)}${PREVIEW_GUARD_CLOSE}\n${sourceWithBoundary.slice(closeIndex)}`;
+  const renderCall = findRenderCall(sourceWithBoundary);
+  if (renderCall === null) return `${PREVIEW_BRIDGE_IMPORT}\n${source}`;
+  const trailingCommaIndex = findTrailingComma(sourceWithBoundary, renderCall.openIndex + 1, renderCall.closeIndex);
+  const guardCloseIndex = trailingCommaIndex ?? renderCall.closeIndex;
+  return `${PREVIEW_BRIDGE_IMPORT}\n${PREVIEW_GUARD_CODE}${sourceWithBoundary.slice(0, renderCall.openIndex + 1)}${PREVIEW_GUARD_OPEN}${sourceWithBoundary.slice(renderCall.openIndex + 1, guardCloseIndex)}${PREVIEW_GUARD_CLOSE}${sourceWithBoundary.slice(guardCloseIndex)}`;
 }
-
 function removeMountGuard(source: string): string {
   const withoutBridge = source.slice(PREVIEW_BRIDGE_IMPORT.length).replace(/^\n/, "");
   const guardMarker = withoutBridge.indexOf(PREVIEW_GUARD_BEGIN);
   const guardStart = guardMarker >= 0 ? guardMarker : withoutBridge.indexOf(PREVIEW_GUARD_IMPORT);
-  const rootRenderIndex = withoutBridge.indexOf("root.render(");
-  if (guardStart < 0 || rootRenderIndex < 0) return withoutBridge;
+  if (guardStart < 0) return withoutBridge;
 
-  const openIndex = withoutBridge.indexOf(PREVIEW_GUARD_OPEN, rootRenderIndex);
-  const closeIndex = withoutBridge.lastIndexOf(PREVIEW_GUARD_CLOSE);
-  if (openIndex < 0 || closeIndex < openIndex) return withoutBridge;
   const sourceAfterGuard = withoutBridge.slice(findGuardEnd(withoutBridge, guardStart)).replace(/^\n/, "");
   const sourceWithoutGuardImports = withoutBridge.slice(0, guardStart) + sourceAfterGuard;
-  const adjustedRenderIndex = sourceWithoutGuardImports.indexOf("root.render(");
-  const adjustedOpenIndex = sourceWithoutGuardImports.indexOf(PREVIEW_GUARD_OPEN, adjustedRenderIndex);
-  const adjustedCloseIndex = sourceWithoutGuardImports.lastIndexOf(PREVIEW_GUARD_CLOSE);
-  if (adjustedRenderIndex < 0 || adjustedOpenIndex < 0 || adjustedCloseIndex < adjustedOpenIndex) {
+  const renderCall = findRenderCall(sourceWithoutGuardImports);
+  if (renderCall === null) {
+    return withoutBridge;
+  }
+  const guardOpenIndex = sourceWithoutGuardImports.indexOf(PREVIEW_GUARD_OPEN, renderCall.openIndex + 1);
+  const guardCloseIndex = guardOpenIndex < 0
+    ? -1
+    : sourceWithoutGuardImports.indexOf(PREVIEW_GUARD_CLOSE, guardOpenIndex + PREVIEW_GUARD_OPEN.length);
+  if (guardOpenIndex < 0 || guardCloseIndex < guardOpenIndex || guardCloseIndex >= renderCall.closeIndex) {
     return withoutBridge;
   }
   const body = sourceWithoutGuardImports
-    .slice(adjustedOpenIndex + PREVIEW_GUARD_OPEN.length, adjustedCloseIndex)
-    .replace(/^\n/, "");
-  const afterClose = sourceWithoutGuardImports
-    .slice(adjustedCloseIndex + PREVIEW_GUARD_CLOSE.length)
-    .replace(/^\n/, "");
-  return removeBoundaryRuntimeReporter(`${sourceWithoutGuardImports.slice(0, adjustedRenderIndex + "root.render(".length)}${body}${afterClose}`);
+    .slice(guardOpenIndex + PREVIEW_GUARD_OPEN.length, guardCloseIndex);
+  const afterClose = sourceWithoutGuardImports.slice(guardCloseIndex + PREVIEW_GUARD_CLOSE.length);
+  return removeBoundaryRuntimeReporter(`${sourceWithoutGuardImports.slice(0, renderCall.openIndex + 1)}${body}${afterClose}`);
 }
-
+interface RenderCall {
+  openIndex: number;
+  closeIndex: number;
+}
+function findRenderCall(source: string): RenderCall | null {
+  for (let index = 0; index < source.length; index += 1) {
+    const character = source[index];
+    if (character === "/" && source[index + 1] === "/") {
+      index = skipLineComment(source, index);
+      continue;
+    }
+    if (character === "/" && source[index + 1] === "*") {
+      index = skipBlockComment(source, index);
+      continue;
+    }
+    if (character === "'" || character === '"' || character === "`") {
+      index = skipQuoted(source, index, character);
+      continue;
+    }
+    if (!isIdentifierBoundary(source, index - 1)) continue;
+    if (source.startsWith("root", index) && isIdentifierBoundary(source, index + 4)) {
+      const rootRender = readMemberRenderCall(source, index + 4);
+      if (rootRender !== null) return rootRender;
+    }
+    if (source.startsWith("createRoot", index) && isIdentifierBoundary(source, index + 10)) {
+      const createRootRender = readCreateRootRenderCall(source, index + 10);
+      if (createRootRender !== null) return createRootRender;
+    }
+  }
+  return null;
+}
+function readMemberRenderCall(source: string, startIndex: number): RenderCall | null {
+  let index = skipWhitespace(source, startIndex);
+  if (source[index] !== ".") return null;
+  index = skipWhitespace(source, index + 1);
+  if (!source.startsWith("render", index) || !isIdentifierBoundary(source, index + 6)) return null;
+  return readRenderArguments(source, skipWhitespace(source, index + 6));
+}
+function readCreateRootRenderCall(source: string, startIndex: number): RenderCall | null {
+  const createOpenIndex = skipWhitespace(source, startIndex);
+  if (source[createOpenIndex] !== "(") return null;
+  const createCloseIndex = findMatchingDelimiter(source, createOpenIndex);
+  if (createCloseIndex === null) return null;
+  let index = skipWhitespace(source, createCloseIndex + 1);
+  if (source[index] !== ".") return null;
+  index = skipWhitespace(source, index + 1);
+  if (!source.startsWith("render", index) || !isIdentifierBoundary(source, index + 6)) return null;
+  return readRenderArguments(source, skipWhitespace(source, index + 6));
+}
+function readRenderArguments(source: string, openIndex: number): RenderCall | null {
+  if (source[openIndex] !== "(") return null;
+  const closeIndex = findMatchingDelimiter(source, openIndex);
+  return closeIndex === null ? null : { openIndex, closeIndex };
+}
+function findTrailingComma(source: string, startIndex: number, closeIndex: number): number | null {
+  let index = closeIndex - 1;
+  while (index >= startIndex && /\s/.test(source[index])) index -= 1;
+  return source[index] === "," ? index : null;
+}
+function findMatchingDelimiter(source: string, openIndex: number): number | null {
+  let depth = 0;
+  for (let index = openIndex; index < source.length; index += 1) {
+    const character = source[index];
+    if (character === "'" || character === '"' || character === "`") {
+      index = skipQuoted(source, index, character);
+      continue;
+    }
+    if (character === "/" && source[index + 1] === "/") {
+      index = skipLineComment(source, index);
+      continue;
+    }
+    if (character === "/" && source[index + 1] === "*") {
+      index = skipBlockComment(source, index);
+      continue;
+    }
+    if (character === "(") depth += 1;
+    if (character === ")") {
+      depth -= 1;
+      if (depth === 0) return index;
+    }
+  }
+  return null;
+}
+function skipWhitespace(source: string, startIndex: number): number {
+  let index = startIndex;
+  while (index < source.length && /\s/.test(source[index])) index += 1;
+  return index;
+}
+function isIdentifierBoundary(source: string, index: number): boolean {
+  return index < 0 || index >= source.length || !/[A-Za-z0-9_$]/.test(source[index]);
+}
+function skipQuoted(source: string, startIndex: number, quote: string): number {
+  for (let index = startIndex + 1; index < source.length; index += 1) {
+    if (source[index] === "\\") {
+      index += 1;
+      continue;
+    }
+    if (source[index] === quote) return index;
+  }
+  return source.length - 1;
+}
+function skipLineComment(source: string, startIndex: number): number {
+  const newlineIndex = source.indexOf("\n", startIndex + 2);
+  return newlineIndex < 0 ? source.length - 1 : newlineIndex;
+}
+function skipBlockComment(source: string, startIndex: number): number {
+  const closeIndex = source.indexOf("*/", startIndex + 2);
+  return closeIndex < 0 ? source.length - 1 : closeIndex + 1;
+}
 function addBoundaryRuntimeReporter(source: string): string {
   const boundarySignature = "static getDerivedStateFromError(error: unknown): ErrorBoundaryState {";
   if (!source.includes(boundarySignature) || source.includes(PREVIEW_BOUNDARY_BEGIN)) return source;
   const report = `\n    ${PREVIEW_BOUNDARY_BEGIN}\n    reportPreviewRuntimeError(error);\n    ${PREVIEW_BOUNDARY_END}`;
   return source.replace(boundarySignature, `${boundarySignature}${report}`);
 }
-
 function removeBoundaryRuntimeReporter(source: string): string {
   const report = `\n    ${PREVIEW_BOUNDARY_BEGIN}\n    reportPreviewRuntimeError(error);\n    ${PREVIEW_BOUNDARY_END}`;
   return source.replace(report, "");

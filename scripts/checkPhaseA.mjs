@@ -90,6 +90,25 @@ const exportFiles = bridgeModule.exports.stripPreviewFiles(previewFiles);
 assert.equal(exportFiles["/__promptforge_preview_bridge.js"], undefined);
 assert.equal(exportFiles["/index.tsx"].code, files["/index.tsx"].code);
 
+const createRootEntry = `// root.render(<Ignored />)\nconst ignored = "createRoot(root).render(";\nimport { createRoot } from "react-dom/client";\nconst rootElement = document.getElementById("root");\ncreateRoot(rootElement).render(\n  <App title={getTitle(")")} />,\n);`;
+const createRootFiles = {
+  "/index.tsx": { code: createRootEntry },
+  "/App.tsx": { code: "export default function App() { return null; }" },
+};
+const createRootPreview = bridgeModule.exports.createPreviewFiles(createRootFiles);
+assert.match(createRootPreview["/index.tsx"].code, /<PromptForgePreviewGuard>/);
+assert.match(createRootPreview["/index.tsx"].code, /<\/PromptForgePreviewGuard>,/);
+const transpiledCreateRootPreview = typescript.transpileModule(createRootPreview["/index.tsx"].code, {
+  compilerOptions: {
+    jsx: typescript.JsxEmit.ReactJSX,
+    module: typescript.ModuleKind.CommonJS,
+    target: typescript.ScriptTarget.ES2020,
+  },
+});
+assert.equal(transpiledCreateRootPreview.diagnostics?.length ?? 0, 0);
+const createRootExport = bridgeModule.exports.stripPreviewFiles(createRootPreview);
+assert.equal(createRootExport["/index.tsx"].code, createRootEntry);
+
 let capturedBlob;
 let capturedFilename;
 const previousDocument = globalThis.document;
@@ -126,7 +145,7 @@ assert.ok(archive.files["promptforge-resource-manifest.json"]);
 const exportedManifest = JSON.parse(await archive.files["promptforge-resource-manifest.json"].async("string"));
 assert.deepEqual(exportedManifest.externalResources.map((resource) => resource.url), NOVEL_COVER_URLS);
 assert.equal(archive.files["/__promptforge_preview_bridge.js"], undefined);
-console.log(JSON.stringify({ fixedCoverAllowlist: true, externalManifest: true, maliciousUrlRejected: true, exportOmitsRemoteBytes: true, bridgeExcluded: true }));
+console.log(JSON.stringify({ fixedCoverAllowlist: true, externalManifest: true, maliciousUrlRejected: true, exportOmitsRemoteBytes: true, bridgeExcluded: true, createRootBridge: true }));
 
 function loadTsModule(filePath, replacements = {}) {
   const source = require("node:fs").readFileSync(filePath, "utf8");
