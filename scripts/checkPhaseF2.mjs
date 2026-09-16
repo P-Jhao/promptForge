@@ -226,14 +226,18 @@ const managerSource = readFileSync(path.join(root, "frontend/src/components/shel
 const mutationsSource = readFileSync(path.join(root, "frontend/src/hooks/useProjectManagerMutations.ts"), "utf8");
 const browserSource = readFileSync(path.join(root, "frontend/src/components/shell/ProjectBrowserModal.tsx"), "utf8");
 const persistenceSource = readFileSync(path.join(root, "frontend/src/hooks/useProjectPersistence.ts"), "utf8");
+const baselineHookSource = readFileSync(path.join(root, "frontend/src/hooks/useProjectBaseline.ts"), "utf8");
+const runtimeDraftSource = readFileSync(path.join(root, "frontend/src/lib/runtimeProjectDraft.ts"), "utf8");
 assert.match(managerSource, /const storageBusy = persistence\.status === "saving" \|\| persistence\.status === "loading"/);
 assert.match(managerSource, /disabled=\{busy \|\| storageBusy/);
 assert.match(mutationsSource, /storageBusy/);
 assert.match(browserSource, /candidatePresent \|\| storageBusy/);
-assert.match(persistenceSource, /getProjectBaseline\(projectId\)/);
-assert.match(persistenceSource, /setProjectBaseline\(\{ projectId: targetProjectId/);
-assert.match(persistenceSource, /removeProjectBaseline\(targetProjectId\)/);
-assert.match(persistenceSource, /resourceRecords: savedDraftRef\.current\?\.resources/);
+assert.match(baselineHookSource, /getProjectBaseline\(projectId\)/);
+assert.match(baselineHookSource, /setProjectBaseline\(\{ projectId: draft\.projectId/);
+assert.match(baselineHookSource, /requestId !== entry\.requestId/);
+assert.match(persistenceSource, /useProjectBaseline\(projectId, repositoryRef\.current\)/);
+assert.match(persistenceSource, /createDraftFromRuntimeState/);
+assert.match(runtimeDraftSource, /resourceRecords/);
 
 console.log(JSON.stringify({
   dbVersion: storage.PROJECT_DB_VERSION,

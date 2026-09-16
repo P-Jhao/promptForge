@@ -222,7 +222,7 @@ assert.match(persistenceSource, /cleanBeforeUpdate/);
 assert.match(persistenceSource, /return "memory"/);
 assert.match(persistenceSource, /savedDraftRef\.current\?\.versions\.some/);
 assert.match(persistenceSource, /const hasSavedBaseline = expectedRevisionRef\.current !== null && savedFingerprintRef\.current !== null/);
-assert.match(persistenceSource, /const visibleStatus: ProjectStorageStatus = status === "saved" && !hasSavedBaseline \? "idle" : status/);
+assert.match(persistenceSource, /const visibleStatus: ProjectStorageStatus = status === "saved"\s+\? \(hasSavedBaseline \? "saved" : "idle"\)/);
 assert.match(persistenceSource, /return \{ status: visibleStatus,/);
 assert.match(chatStoreSource, /Math\.max\(state\.currentVersion, highestSavedVersion\) \+ 1/);
 assert.match(chatStoreSource, /版本号必须从 v1 开始/);

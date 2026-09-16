@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useChatStore } from "@/store/chatStore";
 import { useSandpackStore } from "@/store/sandpackStore";
 import { IndexedDbProjectRepository } from "@/lib/projectRepository";
@@ -14,13 +14,9 @@ import {
   toProjectVersion,
 } from "@/lib/projectSerialization";
 import { runRecordToGeneration } from "@/lib/projectRunHydration";
-import {
-  getProjectBaseline,
-  isCurrentBaselineRead,
-  removeProjectBaseline,
-  setProjectBaseline,
-} from "@/lib/projectBaselineCache";
-import type { ProjectDraft, ProjectRepository, ProjectSnapshot, ProjectStorageStatus, ProjectSummary, VersionMetadata, VersionMetadataSaveMode } from "@/types/project";
+import { useProjectBaseline } from "@/hooks/useProjectBaseline";
+import { createDraftFromRuntimeState } from "@/lib/runtimeProjectDraft";
+import type { ProjectRepository, ProjectSnapshot, ProjectStorageStatus, ProjectSummary, VersionMetadata, VersionMetadataSaveMode } from "@/types/project";
 import type { ProjectVersion } from "@/types/store";
 
 export interface ProjectPersistenceApi {
@@ -57,27 +53,17 @@ export function useProjectPersistence(): ProjectPersistenceApi {
   const setGeneratedFiles = useSandpackStore((state) => state.setGeneratedFiles);
   const repositoryRef = useRef<ProjectRepository | null>(null);
   if (repositoryRef.current === null) repositoryRef.current = new IndexedDbProjectRepository();
-  const initialBaseline = getProjectBaseline(projectId);
-  const expectedRevisionRef = useRef<number | null>(initialBaseline?.revision ?? null);
-  const savedFingerprintRef = useRef<string | null>(initialBaseline?.fingerprint ?? null);
-  const savedDraftRef = useRef<ProjectDraft | null>(initialBaseline?.draft ?? null);
-  const baselineRequestRef = useRef<Promise<void>>(Promise.resolve());
-  const baselineRequestIdRef = useRef(0);
-  const [baselineEpoch, setBaselineEpoch] = useState(0);
+  const baseline = useProjectBaseline(projectId, repositoryRef.current);
+  const { expectedRevisionRef, savedFingerprintRef, savedDraftRef, requestRef, remember, clear } = baseline;
   const identityRef = useRef({ projectId, createdAt: Date.now(), workspaceId: `workspace-${projectId}` });
   if (identityRef.current.projectId !== projectId) {
     identityRef.current = { projectId, createdAt: Date.now(), workspaceId: `workspace-${projectId}` };
-    const cachedBaseline = getProjectBaseline(projectId);
-    expectedRevisionRef.current = cachedBaseline?.revision ?? null;
-    savedFingerprintRef.current = cachedBaseline?.fingerprint ?? null;
-    savedDraftRef.current = cachedBaseline?.draft ?? null;
   }
-  const [status, setStatus] = useState<ProjectStorageStatus>(initialBaseline === undefined ? "idle" : "saved");
+  const [status, setStatus] = useState<ProjectStorageStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [listLoading, setListLoading] = useState(false);
-
   const identity = identityRef.current;
   const persistedResources = savedDraftRef.current?.resources;
   const draft = useMemo(() => createProjectDraft({
@@ -96,11 +82,12 @@ export function useProjectPersistence(): ProjectPersistenceApi {
   const hasContent = draft.files !== undefined && (
     Object.keys(draft.files).length > 0 || draft.messages.length > 0 || draft.versions.length > 0 || draft.name !== "新项目"
   );
-  const hasSavedFingerprint = baselineEpoch >= 0 && savedFingerprintRef.current !== null;
+  const hasSavedFingerprint = savedFingerprintRef.current !== null;
   const dirty = hasSavedFingerprint ? savedFingerprintRef.current !== fingerprint : hasContent;
   const hasSavedBaseline = expectedRevisionRef.current !== null && savedFingerprintRef.current !== null;
-  const visibleStatus: ProjectStorageStatus = status === "saved" && !hasSavedBaseline ? "idle" : status;
-
+  const visibleStatus: ProjectStorageStatus = status === "saved"
+    ? (hasSavedBaseline ? "saved" : "idle")
+    : (status === "idle" && hasSavedBaseline ? "saved" : status);
   const refreshProjects = useCallback(async () => {
     setListLoading(true);
     try {
@@ -111,69 +98,17 @@ export function useProjectPersistence(): ProjectPersistenceApi {
       setListLoading(false);
     }
   }, []);
-
-  useEffect(() => {
-    const targetProjectId = projectId;
-    const requestId = baselineRequestIdRef.current + 1;
-    baselineRequestIdRef.current = requestId;
-    let active = true;
-    const request = repositoryRef.current!.loadProject(targetProjectId)
-      .then((snapshot) => {
-        if (!active || !isCurrentBaselineRead(requestId, baselineRequestIdRef.current, targetProjectId, identityRef.current.projectId)) return;
-        if (snapshot === null) {
-          expectedRevisionRef.current = null;
-          savedFingerprintRef.current = null;
-          savedDraftRef.current = null;
-          removeProjectBaseline(targetProjectId);
-          setBaselineEpoch((value) => value + 1);
-          setStatus((current) => current === "saving" ? current : "idle");
-          return;
-        }
-        const loadedDraft = snapshotToDraft(snapshot);
-        const loadedFingerprint = projectDraftFingerprint(loadedDraft);
-        expectedRevisionRef.current = snapshot.project.revision;
-        savedFingerprintRef.current = loadedFingerprint;
-        savedDraftRef.current = loadedDraft;
-        setProjectBaseline({ projectId: targetProjectId, revision: snapshot.project.revision, fingerprint: loadedFingerprint, draft: loadedDraft });
-        setBaselineEpoch((value) => value + 1);
-        setStatus((current) => current === "saving" || current === "error" ? current : "saved");
-      })
-      .catch(() => {
-        // A read failure must not turn an existing cached baseline into a clean draft.
-      });
-    baselineRequestRef.current = request;
-    return () => {
-      active = false;
-    };
-  }, [projectId]);
-
   const saveCurrentProject = useCallback(async () => {
     setStatus("saving");
     setError(null);
     try {
-      await baselineRequestRef.current;
+      await requestRef.current;
       const latestState = useChatStore.getState();
       const latestSandpack = useSandpackStore.getState();
       if (latestState.currentProjectId !== projectId) throw new Error("项目已切换，请在当前项目中重新保存。");
-      const draftToSave = createProjectDraft({
-        projectId,
-        projectName: latestState.projectName,
-        createdAt: identityRef.current.createdAt,
-        workspaceId: identityRef.current.workspaceId,
-        currentVersion: latestState.currentVersion,
-        versions: latestState.versions,
-        messages: latestState.messages,
-        files: latestSandpack.currentFiles ?? latestSandpack.generatedFiles,
-        generation: latestState.generation,
-        resourceRecords: savedDraftRef.current?.resources,
-      });
-      const fingerprintToSave = projectDraftFingerprint(draftToSave);
+      const draftToSave = createDraftFromRuntimeState(latestState, latestSandpack, identityRef.current, savedDraftRef.current?.resources);
       const result = await repositoryRef.current!.saveProject(draftToSave, expectedRevisionRef.current);
-      baselineRequestIdRef.current += 1;
-      expectedRevisionRef.current = result.revision;
-      savedFingerprintRef.current = fingerprintToSave;
-      savedDraftRef.current = draftToSave;
-      setProjectBaseline({ projectId: draftToSave.projectId, revision: result.revision, fingerprint: fingerprintToSave, draft: draftToSave });
+      remember(draftToSave, result.revision);
       setWarning(null);
       setStatus("saved");
       await refreshProjects();
@@ -182,8 +117,7 @@ export function useProjectPersistence(): ProjectPersistenceApi {
       setError(caught instanceof Error ? caught.message : "项目保存失败，内存内容已保留");
       throw caught;
     }
-  }, [projectId, refreshProjects]);
-
+  }, [expectedRevisionRef, projectId, refreshProjects, remember, requestRef, savedDraftRef]);
   const saveAs = useCallback(async (name: string) => {
     const nextName = name.trim();
     if (nextName.length === 0) throw new Error("项目名称不能为空");
@@ -191,29 +125,19 @@ export function useProjectPersistence(): ProjectPersistenceApi {
     setError(null);
     const nextProjectId = createProjectId();
     try {
-      await baselineRequestRef.current;
+      await requestRef.current;
       const latestState = useChatStore.getState();
       const latestSandpack = useSandpackStore.getState();
       if (latestState.currentProjectId !== projectId) throw new Error("项目已切换，请在当前项目中重新另存为。");
-      const nextDraft = createProjectDraft({
+      const nextDraft = createDraftFromRuntimeState(latestState, latestSandpack, identityRef.current, savedDraftRef.current?.resources, {
         projectId: nextProjectId,
         projectName: nextName,
         createdAt: Date.now(),
         workspaceId: createWorkspaceId(nextProjectId),
-        currentVersion: latestState.currentVersion,
-        versions: latestState.versions,
-        messages: latestState.messages,
-        files: latestSandpack.currentFiles ?? latestSandpack.generatedFiles,
-        generation: latestState.generation,
-        resourceRecords: savedDraftRef.current?.resources,
       });
       const result = await repositoryRef.current!.saveProject(nextDraft, null);
-      baselineRequestIdRef.current += 1;
       identityRef.current = { projectId: nextProjectId, createdAt: nextDraft.createdAt, workspaceId: nextDraft.workspaceId };
-      expectedRevisionRef.current = result.revision;
-      savedFingerprintRef.current = projectDraftFingerprint(nextDraft);
-      savedDraftRef.current = nextDraft;
-      setProjectBaseline({ projectId: nextDraft.projectId, revision: result.revision, fingerprint: savedFingerprintRef.current, draft: nextDraft });
+      remember(nextDraft, result.revision);
       setCurrentProject(nextProjectId, nextName);
       setWarning(null);
       setStatus("saved");
@@ -223,7 +147,7 @@ export function useProjectPersistence(): ProjectPersistenceApi {
       setError(caught instanceof Error ? caught.message : "另存为失败，内存内容已保留");
       throw caught;
     }
-  }, [projectId, refreshProjects, setCurrentProject]);
+  }, [projectId, refreshProjects, remember, requestRef, savedDraftRef, setCurrentProject]);
 
   const applySnapshot = useCallback((snapshot: ProjectSnapshot): void => {
     const sortedVersions = [...snapshot.versions].sort((first, second) => first.versionNumber - second.versionNumber);
@@ -244,14 +168,10 @@ export function useProjectPersistence(): ProjectPersistenceApi {
     });
     setGeneratedFiles(snapshot.workspace.files);
     const loadedDraft = snapshotToDraft(snapshot);
-    const loadedFingerprint = projectDraftFingerprint(loadedDraft);
-    expectedRevisionRef.current = snapshot.project.revision;
-    savedFingerprintRef.current = loadedFingerprint;
-    savedDraftRef.current = loadedDraft;
-    setProjectBaseline({ projectId: snapshot.project.projectId, revision: snapshot.project.revision, fingerprint: loadedFingerprint, draft: loadedDraft });
+    remember(loadedDraft, snapshot.project.revision);
     setWarning(snapshot.warnings.length === 0 ? null : snapshot.warnings.join(" "));
     setStatus("saved");
-  }, [hydrateProject, setGeneratedFiles]);
+  }, [hydrateProject, remember, setGeneratedFiles]);
 
   const openProject = useCallback(async (targetProjectId: string) => {
     setStatus("loading");
@@ -259,7 +179,6 @@ export function useProjectPersistence(): ProjectPersistenceApi {
     try {
       const snapshot = await repositoryRef.current!.loadProject(targetProjectId);
       if (snapshot === null) throw new Error("未找到本地项目，可能是首次访问、浏览器变化或站点数据已被清除。");
-      baselineRequestIdRef.current += 1;
       applySnapshot(snapshot);
     } catch (caught: unknown) {
       setStatus("error");
@@ -293,12 +212,12 @@ export function useProjectPersistence(): ProjectPersistenceApi {
     const revision = targetProjectId === projectId ? expectedRevisionRef.current ?? expectedRevision : expectedRevision;
     if (revision === undefined || revision === null) throw new Error("项目尚未保存或缺少当前修订号，无法执行此操作。请先保存或刷新项目列表。" );
     return revision;
-  }, [projectId]);
+  }, [expectedRevisionRef, projectId]);
   const updateVersionMetadata = useCallback(async (versionId: string, metadata: VersionMetadata) => {
     setStatus("saving");
     setError(null);
     try {
-      await baselineRequestRef.current;
+      await requestRef.current;
       const cleanBeforeUpdate = savedDraftRef.current !== null
         && projectDraftFingerprintWithoutVersionMetadata(draft, versionId) === projectDraftFingerprintWithoutVersionMetadata(savedDraftRef.current, versionId);
       if (expectedRevisionRef.current === null || savedDraftRef.current?.versions.some((version) => version.versionId === versionId) !== true) {
@@ -319,10 +238,7 @@ export function useProjectPersistence(): ProjectPersistenceApi {
         : version);
       if (cleanBeforeUpdate) {
         const nextDraft = { ...draft, versions: nextVersions };
-        const nextFingerprint = projectDraftFingerprint(nextDraft);
-        savedFingerprintRef.current = nextFingerprint;
-        savedDraftRef.current = nextDraft;
-        setProjectBaseline({ projectId, revision: result.revision, fingerprint: nextFingerprint, draft: nextDraft });
+        remember(nextDraft, result.revision);
       }
       expectedRevisionRef.current = result.revision;
       setWarning(null);
@@ -334,22 +250,18 @@ export function useProjectPersistence(): ProjectPersistenceApi {
       setError(caught instanceof Error ? caught.message : "版本元数据更新失败，当前内容已保留");
       throw caught;
     }
-  }, [draft, projectId, refreshProjects, resolveRevision, updateVersionMetadataInStore]);
+  }, [draft, expectedRevisionRef, projectId, refreshProjects, remember, requestRef, resolveRevision, savedDraftRef, updateVersionMetadataInStore]);
 
   const renameProject = useCallback(async (targetProjectId: string, name: string, expectedRevision?: number) => {
     setStatus("saving");
     setError(null);
     try {
-      await baselineRequestRef.current;
+      await requestRef.current;
       const result = await repositoryRef.current!.renameProject(targetProjectId, name, resolveRevision(targetProjectId, expectedRevision));
       if (targetProjectId === projectId) {
         setCurrentProject(result.projectId, result.name);
         const nextDraft = { ...draft, name: result.name };
-        const nextFingerprint = projectDraftFingerprint(nextDraft);
-        expectedRevisionRef.current = result.revision;
-        savedFingerprintRef.current = nextFingerprint;
-        savedDraftRef.current = nextDraft;
-        setProjectBaseline({ projectId: targetProjectId, revision: result.revision, fingerprint: nextFingerprint, draft: nextDraft });
+        remember(nextDraft, result.revision);
         setWarning(null);
       }
       setStatus(targetProjectId === projectId ? "saved" : "idle");
@@ -359,20 +271,17 @@ export function useProjectPersistence(): ProjectPersistenceApi {
       setError(caught instanceof Error ? caught.message : "重命名失败，当前内容已保留");
       throw caught;
     }
-  }, [draft, projectId, refreshProjects, resolveRevision, setCurrentProject]);
+  }, [draft, projectId, refreshProjects, remember, requestRef, resolveRevision, setCurrentProject]);
 
   const deleteProject = useCallback(async (targetProjectId: string, expectedRevision?: number) => {
     setStatus("saving");
     setError(null);
     try {
-      await baselineRequestRef.current;
+      await requestRef.current;
       const revision = resolveRevision(targetProjectId, expectedRevision);
       await repositoryRef.current!.deleteProject(targetProjectId, revision);
       if (targetProjectId === projectId) {
-        expectedRevisionRef.current = null;
-        savedFingerprintRef.current = null;
-        savedDraftRef.current = null;
-        removeProjectBaseline(targetProjectId);
+        clear();
         setWarning(null);
         setStatus("idle");
       } else {
@@ -384,7 +293,7 @@ export function useProjectPersistence(): ProjectPersistenceApi {
       setError(caught instanceof Error ? caught.message : "删除失败，当前内容已保留");
       throw caught;
     }
-  }, [projectId, refreshProjects, resolveRevision]);
+  }, [clear, projectId, refreshProjects, requestRef, resolveRevision]);
 
   return { status: visibleStatus, dirty, error, warning, projects, listLoading, saveCurrentProject, saveAs, openProject, restoreVersion, updateVersionMetadata, renameProject, deleteProject, refreshProjects };
 }
