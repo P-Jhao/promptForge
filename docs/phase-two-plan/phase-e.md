@@ -34,6 +34,18 @@ EVAL-01 的 prompt 文本来自既有 `recordRealTaskBoard.mjs` 固定需求；�
 
 这是一条防止 Mock 冒充真实结果的负向证据，不是 EVAL-01 成功；未记录完整请求或任何密钥。该记录不提供 EVAL-02 基线，独立任务板案例继续保持 `NOT_READY`。
 
+## 串行编排负向现场证据（2026-09-16）
+
+本地强制 Mock 执行了单次串行编排：
+
+```text
+node scripts/runTaskBoardEvaluation.mjs --count 1 --base-url http://127.0.0.1:7001/api --output-dir artifacts/mock-orchestration-20260916 --report-output artifacts/mock-orchestration-20260916/evaluation-report.json --output artifacts/mock-orchestration-20260916/orchestration.json
+```
+
+实际结果为 EVAL-01 `attempt=1`、`exitCode=1`、`status=failed`、`terminalCategory=mode`，收到 48 个文件，`baselineRunId=null`。由于没有 `real` 成功基线，EVAL-02 数量为 `0`，并以 `notExecuted` 记录门控原因；报告 `status=NOT_READY`。
+
+这是 Mock 防冒充和 EVAL-02 串行门控验证，不是成功率或案例来源证据。编排、报告和 raw SSE/files 产物位于已忽略的 `artifacts/` 下，不进入案例目录。
+
 ## 当前环境检查
 
 ```text
