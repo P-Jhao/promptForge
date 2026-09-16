@@ -20,7 +20,7 @@
 - 固定任务板不要求 Playwright E2E，使用单元/集成检查或用户人工确认；独立案例当前以真实来源和 Edge 临时 Vite EVAL-03 人工证据达到 `READY`，并已接入首页链接和 `/workspace?case=task-board-real-eval`。目标工作台已有一次 Sandpack 渲染/握手和关键词/优先级筛选证据，但完整状态矩阵、移动端/键盘、原生 ZIP 下载、导出、离线和第五类 IndexedDB 故障场景由用户手动完成，当前保持未验证。
 - `e9bbb1d` 修复任务看板 source 的 5 个 ESLint error 后，`pnpm --dir frontend run lint` 为 0 errors、23 个既有 warnings；主代理独立复跑 tsc、build、案例组装一致性、案例检查和 `git diff --check` 均通过。修复后 Edge 目标工作台刷新任务看板约 25 秒内收到真实 `done(compilatonError=false)` + `app-mounted`，完成三列/4 条任务、空标题校验、新增计数 5、编辑描述、状态移动、关键词“登录”筛选 1 条及优先级筛选清除/重置的单次回归；该证据不覆盖完整状态矩阵。控制台仅见扩展 hydration、Tailwind CDN、React Router 和扩展日志警告，没有应用运行失败。
 - `checkPhaseE.mjs` 的临时 fixture 没有真实输入；未安装 Playwright 时固定交互检查按预期保持 `NOT_READY`/`skipped/not-verified`，这不是代码或评测失败。独立案例的 `checkTaskBoardCase.mjs` 才读取真实来源和人工 EVAL-03，并返回 `READY`。
-- 2026-09-16 在 Codex In-app Browser 临时 tab 的 viewport `390x844` 下观察到 `document.documentElement.clientWidth=390`、`scrollWidth=390`、`body.scrollWidth=390`；截图显示顶部项目栏、对话/预览切换和预览容器无横向溢出。观察窗口内 Sandpack 未完成启动，界面显示“启动耗时较长，仍在等待真实运行事件…”，因此只记录移动布局/加载提示的部分证据；纯键盘、移动端表单/筛选完整操作、移动端 ready、其他浏览器和完整状态矩阵仍未验证，外部沙盒未就绪不归为应用失败。
+- 2026-09-16 在 Codex In-app Browser 临时 tab 的 viewport `390x844` 下观察到 `document.documentElement.clientWidth=390`、`scrollWidth=390`、`body.scrollWidth=390`；截图显示顶部项目栏、对话/预览切换和预览容器无横向溢出。观察窗口内 Sandpack 未完成启动，界面显示“启动耗时较长，仍在等待真实运行事件…”，因此只记录移动布局/加载提示的部分证据；已完成桌面焦点与表单局部验证，纯键盘完整流程和移动端键盘、移动端表单/筛选完整操作、移动端 ready、其他浏览器和完整状态矩阵仍未验证，外部沙盒未就绪不归为应用失败。
 - 工作台 Sandpack 曾因本地 `/book-cover.svg` 文件键交付失败：6 个 iframe 图片 `complete=true` 但 `naturalWidth=0`。现已切换为六个固定 Unsplash URL，主代理已取得六个 URL 的 `200 image/jpeg` HTTP 证据；Edge 目标工作台另观察到小说详情 iframe 封面 `complete=true,naturalWidth=400,naturalHeight=560`。一次资源观察不能替代完整资源矩阵、导出和离线证据；浏览器扩展注入、React Router 和 Tailwind CDN 警告不记录为产品失败。
 
 ## 已确认的阶段边界

@@ -1,6 +1,6 @@
 # 阶段 E 交接：独立任务看板评测与固化门槛
 
-状态：评测契约、真实运行记录复用、统计报告和独立案例来源门槛已实现。2026-09-16 串行评测已完成 EVAL-01 3/3、EVAL-02 3/3；每次均满足 `mode=real`、`forced=false`、终态 `success`、可读 files（EVAL-02 为 `candidate.data.files`）和 `done`。EVAL-02 的首次独立探测仍因旧 recorder 只识别 `files` 事件而误判协议失败，原始 candidate 保留在 raw SSE，修复后重跑 `task-board-real-edit-probe-20260916-r2` 成功。串行三次记录与历史探测、Mock 拒绝样本分开解释，不能用混合报告宣称三次成功率。独立任务看板案例 `task-board-real-eval` 已根据真实来源、构建检查和主代理 Edge 临时 Vite 人工 EVAL-03 证据标为 `READY`；2026-09-16 又在 Edge 目标工作台观察到该入口一次 Sandpack 渲染、`done(compilatonError=false)` 与 `app-mounted` 握手，以及关键词/优先级筛选。`e9bbb1d` 修复任务看板 source 的 5 个 ESLint error 后，lint 为 0 errors、23 个既有 warnings；主代理独立复跑 tsc、build、案例组装一致性和案例检查均通过，并在同日完成一次目标工作台 Sandpack 回归。该状态和这些现场不覆盖完整状态矩阵、移动端/键盘、ZIP/导出、离线或第五类 IndexedDB 故障场景，也没有把小说案例改名复用。
+状态：评测契约、真实运行记录复用、统计报告和独立案例来源门槛已实现。2026-09-16 串行评测已完成 EVAL-01 3/3、EVAL-02 3/3；每次均满足 `mode=real`、`forced=false`、终态 `success`、可读 files（EVAL-02 为 `candidate.data.files`）和 `done`。EVAL-02 的首次独立探测仍因旧 recorder 只识别 `files` 事件而误判协议失败，原始 candidate 保留在 raw SSE，修复后重跑 `task-board-real-edit-probe-20260916-r2` 成功。串行三次记录与历史探测、Mock 拒绝样本分开解释，不能用混合报告宣称三次成功率。独立任务看板案例 `task-board-real-eval` 已根据真实来源、构建检查和主代理 Edge 临时 Vite 人工 EVAL-03 证据标为 `READY`；2026-09-16 又在 Edge 目标工作台观察到该入口一次 Sandpack 渲染、`done(compilatonError=false)` 与 `app-mounted` 握手，以及关键词/优先级筛选。`e9bbb1d` 修复任务看板 source 的 5 个 ESLint error 后，lint 为 0 errors、23 个既有 warnings；主代理独立复跑 tsc、build、案例组装一致性和案例检查均通过，并在同日完成一次目标工作台 Sandpack 回归。该状态和这些现场不覆盖完整状态矩阵、纯键盘完整流程、移动端键盘/交互、ZIP/导出、离线或第五类 IndexedDB 故障场景，也没有把小说案例改名复用。
 
 权威范围见[第二阶段执行计划](../phase-two-spec/plan.md)的“阶段 E”。本记录描述实现与证据，不替代计划。
 
@@ -65,6 +65,12 @@ EVAL-01 的 prompt 文本来自既有 `recordRealTaskBoard.mjs` 固定需求；�
 
 主代理在 Codex In-app Browser 临时 tab 以 viewport `390x844` 观察工作台：`document.documentElement.clientWidth=390`、`scrollWidth=390`、`body.scrollWidth=390`。截图显示顶部项目栏、对话/预览切换和预览容器按移动布局排列，没有横向溢出。观察窗口内 Sandpack 尚未完成启动，界面显示“启动耗时较长，仍在等待真实运行事件…”。这只证明该尺寸下的布局和加载提示部分证据；外部沙盒未就绪不归为应用失败，也不能写成移动端案例或 Sandpack ready 通过。
 
+### 桌面键盘现场（2026-09-16）
+
+主代理在桌面 Edge 现场用 Tab 检查首页焦点顺序：Logo、主导航、“查看案例”和“开始生成”均可达；焦点位于“开始生成”时按 Enter 进入 `/workspace`。在工作台，Tab 可达项目名称、保存/打开/另存为、预览/代码、看案例、两个小说案例入口、示例体验开关、“关于示例体验”、全屏和 Sandpack iframe。
+
+任务看板 Sandpack ready 后，Tab 可进入 iframe 内的导航、返回/取消/新建任务、标题、描述、负责人、日期、优先级、状态和保存控件。空标题按键盘提交显示“标题不能为空”；填写“键盘验收”后保存，任务数从 4 增至 5。该证据只覆盖桌面焦点顺序和一次表单局部操作；纯键盘完整流程、移动端键盘与移动端表单/筛选操作仍未验证。
+
 ## 负向 recorder 证据（2026-09-16）
 
 本地强制 Mock 记录保存在 `artifacts/real-runs/task-board/task-board-mock-rejection-20260916/record.json`：`runId=task-board-mock-rejection-20260916`、`attempt=1`、`samplePool=REAL-EVAL`、`status=failed`，终态 `terminal.category=mode`，收到的模式为 `mode=mock`、`forced=true`。该 attempt 虽收到完整的 48 个文件和 `done` 事件，记录器仍拒绝登记为真实成功。
@@ -116,7 +122,7 @@ git diff --check
 ## 未验证和限制
 
 - 本阶段已完成串行 EVAL-01 3/3、EVAL-02 3/3，以及独立案例 EVAL-03 的 Edge 临时 Vite 人工验收；历史 EVAL-02 协议误判和修复重跑仍保留。混合历史报告不用于替代固定三次统计，也没有将小说 48 文件 mock 作为真实评测样本。
-- 独立案例已有临时 Vite 人工证据，以及一次 Edge 目标工作台 Sandpack 回归（ready/app-mounted、三列/4 条任务、筛选和新增/编辑/状态切换）证据；另有一次 In-app Browser `390x844` 移动布局无横向溢出和加载提示观察，但 Sandpack 在观察窗口内未 ready。纯键盘、移动端表单/筛选完整操作、移动端 ready、完整状态矩阵、删除、其他浏览器、完整失败/取消/超时/资源矩阵、导出构建、保存/恢复、EVAL-01/EVAL-02 功能保留和其他候选仍需单独现场验收。原生 ZIP 下载、离线行为与第五类 IndexedDB 故障场景由用户手动完成，当前保持未验证。
+- 独立案例已有临时 Vite 人工证据，以及一次 Edge 目标工作台 Sandpack 回归（ready/app-mounted、三列/4 条任务、筛选和新增/编辑/状态切换）证据；另有一次 In-app Browser `390x844` 移动布局无横向溢出和加载提示观察，但 Sandpack 在观察窗口内未 ready；桌面 Edge 已完成焦点顺序和表单局部键盘操作。纯键盘完整流程、移动端键盘、移动端表单/筛选完整操作、移动端 ready、完整状态矩阵、删除、其他浏览器、完整失败/取消/超时/资源矩阵、导出构建、保存/恢复、EVAL-01/EVAL-02 功能保留和其他候选仍需单独现场验收。原生 ZIP 下载、离线行为与第五类 IndexedDB 故障场景由用户手动完成，当前保持未验证。
 - recorder 记录的是客户端接收的 SSE 墙钟起止时间；没有服务端节点耗时，也不会把客户端取消写成供应商已终止。
 - 配置摘要只读取白名单键，raw SSE、文件和人工修正说明经过脱敏；密钥不写入案例或报告。真实案例仍需人工审查脱敏结果后再固化。
 - 本阶段没有实现 Vue、多框架选择器、工作台核心 UI 或自动生成案例；报告工具不会凭 fixture 结果创建可用案例。
