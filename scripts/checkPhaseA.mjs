@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
+import {
+  NOVEL_COVER_URLS,
+  validateNovelCoverUrls,
+} from "./lib/novelCoverUrls.mjs";
 
 const require = createRequire(import.meta.url);
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -15,31 +18,60 @@ const JSZip = require(path.join(rootDir, "frontend/node_modules/jszip"));
 const runtimeManifestModule = loadTsModule(path.join(rootDir, "frontend/src/cases/resourceManifest.ts"));
 const bridgeModule = loadTsModule(path.join(rootDir, "frontend/src/components/preview/previewBridge.ts"));
 const runtimeManifest = runtimeManifestModule.exports.NOVEL_CASE_RESOURCE_MANIFEST;
-const coverPath = path.join(rootDir, "frontend/public/book-cover.svg");
-const cover = await readFile(coverPath, "utf8");
 const generatedManifest = JSON.parse(await readFile(path.join(rootDir, "frontend/src/cases/generated/manifest.json"), "utf8"));
-const manifestResource = generatedManifest.resources.find((resource) => resource.id === "book-cover");
-assert.ok(manifestResource, "generated manifest lacks book-cover");
-assert.equal(manifestResource.sizeBytes, Buffer.byteLength(cover, "utf8"));
-assert.equal(manifestResource.sha256, createHash("sha256").update(cover).digest("hex"));
-assert.equal(manifestResource.hostPath, "/book-cover.svg");
-assert.equal(manifestResource.sandpackPath, "/book-cover.svg");
-assert.equal(manifestResource.exportPath, "public/book-cover.svg");
-assert.ok(generatedManifest.files.includes("/book-cover.svg"));
-assert.equal(generatedManifest.files.includes("/public/book-cover.svg"), false);
 const generatedNovelData = await readFile(path.join(rootDir, "frontend/src/cases/generated/data/novels.ts"), "utf8");
-assert.match(generatedNovelData, /coverImage: '\/book-cover\.svg'/);
-const generatedCover = await readFile(path.join(rootDir, "frontend/src/cases/generated/book-cover.svg"), "utf8");
-assert.equal(generatedCover, cover);
+const generatedFilesSource = await readFile(path.join(rootDir, "frontend/src/cases/generatedFiles.ts"), "utf8");
+const generatedCoverUrls = [...generatedNovelData.matchAll(/coverImage\s*:\s*['"]([^'"]+)['"]/g)].map((match) => match[1]);
+
+assert.deepEqual(generatedCoverUrls, NOVEL_COVER_URLS);
+assert.deepEqual(generatedManifest.files.includes("/book-cover.svg"), false);
+assert.deepEqual(generatedManifest.resources, []);
+assert.deepEqual(
+  runtimeManifest.externalResources.map((resource) => resource.url),
+  NOVEL_COVER_URLS,
+);
+assert.deepEqual(
+  generatedManifest.externalResources.map((resource) => resource.url),
+  NOVEL_COVER_URLS,
+);
+assert.equal(generatedManifest.externalResources.length, NOVEL_COVER_URLS.length);
+assert.doesNotMatch(generatedNovelData, /\/book-cover\.svg/);
+assert.doesNotMatch(generatedFilesSource, /\/book-cover\.svg/);
+validateNovelCoverUrls(generatedCoverUrls);
+assert.throws(
+  () => validateNovelCoverUrls([
+    ...NOVEL_COVER_URLS.slice(0, -1),
+    "https://example.invalid/not-an-approved-cover.jpg",
+  ]),
+  /fixed allowlist/,
+);
+assert.throws(
+  () => validateNovelCoverUrls([NOVEL_COVER_URLS[0], ...NOVEL_COVER_URLS.slice(0, 5)]),
+  /duplicated/,
+);
 
 const files = {
   "/index.tsx": { code: "import { createRoot } from 'react-dom/client'; const root = createRoot(document.getElementById('root')); root.render(<App />);" },
   "/App.tsx": { code: "export default function App() { return null; }" },
-  "/book-cover.svg": { code: cover },
 };
 runtimeManifestModule.exports.validateResourceManifest(files, runtimeManifest);
+const invalidExternalManifest = {
+  ...runtimeManifest,
+  externalResources: runtimeManifest.externalResources.map((resource, index) => index === 0
+    ? { ...resource, url: "https://example.invalid/not-an-approved-cover.jpg" }
+    : resource),
+};
 assert.throws(
-  () => runtimeManifestModule.exports.validateResourceManifest({ "/App.tsx": files["/App.tsx"] }, runtimeManifest),
+  () => runtimeManifestModule.exports.validateResourceManifest(files, invalidExternalManifest),
+  /allowlist/,
+);
+const requiredLocalManifest = {
+  version: 1,
+  caseId: "fixture",
+  resources: [{ id: "cover", kind: "image", required: true, hostPath: "/cover.svg", sandpackPath: "/cover.svg", exportPath: "cover.svg", contentType: "image/svg+xml" }],
+};
+assert.throws(
+  () => runtimeManifestModule.exports.validateResourceManifest(files, requiredLocalManifest),
   /案例资源缺失/,
 );
 
@@ -79,11 +111,13 @@ try {
 assert.ok(capturedBlob instanceof Blob);
 assert.match(capturedFilename, /^promptforge-project-.*\.zip$/);
 const archive = await JSZip.loadAsync(Buffer.from(await capturedBlob.arrayBuffer()));
-assert.ok(archive.files["public/book-cover.svg"]);
+assert.equal(archive.files["public/book-cover.svg"], undefined);
 assert.equal(archive.files["book-cover.svg"], undefined);
 assert.ok(archive.files["promptforge-resource-manifest.json"]);
+const exportedManifest = JSON.parse(await archive.files["promptforge-resource-manifest.json"].async("string"));
+assert.deepEqual(exportedManifest.externalResources.map((resource) => resource.url), NOVEL_COVER_URLS);
 assert.equal(archive.files["/__promptforge_preview_bridge.js"], undefined);
-console.log(JSON.stringify({ manifest: true, missingResourceRejected: true, export: true, bridgeExcluded: true }));
+console.log(JSON.stringify({ fixedCoverAllowlist: true, externalManifest: true, maliciousUrlRejected: true, exportOmitsRemoteBytes: true, bridgeExcluded: true }));
 
 function loadTsModule(filePath, replacements = {}) {
   const source = require("node:fs").readFileSync(filePath, "utf8");

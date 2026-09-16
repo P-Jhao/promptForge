@@ -53,7 +53,7 @@ export function LandingPage() {
           <div className="section-intro"><span className="section-kicker">CASE STUDY</span><h2>先看一个真实可操作的成果。</h2><p>首屏预览直接加载同一份预置成果的两个场景；这里补充它的需求边界和实现来源，便于你判断哪些内容来自已有结果，哪些内容是为了演示交互而做的人工修正。</p></div>
           <div className="case-brief-grid">
             <article><span>需求摘要</span><h3>小说阅读管理</h3><p>书库支持书名或作者搜索、阅读状态筛选和详情入口；详情展示阅读进度、笔记与书签；阅读页支持翻页、字号、主题和会话内书签。</p></article>
-            <article><span>人工修正说明</span><h3>让预置结果可以直接操作</h3><p>案例由 <code>backend/mock</code> 的节点结果组装而来，并补充了新增书籍、阅读笔记和书签的会话内写入、本地封面占位图、路由入口与边界提示。这里是需求摘要，不是原始完整 prompt；正文内容也只用于演示。</p></article>
+            <article><span>人工修正说明</span><h3>让预置结果可以直接操作</h3><p>案例由 <code>backend/mock</code> 的节点结果组装而来，并补充了新增书籍、阅读笔记和书签的会话内写入、固定远程封面 URL、路由入口与边界提示。封面依赖网络；这里是需求摘要，不是原始完整 prompt；正文内容也只用于演示。</p></article>
           </div>
         </section>
 

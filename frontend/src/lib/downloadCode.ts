@@ -109,6 +109,8 @@ export async function downloadGeneratedCode(
 
   if (resourceManifest !== undefined) {
     validateResourceManifest(allFiles, resourceManifest);
+    // External resources remain URL metadata in the manifest; their remote
+    // bytes are never copied into the generated project or ZIP.
     for (const resource of resourceManifest.resources) {
       if (toZipPath(resource.exportPath) !== toZipPath(resource.sandpackPath)) {
         relocatedResourcePaths.add(resource.sandpackPath);
@@ -139,6 +141,8 @@ export async function downloadGeneratedCode(
   });
 
   if (resourceManifest !== undefined) {
+    // Only local Sandpack resources are materialized. Remote URLs stay in
+    // promptforge-resource-manifest.json for source traceability.
     for (const resource of resourceManifest.resources) {
       const file = allFiles[resource.sandpackPath];
       if (file === undefined) {

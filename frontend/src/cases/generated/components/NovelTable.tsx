@@ -53,7 +53,7 @@ export default function NovelTable({ novels, onRowClick }: NovelTableProps) {
               >
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-3">
-                    <img src={novel.coverImage || '/book-cover.svg'} alt={novel.title} className="w-10 h-14 object-cover rounded" />
+                    <img src={novel.coverImage || 'https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=400&h=560&fit=crop'} alt={novel.title} className="w-10 h-14 object-cover rounded" />
                     <Link to={'/novels/' + novel.id} onClick={(event) => event.stopPropagation()} className="font-medium text-blue-700 hover:underline">{novel.title}</Link>
                   </div>
                 </td>

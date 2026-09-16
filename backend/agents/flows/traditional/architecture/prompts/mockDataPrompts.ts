@@ -85,11 +85,14 @@ export const MOCK_DATA_SYSTEM_PROMPT = `
        - \`https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=200&fit=crop\` (Male 2)
        - \`https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&fit=crop\` (Female 2)
        - \`https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&fit=crop\` (Male 3)
-     - **Covers / Content (Books, Articles, Movies)**:
-       - \`https://images.unsplash.com/photo-1589829085413-56de8ae18c73?w=600&q=80\` (Book Cover)
-       - \`https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=600&q=80\` (Library/Knowledge)
-       - \`https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=600&q=80\` (Study/Writing)
-       - \`https://images.unsplash.com/photo-1518972559570-7cc1309f3229?w=600&q=80\` (Dark Mood)
+     - **小说预置案例封面（固定 allowlist）**:
+       - \`https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=400&h=560&fit=crop\`
+       - \`https://images.unsplash.com/photo-1589829085413-56de8ae18c73?w=400&h=560&fit=crop\`
+       - \`https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=400&h=560&fit=crop\`
+       - \`https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=400&h=560&fit=crop\`
+       - \`https://images.unsplash.com/photo-1515879218367-8466d910aaa4?w=400&h=560&fit=crop\`
+       - \`https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=400&h=560&fit=crop\`
+       - 预置小说封面只能使用上述固定 URL；禁止随机、动态或其他域名图片源。
      - **Scenery / Backgrounds**:
        - \`https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=800&q=80\` (Nature)
        - \`https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&q=80\` (Tech/Network)

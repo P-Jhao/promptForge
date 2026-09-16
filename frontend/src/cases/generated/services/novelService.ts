@@ -20,7 +20,7 @@ export function createNovel(input: Pick<Novel, "title" | "author" | "description
     id: `novel_session_${Date.now()}`,
     title: input.title,
     author: input.author,
-    coverImage: "/book-cover.svg",
+    coverImage: "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=400&h=560&fit=crop",
     description: input.description,
     filePath: "",
     totalPages: 100,

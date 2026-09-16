@@ -1,6 +1,6 @@
 # PromptForge 第二阶段规格（讨论稿）
 
-状态：阶段 A 代码与首页资源已现场核验，阶段 B 代码已实现，阶段 C 最小候选隔离切片已实现，阶段 D 分层校验/有限修复切片与固定任务板验收工具已实现，阶段 E 评测/来源门槛工具已实现；已完成一次 EVAL-01 真实探测、记录一次 EVAL-02 首次协议误判并完成一次修复后 EVAL-02 成功重跑，工作台 Sandpack 封面资源在真实 iframe 中仍加载失败，完整三次评测、外部 Sandpack、导出包、固定任务板和 IndexedDB 故障场景仍待现场验收；独立任务看板案例尚未固化。
+状态：阶段 A 代码与资源清单已实现，阶段 B 代码已实现，阶段 C 最小候选隔离切片已实现，阶段 D 分层校验/有限修复切片与固定任务板验收工具已实现，阶段 E 评测/来源门槛工具已实现；已完成一次 EVAL-01 真实探测、记录一次 EVAL-02 首次协议误判并完成一次修复后 EVAL-02 成功重跑。此前本地封面在工作台 iframe 中加载失败，现已切换固定远程 URL，重载后的浏览器图片结果仍待验收；完整三次评测、外部 Sandpack、导出包、固定任务板和 IndexedDB 故障场景仍待现场验收；独立任务看板案例尚未固化。
 更新时间：2026-09-16
 
 本目录把第二阶段要解决的问题、产品判断、当前能力基线、用户体验状态、项目与变更语义、验证口径和待决问题拆开记录。它是执行计划的输入，不是执行计划本身；执行记录见 [`docs/phase-two-plan/`](../phase-two-plan/)。
@@ -15,10 +15,10 @@
 - 阶段 D 已建立 L0-L5 可序列化验证报告、真实 Sandpack 构建/挂载诊断、候选有限修复入口和固定任务板交互检查工具；实现与未验证项见 [`phase-d.md`](../phase-two-plan/phase-d.md)。
 - 阶段 E 已建立固定 EVAL-01/EVAL-02 prompt 契约、REAL-EVAL/PROTOCOL-FIXTURE/FIXED-INTERACTION 分池报告、真实 run 复用和独立案例来源门槛；实现与未验证项见 [`phase-e.md`](../phase-two-plan/phase-e.md)。已有一次 EVAL-01 真实成功探测、一次 EVAL-02 首次协议误判和一次修复后 EVAL-02 成功重跑；当前 `REAL-EVAL` 汇总的 `N_all=4、N_raw_success=2` 混合了 EVAL-01/EVAL-02 与历史 Mock 记录，不能当作三次成功率。尚无完整三次评测及可审查验收来源，因此不固化任务看板案例。
 - 预览 ready 的判定是 Sandpack `done` 且 `compilatonError=false`，并收到入口内 `app-mounted`；模板收到、代码可见、iframe `load` 或 `status=running` 都不能单独宣称 ready。
-- 资源清单同时约束宿主案例、Sandpack 文件和 Vite 导出；缺少必需资源必须失败。真实生成结果没有对应 manifest 时不沿用小说案例 manifest。
+- 资源清单同时约束宿主案例、Sandpack 文件和 Vite 导出；小说案例的六个固定 Unsplash 封面放在 `externalResources`，导出只保留 URL 元数据，不把远程字节伪造为本地文件。缺少必需本地资源必须失败，真实生成结果没有对应 manifest 时不沿用小说案例 manifest。
 - 真实生成记录必须收到明确的 `mode={mode:"real",forced:false}`，不允许缺失 mode 或强制 Mock 结果被记录为真实；成功 run ID 复用，中断/失败产生新 attempt。
 - 固定任务板不要求 Playwright E2E，使用单元/集成检查或用户人工确认；原生 ZIP 下载和第五类 IndexedDB 故障场景由用户手动完成，当前证据保持未验证。任务看板案例只有在真实 run 和后续验收证据齐全后才可固化。
-- 工作台 Sandpack 已现场出现封面资源加载失败：6 个 iframe 图片 `complete=true` 但 `naturalWidth=0`，静态根键/导出 fixture 通过不等于浏览器资源交付通过；当前保留资源错误反馈并记录为未解决。
+- 工作台 Sandpack 曾因本地 `/book-cover.svg` 文件键交付失败：6 个 iframe 图片 `complete=true` 但 `naturalWidth=0`。现已切换为六个固定 Unsplash URL，主代理已取得 `200 image/jpeg` HTTP 证据；重载后的 iframe `naturalWidth>0` 仍待现场复验，静态 URL/manifest fixture 不能替代浏览器资源交付证据。
 
 ## 已确认的阶段边界
 

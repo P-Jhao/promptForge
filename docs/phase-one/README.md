@@ -22,13 +22,13 @@
 
 预置案例由 `backend/mock` 的类型、数据、服务、Hooks、组件、页面、布局和样式结果，经 `scripts/assembleNovelCase.mjs` 组装到 `frontend/src/cases/generated/`，再由 `frontend/src/cases/generatedFiles.ts` 提供给首页 iframe 和工作台。书库和阅读笔记标签只是同一份文件成果的两个初始路由场景，不是两个独立项目。
 
-组装脚本对原始 Mock 结果做了明确的可操作性修正：补充会话内新增书籍、阅读笔记和书签写入；用本地占位封面替代远程图片；接通表格详情、笔记入口和阅读页书签；为书库搜索补充 `query` 依赖；为移动端收紧顶部布局并让筛选按钮保持完整文字、可横向滚动；为模板案例入口补充明确的 ErrorBoundary props/state、`unknown` 错误类型和 `root` 空值检查；在阅读正文中标注示意内容。首页的“需求摘要”是对这些结果的归纳，不能当作原始完整 prompt。
+组装脚本对原始 Mock 结果做了明确的可操作性修正：补充会话内新增书籍、阅读笔记和书签写入；保留六个固定 Unsplash 封面 URL，并把它们登记为外部资源；接通表格详情、笔记入口和阅读页书签；为书库搜索补充 `query` 依赖；为移动端收紧顶部布局并让筛选按钮保持完整文字、可横向滚动；为模板案例入口补充明确的 ErrorBoundary props/state、`unknown` 错误类型和 `root` 空值检查；在阅读正文中标注示意内容。首页的“需求摘要”是对这些结果的归纳，不能当作原始完整 prompt。
 
 ## 已知限制
 
 - 案例数据、编辑器修改、生成版本和重试请求上下文都只保留在当前浏览会话；保存、重新打开和恢复尚未实现，内存中的 version 也没有接通 rollback。
 - 下一次真实生成会重新请求模型，当前编辑器修改不会自动合并进新的生成请求；导出按钮读取 Sandpack 当前文件。
-- 尚未验证真实 LLM 的完整 traditional 链路。当前已验证的是后端反馈夹具和前端状态处理。
+- 阶段 E 已记录一次 EVAL-01 真实成功、EVAL-02 首次协议误判和修复后的 EVAL-02 重跑成功；这仍不是完整 traditional 链路或三次评测证据。
 - Sandpack 依赖外部预览运行时；本机验证曾出现 `TIME_OUT`，内置英文错误可以显示。联网运行、编辑后重新预览和 ZIP 解压安装构建仍需手动确认。
 - 预置布局顶部的搜索框来自原始 Mock 结果，目前只在桌面显示且不是书库筛选入口；书库页面自己的书名/作者搜索已接通。
 - 当前没有运行时功能校验、自动修复、保留编辑后继续生成、认证和服务端持久化；AST 分析和请求重试只处理生成/协议问题，不等于运行时修复。
@@ -58,14 +58,14 @@ Assembled 48 novel case files from backend/mock
 1. 在手机工作台打开“预览与代码”，编辑一个文件后切回预览，确认修改可见；再导出并检查 ZIP 中是当前编辑内容。
 2. 在可用网络下确认 Sandpack 外部运行时能启动，预览错误重试不会刷新页面或丢失已有文件。
 3. 关闭示例体验后，用真实模型完成一次传统流程，确认 `done` 前不会替换旧结果、成功后才保存版本。
-4. 解压导出包后执行依赖安装和构建，并确认本地封面等案例资源包含在包内。
+4. 解压导出包后执行依赖安装和构建，确认包内不伪造远程封面文件，并检查 manifest 中的固定 URL；联网环境下才能加载封面。
 5. 刷新或重新打开工作台，确认用户能理解当前没有持久化恢复；失败后重新加载页面时重试按钮应保持禁用。
 
 ## 第二阶段规格索引
 
-第二阶段目前只有待讨论的规格文档，未开始执行，也没有在本轮生成新案例或调用模型。规格入口见 [docs/phase-two-spec/README.md](../phase-two-spec/README.md)。章节编号只是阅读顺序，不是执行计划或排期。
+第二阶段规格入口见 [docs/phase-two-spec/README.md](../phase-two-spec/README.md)。阶段 E 已单独记录真实 EVAL-01/EVAL-02 探测；本一期案例仍是 backend/mock 回放，章节编号只是阅读顺序，不是执行计划或排期。
 
 ### 针对图片与预览加载反馈的基线补充
 
-- `frontend/public/book-cover.svg` 确实存在，案例数据和宿主继续引用 `/book-cover.svg`；Sandpack 运行时文件键也使用 `/book-cover.svg`，导出时映射到 `public/book-cover.svg`。`checkPhaseA.mjs` 已覆盖静态映射、缺失资源拒绝和 ZIP 条目；此前 `/public/book-cover.svg` 键、以及随后复验的根键在工作台浏览器中都导致资源加载失败，当前 CRA Sandpack 资源交付仍未解决，不能把静态检查写成浏览器通过。
+- 案例数据使用六个固定 Unsplash URL，`resourceManifest.ts` 的 `externalResources` 保留 URL、类型和 allowlist 来源；`checkPhaseA.mjs` 覆盖六个 URL、恶意 URL 拒绝、无本地 `/book-cover.svg` 运行时引用和 ZIP 元数据。`frontend/public/book-cover.svg` 仍是未被案例引用的旧占位文件，不代表案例离线可用。此前两种本地 Sandpack 文件键均在工作台 iframe 中加载失败；远程封面切换后的 `naturalWidth>0` 仍需浏览器复验，静态检查不能代替该证据。
 - `SandpackView.tsx` 在 `sandpack.status` 为 `initial` 或 `running` 时显示等待文案；当前没有以真实运行 ready 事件确认预览已经启动。代码已经渲染而状态仍为 `running` 时可能持续等待，外部 Sandpack 运行还曾出现 `TIME_OUT`，所以该反馈仍属于待修正、待验证状态。

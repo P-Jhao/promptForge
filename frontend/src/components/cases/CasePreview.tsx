@@ -33,12 +33,23 @@ export function CasePreview({
 
   useEffect(() => {
     const controller = new AbortController();
-    void Promise.all(NOVEL_CASE_MANIFEST.resources.filter((resource) => resource.required).map(async (resource) => {
-      const response = await fetch(resource.hostPath, { signal: controller.signal, cache: "no-store" });
-      if (!response.ok) {
-        throw new Error(`${resource.id}（${resource.hostPath}）返回 HTTP ${response.status}`);
-      }
-    })).then(() => {
+    const localChecks = NOVEL_CASE_MANIFEST.resources
+      .filter((resource) => resource.required)
+      .map(async (resource) => {
+        const response = await fetch(resource.hostPath, { signal: controller.signal, cache: "no-store" });
+        if (!response.ok) {
+          throw new Error(`${resource.id}（${resource.hostPath}）返回 HTTP ${response.status}`);
+        }
+      });
+    const externalChecks = (NOVEL_CASE_MANIFEST.externalResources ?? [])
+      .filter((resource) => resource.required)
+      .map(async (resource) => {
+        const response = await fetch(resource.url, { signal: controller.signal, cache: "no-store" });
+        if (!response.ok) {
+          throw new Error(`${resource.id}（${resource.url}）返回 HTTP ${response.status}`);
+        }
+      });
+    void Promise.all([...localChecks, ...externalChecks]).then(() => {
       if (!controller.signal.aborted) setResourceCheck("ready");
     }).catch((error: unknown) => {
       if (controller.signal.aborted) return;
@@ -104,7 +115,7 @@ export function CasePreview({
 
       <div className="case-resource-status" role={resourceCheck === "error" ? "alert" : "status"}>
         {resourceCheck === "checking" && <span>正在检查案例资源…</span>}
-        {resourceCheck === "ready" && <span>资源已就绪：Sandpack 与导出使用同一份清单。</span>}
+        {resourceCheck === "ready" && <span>固定远程封面已就绪；离线时不可用，导出只记录图片 URL。</span>}
         {resourceCheck === "error" && (
           <>
             <span>资源无法加载：{resourceError ?? "未知错误"}</span>

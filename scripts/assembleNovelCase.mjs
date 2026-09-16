@@ -1,14 +1,17 @@
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { createHash } from "node:crypto";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  NOVEL_COVER_URLS,
+  NOVEL_DEFAULT_COVER_URL,
+  validateNovelCoverUrls,
+} from "./lib/novelCoverUrls.mjs";
 
 const root = resolve(dirname(dirname(fileURLToPath(import.meta.url))));
 const mockDir = join(root, "backend", "mock");
 const templateDir = join(root, "backend", "templates", "react-ts");
 const generatedDir = join(root, "frontend", "src", "cases", "generated");
 const outputFile = join(root, "frontend", "src", "cases", "generatedFiles.ts");
-const coverAssetPath = join(root, "frontend", "public", "book-cover.svg");
 
 async function readText(path) {
   return readFile(path, "utf8");
@@ -18,18 +21,15 @@ async function readJson(name) {
   return JSON.parse(await readText(join(mockDir, name)));
 }
 
-function createResourceMetadata(content) {
-  return {
-    id: "book-cover",
+function createExternalResourceMetadata() {
+  return NOVEL_COVER_URLS.map((url, index) => ({
+    id: `book-cover-${String(index + 1).padStart(3, "0")}`,
     kind: "image",
     required: true,
-    hostPath: "/book-cover.svg",
-    sandpackPath: "/book-cover.svg",
-    exportPath: "public/book-cover.svg",
-    contentType: "image/svg+xml",
-    sizeBytes: Buffer.byteLength(content, "utf8"),
-    sha256: createHash("sha256").update(content, "utf8").digest("hex"),
-  };
+    url,
+    contentType: "image/jpeg",
+    source: "fixed-unsplash-allowlist",
+  }));
 }
 
 function assertContains(source, needle, label) {
@@ -55,7 +55,7 @@ function addFileList(files, items, field = "content") {
 function patchNovelService(source) {
   const marker = "export function getNovelsByStatus";
   assertContains(source, marker, "novelService query functions");
-  return `${source}\n\nexport function createNovel(input: Pick<Novel, "title" | "author" | "description">): Novel {\n  const now = new Date().toISOString();\n  const novel: Novel = {\n    id: \`novel_session_\${Date.now()}\`,\n    title: input.title,\n    author: input.author,\n    coverImage: "/book-cover.svg",\n    description: input.description,\n    filePath: "",\n    totalPages: 100,\n    currentPage: 0,\n    lastReadAt: now,\n    createdAt: now,\n    updatedAt: now,\n    status: "unread",\n    progressPercentage: 0,\n  };\n  MOCK_NOVELS.push(novel);\n  return novel;\n}\n`;
+  return `${source}\n\nexport function createNovel(input: Pick<Novel, "title" | "author" | "description">): Novel {\n  const now = new Date().toISOString();\n  const novel: Novel = {\n    id: \`novel_session_\${Date.now()}\`,\n    title: input.title,\n    author: input.author,\n    coverImage: "${NOVEL_DEFAULT_COVER_URL}",\n    description: input.description,\n    filePath: "",\n    totalPages: 100,\n    currentPage: 0,\n    lastReadAt: now,\n    createdAt: now,\n    updatedAt: now,\n    status: "unread",\n    progressPercentage: 0,\n  };\n  MOCK_NOVELS.push(novel);\n  return novel;\n}\n`;
 }
 
 function patchNoteService(source) {
@@ -146,18 +146,16 @@ function patchNovelTable(source) {
   return source
     .replace(importTarget, "import { Book, Clock } from 'lucide-react';\nimport { Link } from 'react-router-dom';")
     .replace(rowTarget, "onClick={() => onRowClick?.(novel)}\n                onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onRowClick?.(novel); } }}\n                tabIndex={0}\n                role=\"button\"\n                aria-label={'打开 ' + novel.title}")
-    .replace(imageTarget, "src={novel.coverImage || '/book-cover.svg'}")
+    .replace(imageTarget, `src={novel.coverImage || '${NOVEL_DEFAULT_COVER_URL}'}`)
     .replace("<span className=\"font-medium text-gray-900\">{novel.title}</span>", "<Link to={'/novels/' + novel.id} onClick={(event) => event.stopPropagation()} className=\"font-medium text-blue-700 hover:underline\">{novel.title}</Link>")
     .replace(actionTarget, "<td className=\"py-3 px-4 text-right\"><span className=\"text-xs text-gray-400\">打开详情</span></td>")
     .replace(tableTarget, "<table className=\"w-full min-w-[560px]\">");
 }
 
 function patchNovelData(source) {
-  const matches = source.match(/coverImage: 'https:\/\/images\.unsplash\.com\/[^']+'/g) ?? [];
-  if (matches.length === 0) {
-    throw new Error("Novel data has no remote cover images to normalize");
-  }
-  return source.replace(/coverImage: 'https:\/\/images\.unsplash\.com\/[^']+'/g, "coverImage: '/book-cover.svg'");
+  const matches = [...source.matchAll(/coverImage\s*:\s*(['"])(.*?)\1/g)].map((match) => match[2]);
+  validateNovelCoverUrls(matches);
+  return source;
 }
 
 function patchMainLayout(source) {
@@ -231,7 +229,7 @@ function patchFilterPanel(source) {
 }
 
 async function main() {
-  const [app, index, templateStyles, dependency, structure, types, mockData, service, hooks, components, pages, layouts, utils, generatedStyles, coverAsset] = await Promise.all([
+  const [app, index, templateStyles, dependency, structure, types, mockData, service, hooks, components, pages, layouts, utils, generatedStyles] = await Promise.all([
     readJson("appGenResult.json"),
     readText(join(templateDir, "index.tsx")),
     readText(join(templateDir, "styles.css")),
@@ -246,12 +244,10 @@ async function main() {
     readJson("layoutResult.json"),
     readJson("utilsResult.json"),
     readJson("styleGenResult.json"),
-    readText(coverAssetPath),
   ]);
   const files = {};
   add(files, "/index.tsx", patchCaseEntry(index));
   add(files, "/styles.css", templateStyles);
-  add(files, "/book-cover.svg", coverAsset);
   add(files, app.path, app.content);
   addFileList(files, utils.files, "code");
   if (generatedStyles.path !== undefined && generatedStyles.content !== undefined) {
@@ -301,7 +297,8 @@ async function main() {
     caseId: "novel-reading-management",
     source: "backend/mock",
     files: Object.keys(files),
-    resources: [createResourceMetadata(coverAsset)],
+    resources: [],
+    externalResources: createExternalResourceMetadata(),
     patched: ["NovelForm", "NoteForm", "NovelList", "NovelDetail", "ReadingWorkspace", "novelService", "readingNoteService", "bookmarkService", "MainLayout", "FilterPanel"],
   }, null, 2), "utf8");
   console.log(`Assembled ${Object.keys(files).length} novel case files from backend/mock`);

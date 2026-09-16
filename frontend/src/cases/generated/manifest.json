@@ -5,7 +5,6 @@
   "files": [
     "/index.tsx",
     "/styles.css",
-    "/book-cover.svg",
     "/App.tsx",
     "/lib/utils.ts",
     "/types/Novel.ts",
@@ -53,17 +52,55 @@
     "/layouts/ReadingLayout.tsx",
     "/package.json"
   ],
-  "resources": [
+  "resources": [],
+  "externalResources": [
     {
-      "id": "book-cover",
+      "id": "book-cover-001",
       "kind": "image",
       "required": true,
-      "hostPath": "/book-cover.svg",
-      "sandpackPath": "/book-cover.svg",
-      "exportPath": "public/book-cover.svg",
-      "contentType": "image/svg+xml",
-      "sizeBytes": 750,
-      "sha256": "30c7d1abf2a2bc2fd290daed9c1d62599b9ab4f817f01e3f1c17136bd33c900c"
+      "url": "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=400&h=560&fit=crop",
+      "contentType": "image/jpeg",
+      "source": "fixed-unsplash-allowlist"
+    },
+    {
+      "id": "book-cover-002",
+      "kind": "image",
+      "required": true,
+      "url": "https://images.unsplash.com/photo-1589829085413-56de8ae18c73?w=400&h=560&fit=crop",
+      "contentType": "image/jpeg",
+      "source": "fixed-unsplash-allowlist"
+    },
+    {
+      "id": "book-cover-003",
+      "kind": "image",
+      "required": true,
+      "url": "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=400&h=560&fit=crop",
+      "contentType": "image/jpeg",
+      "source": "fixed-unsplash-allowlist"
+    },
+    {
+      "id": "book-cover-004",
+      "kind": "image",
+      "required": true,
+      "url": "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=400&h=560&fit=crop",
+      "contentType": "image/jpeg",
+      "source": "fixed-unsplash-allowlist"
+    },
+    {
+      "id": "book-cover-005",
+      "kind": "image",
+      "required": true,
+      "url": "https://images.unsplash.com/photo-1515879218367-8466d910aaa4?w=400&h=560&fit=crop",
+      "contentType": "image/jpeg",
+      "source": "fixed-unsplash-allowlist"
+    },
+    {
+      "id": "book-cover-006",
+      "kind": "image",
+      "required": true,
+      "url": "https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=400&h=560&fit=crop",
+      "contentType": "image/jpeg",
+      "source": "fixed-unsplash-allowlist"
     }
   ],
   "patched": [
