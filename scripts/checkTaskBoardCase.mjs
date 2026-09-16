@@ -26,12 +26,12 @@ const provenance = await readJson(path.join(CASE_DIR, "provenance.json"));
 
 try {
   assert.equal(descriptor.caseId, "task-board-real-eval");
-  assert.equal(descriptor.status, "NOT_READY");
+  assert.ok(["READY", "NOT_READY"].includes(descriptor.status), `案例状态无效：${descriptor.status}`);
   assert.equal(manifest.caseId, descriptor.caseId);
-  assert.equal(manifest.status, "NOT_READY");
+  assert.equal(manifest.status, descriptor.status);
   assert.equal(manifest.validationReport, descriptor.validation);
   assert.equal(provenance.caseId, descriptor.caseId);
-  assert.equal(provenance.status, "NOT_READY");
+  assert.equal(provenance.status, descriptor.status);
   assert.equal(provenance.validation.reportPath, descriptor.validation);
   assert.deepEqual(provenance.realRunIds, [
     "task-board-eval-01-003",
@@ -39,7 +39,14 @@ try {
   ]);
   assert.equal(provenance.evidence.find((item) => item.scenarioId === "EVAL-01")?.status, "pass");
   assert.equal(provenance.evidence.find((item) => item.scenarioId === "EVAL-02")?.status, "pass");
-  assert.equal(provenance.evidence.find((item) => item.scenarioId === "EVAL-03")?.status, "not-verified");
+  const eval03Status = provenance.evidence.find((item) => item.scenarioId === "EVAL-03")?.status;
+  if (descriptor.status === "READY") {
+    assert.equal(eval03Status, "pass");
+    assert.equal(provenance.validation.browserFunctional, "pass");
+    assert.equal(typeof provenance.validation.browserEvidence?.url, "string");
+  } else {
+    assert.ok(eval03Status === "pass" || eval03Status === "not-verified");
+  }
 
   for (const relativePath of [descriptor.entry, descriptor.files, descriptor.resources, descriptor.manifest, descriptor.provenance, descriptor.validation]) {
     assert.equal(await exists(path.join(CASE_DIR, relativePath)), true, `案例路径缺失：${relativePath}`);
@@ -82,9 +89,9 @@ try {
   assert.match(postcssConfig, /tailwindcss:/);
 
   const caseProvenance = await evaluateCaseProvenance(CASE_DIR, RUNS_DIR);
-  assert.equal(caseProvenance.status, "NOT_READY");
-  assert.equal(caseProvenance.ready, false);
-  assert.ok(caseProvenance.reasonCodes.includes("EVIDENCE_NOT_PASS:EVAL-03"));
+  assert.equal(caseProvenance.status, descriptor.status);
+  assert.equal(caseProvenance.ready, descriptor.status === "READY");
+  if (descriptor.status === "READY") assert.deepEqual(caseProvenance.reasonCodes, []);
 
   const build = await runBuildCheck();
   const report = {

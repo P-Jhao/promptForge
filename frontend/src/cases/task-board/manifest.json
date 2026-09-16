@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "caseId": "task-board-real-eval",
-  "status": "NOT_READY",
+  "status": "READY",
   "entry": "source/index.tsx",
   "validationReport": "validation-report.json",
   "sourceFiles": [

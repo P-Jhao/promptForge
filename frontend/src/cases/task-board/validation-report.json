@@ -2,11 +2,9 @@
   "schemaVersion": 1,
   "status": "PASS",
   "caseId": "task-board-real-eval",
-  "caseStatus": "NOT_READY",
-  "provenanceStatus": "NOT_READY",
-  "provenanceReasons": [
-    "EVIDENCE_NOT_PASS:EVAL-03"
-  ],
+  "caseStatus": "READY",
+  "provenanceStatus": "READY",
+  "provenanceReasons": [],
   "checks": {
     "sourceFileCount": 25,
     "manifestPaths": 21,

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "caseId": "task-board-real-eval",
-  "status": "NOT_READY",
+  "status": "READY",
   "realRunIds": [
     "task-board-eval-01-003",
     "task-board-case-edit-20260916"
@@ -97,9 +97,9 @@
     },
     {
       "scenarioId": "EVAL-03",
-      "status": "not-verified",
+      "status": "pass",
       "evidencePath": "evidence/eval-03.md",
-      "scope": "independent-functional-evidence-missing"
+      "scope": "manual-edge-temporary-vite"
     }
   ],
   "validation": {
@@ -107,7 +107,13 @@
     "typeCheck": "pass",
     "build": "pass",
     "buildInput": "temporary fixed index.html harness; not part of model source",
-    "browserFunctional": "not-verified",
+    "browserFunctional": "pass",
+    "browserEvidence": {
+      "browser": "Edge",
+      "url": "http://127.0.0.1:4176/#/",
+      "date": "2026-09-16",
+      "scope": "temporary Vite host; excludes Sandpack, offline and ZIP claims"
+    },
     "offline": false
   }
 }

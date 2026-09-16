@@ -1,6 +1,6 @@
-# 独立任务看板案例准备
+# 独立任务看板案例
 
-`caseId=task-board-real-eval` 是从真实模型产物整理出的独立案例，当前状态为 `NOT_READY`。它没有加入首页案例入口，现有 `/workspace` 和小说案例链接保持不变；在 EVAL-03 获得独立人工或单元/集成功能证据前，不应把任务看板显示为已验证案例。
+`caseId=task-board-real-eval` 是从真实模型产物整理出的独立案例，当前状态为 `READY`。它没有加入首页案例入口，现有 `/workspace` 和小说案例链接保持不变；`READY` 只表示真实来源、构建检查和临时 Vite 人工 EVAL-03 已满足固化门槛，不代表 Sandpack、离线使用或原生 ZIP 已验证。
 
 主来源是 EVAL-01 的 `task-board-eval-01-003` 和 EVAL-02 的 `task-board-case-edit-20260916`，均为 21 个文件。`task-board-real-probe-20260916` 与 `task-board-real-edit-probe-20260916-r2` 只作对照，没有直接复制其负责人对象/字符串不一致和 `any` 问题。原始 run 目录不改写。
 
@@ -14,4 +14,4 @@ node scripts/checkTaskBoardCase.mjs
 
 该命令检查 descriptor、manifest、provenance、来源 run、路径、`any`/`@ts-nocheck`、必要功能标记和 Tailwind/PostCSS 管线，然后在临时副本执行 `pnpm install --frozen-lockfile --ignore-workspace --ignore-scripts`、`pnpm exec tsc --noEmit --project tsconfig.json` 和 `pnpm run build`。source 自带严格 `tsconfig.json`，主 frontend 的类型检查会同时覆盖其中可兼容的源码。
 
-主代理后续需在独立临时预览页中打开任务看板，确认三列、标题、新增、编辑、状态切换、关键词筛选和优先级筛选；至少用真实页面记录 EVAL-03 的功能证据后再考虑接入入口。当前没有提交独立运行 URL，不能用 `/workspace` 或小说案例 URL 宣称任务看板已可用。
+EVAL-03 的人工证据来自主代理 Edge 临时 Vite 页 `http://127.0.0.1:4176/#/`，已覆盖三列、标题、新增、编辑、状态切换、关键词筛选和优先级筛选。该 URL 属于临时验收环境，不能用 `/workspace` 或小说案例 URL 代表任务看板入口；原生 ZIP、离线使用和 Sandpack 运行仍未验证。
