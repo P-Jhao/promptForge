@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "caseId": "task-board-real-eval",
+  "status": "NOT_READY",
+  "realRunIds": [
+    "task-board-eval-01-003",
+    "task-board-case-edit-20260916"
+  ],
+  "sources": [
+    {
+      "scenarioId": "EVAL-01",
+      "runId": "task-board-eval-01-003",
+      "role": "base-generation",
+      "fileCount": 21,
+      "filesPath": "artifacts/real-runs/task-board/task-board-eval-01-003/attempt-001/files.json",
+      "rawSsePath": "artifacts/real-runs/task-board/task-board-eval-01-003/attempt-001/raw-sse.txt",
+      "recordPath": "artifacts/real-runs/task-board/task-board-eval-01-003/attempt-001/record.json"
+    },
+    {
+      "scenarioId": "EVAL-02",
+      "runId": "task-board-case-edit-20260916",
+      "role": "priority-filter-edit",
+      "fileCount": 21,
+      "filesPath": "artifacts/real-runs/task-board/task-board-case-edit-20260916/attempt-001/files.json",
+      "rawSsePath": "artifacts/real-runs/task-board/task-board-case-edit-20260916/attempt-001/raw-sse.txt",
+      "recordPath": "artifacts/real-runs/task-board/task-board-case-edit-20260916/attempt-001/record.json"
+    }
+  ],
+  "comparisonRuns": [
+    "task-board-real-probe-20260916",
+    "task-board-real-edit-probe-20260916-r2"
+  ],
+  "manualCorrections": [
+    {
+      "paths": ["source/App.tsx", "source/layouts/MainLayout.tsx"],
+      "reason": "补充显式 React 运行时导入，避免模板/编译配置差异导致 JSX 运行时缺失。",
+      "source": "EVAL-01/EVAL-02 source files"
+    },
+    {
+      "paths": ["source/**/*.ts", "source/**/*.tsx"],
+      "reason": "移除独立案例内部导入的 .ts/.tsx 扩展名，兼容宿主 TypeScript 与 Vite 的共同解析规则。",
+      "source": "EVAL-01/EVAL-02 source files"
+    },
+    {
+      "paths": ["source/data/task.ts", "source/data/board.ts", "source/hooks/useBoard.ts"],
+      "reason": "修正 Windows 产物在大小写不敏感文件系统上未暴露的类型路径大小写问题。",
+      "source": "EVAL-01/EVAL-02 source files"
+    },
+    {
+      "paths": ["source/data/task.ts"],
+      "reason": "将中文优先级字面量规范化为 TaskPriority 联合类型，显示标签仍由组件提供。",
+      "source": "EVAL-02 source files"
+    },
+    {
+      "paths": ["source/index.tsx"],
+      "reason": "移除 @ts-nocheck，为错误边界补充 ReactNode、ErrorInfo 和 unknown 处理。",
+      "source": "EVAL-01/EVAL-02 source files"
+    },
+    {
+      "paths": ["source/App.tsx"],
+      "reason": "移除独立案例未使用且不由主 frontend 提供的主题包装依赖，保留看板路由与提示组件。",
+      "source": "EVAL-01/EVAL-02 source files"
+    },
+    {
+      "paths": ["source/App.tsx", "source/pages/TaskForm.tsx", "source/components/TaskList.tsx"],
+      "reason": "补齐 /tasks 与 /tasks/new 路由语义、已有任务编辑入口，并将任务呈现整理为待办/进行中/已完成三列。",
+      "source": "EVAL-01/EVAL-02 functional requirement"
+    }
+  ],
+  "evidence": [
+    {
+      "scenarioId": "EVAL-01",
+      "status": "pass",
+      "evidencePath": "evidence/eval-01.md",
+      "scope": "real-source-and-complete-files-only"
+    },
+    {
+      "scenarioId": "EVAL-02",
+      "status": "pass",
+      "evidencePath": "evidence/eval-02.md",
+      "scope": "real-source-and-complete-candidate-files-only"
+    },
+    {
+      "scenarioId": "EVAL-03",
+      "status": "not-verified",
+      "evidencePath": "evidence/eval-03.md",
+      "scope": "independent-functional-evidence-missing"
+    }
+  ],
+  "validation": {
+    "reportPath": "validation-report.json",
+    "typeCheck": "pass",
+    "build": "pass",
+    "buildInput": "temporary fixed index.html harness; not part of model source",
+    "browserFunctional": "not-verified",
+    "offline": false
+  }
+}

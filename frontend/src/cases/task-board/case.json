@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "caseId": "task-board-real-eval",
+  "title": "真实任务看板（独立案例准备）",
+  "status": "NOT_READY",
+  "entry": "source/index.tsx",
+  "files": "source",
+  "resources": "resources",
+  "manifest": "manifest.json",
+  "provenance": "provenance.json",
+  "validation": "validation-report.json"
+}

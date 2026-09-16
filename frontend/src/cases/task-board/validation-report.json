@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "status": "PASS",
+  "caseId": "task-board-real-eval",
+  "caseStatus": "NOT_READY",
+  "provenanceStatus": "NOT_READY",
+  "provenanceReasons": [
+    "EVIDENCE_NOT_PASS:EVAL-03"
+  ],
+  "checks": {
+    "sourceFileCount": 23,
+    "manifestPaths": 21,
+    "noAnyOrTsNocheck": true,
+    "requiredBoardFeatures": true,
+    "realSourcesResolved": true,
+    "typeCheck": "pass",
+    "build": "pass",
+    "hostIndexFixture": "temporary-only"
+  },
+  "buildCommands": [
+    "pnpm install --frozen-lockfile --ignore-workspace --ignore-scripts",
+    "pnpm exec tsc --noEmit --project tsconfig.json",
+    "pnpm run build"
+  ]
+}
