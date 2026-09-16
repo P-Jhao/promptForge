@@ -64,6 +64,8 @@ export interface VersionMetadata {
   notes?: string;
 }
 
+export type VersionMetadataSaveMode = "saved" | "memory";
+
 export interface ProjectRunDraft {
   runId: string;
   projectId: string;

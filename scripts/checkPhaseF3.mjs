@@ -164,6 +164,15 @@ await assert.rejects(() => repository.updateVersionMetadata(projectId, "v1", { l
 const metadataSnapshot = await repository.loadProject(projectId);
 assert.ok(metadataSnapshot);
 const hydrated = serialization.snapshotToDraft(metadataSnapshot);
+const targetMetadataOnly = { ...hydrated, versions: hydrated.versions.map((version) => ({ ...version, label: version.versionId === "v1" ? "另一个标签" : version.label })) };
+assert.equal(
+  serialization.projectDraftFingerprintWithoutVersionMetadata(targetMetadataOnly, "v1"),
+  serialization.projectDraftFingerprintWithoutVersionMetadata(hydrated, "v1"),
+);
+assert.notEqual(
+  serialization.projectDraftFingerprintWithoutVersionMetadata({ ...targetMetadataOnly, files: { "/App.tsx": "未保存文件" } }, "v1"),
+  serialization.projectDraftFingerprintWithoutVersionMetadata(hydrated, "v1"),
+);
 const secondFiles = { "/App.tsx": "export default function App() { return <main />; }" };
 hydrated.currentVersion = 2;
 hydrated.files = secondFiles;
@@ -203,10 +212,14 @@ assert.equal(finalSnapshot.versions.some((version) => version.versionNumber === 
 const managerSource = readFileSync(path.join(root, "frontend/src/components/shell/ProjectManager.tsx"), "utf8");
 const cardSource = readFileSync(path.join(root, "frontend/src/components/shell/VersionCard.tsx"), "utf8");
 const chatStoreSource = readFileSync(path.join(root, "frontend/src/store/chatStore.ts"), "utf8");
+const persistenceSource = readFileSync(path.join(root, "frontend/src/hooks/useProjectPersistence.ts"), "utf8");
 assert.match(managerSource, /尚无已接受版本/);
 assert.match(managerSource, /版本历史/);
 assert.match(cardSource, /编辑标签\/备注/);
 assert.match(cardSource, /恢复产生/);
+assert.match(cardSource, /已暂存于未保存项目/);
+assert.match(persistenceSource, /cleanBeforeUpdate/);
+assert.match(persistenceSource, /return "memory"/);
 assert.match(chatStoreSource, /Math\.max\(state\.currentVersion, highestSavedVersion\) \+ 1/);
 assert.match(chatStoreSource, /版本号必须从 v1 开始/);
 

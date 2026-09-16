@@ -1,7 +1,7 @@
 // 组件 Props 类型定义
 import type { ReactNode } from "react";
 import type { ThoughtItem, ProjectVersion } from "./store";
-import type { VersionMetadata } from "./project";
+import type { VersionMetadata, VersionMetadataSaveMode } from "./project";
 
 // ============================================================================
 // 布局类型
@@ -38,7 +38,7 @@ export interface VersionCardProps {
   projectName: string;
   isCurrentVersion?: boolean;
   onRollback?: () => void;
-  onMetadataSave?: (versionId: string, metadata: VersionMetadata) => Promise<void>;
+  onMetadataSave?: (versionId: string, metadata: VersionMetadata) => Promise<VersionMetadataSaveMode>;
 }
 
 // ============================================================================

@@ -9,10 +9,11 @@ import {
   createProjectId,
   createWorkspaceId,
   projectDraftFingerprint,
+  projectDraftFingerprintWithoutVersionMetadata,
   snapshotToDraft,
   toProjectVersion,
 } from "@/lib/projectSerialization";
-import type { ProjectRepository, ProjectSnapshot, ProjectStorageStatus, ProjectSummary, VersionMetadata } from "@/types/project";
+import type { ProjectDraft, ProjectRepository, ProjectSnapshot, ProjectStorageStatus, ProjectSummary, VersionMetadata, VersionMetadataSaveMode } from "@/types/project";
 import type { ProjectVersion } from "@/types/store";
 
 export interface ProjectPersistenceApi {
@@ -26,7 +27,7 @@ export interface ProjectPersistenceApi {
   saveAs: (name: string) => Promise<void>;
   openProject: (projectId: string) => Promise<void>;
   restoreVersion: (version: ProjectVersion) => Promise<void>;
-  updateVersionMetadata: (versionId: string, metadata: VersionMetadata) => Promise<void>;
+  updateVersionMetadata: (versionId: string, metadata: VersionMetadata) => Promise<VersionMetadataSaveMode>;
   renameProject: (projectId: string, name: string, expectedRevision?: number) => Promise<void>;
   deleteProject: (projectId: string, expectedRevision?: number) => Promise<void>;
   refreshProjects: () => Promise<void>;
@@ -51,11 +52,13 @@ export function useProjectPersistence(): ProjectPersistenceApi {
   if (repositoryRef.current === null) repositoryRef.current = new IndexedDbProjectRepository();
   const expectedRevisionRef = useRef<number | null>(null);
   const savedFingerprintRef = useRef<string | null>(null);
+  const savedDraftRef = useRef<ProjectDraft | null>(null);
   const identityRef = useRef({ projectId, createdAt: Date.now(), workspaceId: `workspace-${projectId}` });
   if (identityRef.current.projectId !== projectId) {
     identityRef.current = { projectId, createdAt: Date.now(), workspaceId: `workspace-${projectId}` };
     expectedRevisionRef.current = null;
     savedFingerprintRef.current = null;
+    savedDraftRef.current = null;
   }
   const [status, setStatus] = useState<ProjectStorageStatus>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -100,6 +103,7 @@ export function useProjectPersistence(): ProjectPersistenceApi {
       const result = await repositoryRef.current!.saveProject(draft, expectedRevisionRef.current);
       expectedRevisionRef.current = result.revision;
       savedFingerprintRef.current = fingerprint;
+      savedDraftRef.current = draft;
       setWarning(null);
       setStatus("saved");
       await refreshProjects();
@@ -133,6 +137,7 @@ export function useProjectPersistence(): ProjectPersistenceApi {
       identityRef.current = { projectId: nextProjectId, createdAt: nextDraft.createdAt, workspaceId: nextDraft.workspaceId };
       expectedRevisionRef.current = result.revision;
       savedFingerprintRef.current = projectDraftFingerprint(nextDraft);
+      savedDraftRef.current = nextDraft;
       setCurrentProject(nextProjectId, nextName);
       setWarning(null);
       setStatus("saved");
@@ -171,7 +176,9 @@ export function useProjectPersistence(): ProjectPersistenceApi {
       const snapshot = await repositoryRef.current!.loadProject(targetProjectId);
       if (snapshot === null) throw new Error("未找到本地项目，可能是首次访问、浏览器变化或站点数据已被清除。");
       applySnapshot(snapshot);
-      savedFingerprintRef.current = projectDraftFingerprint(snapshotToDraft(snapshot));
+      const loadedDraft = snapshotToDraft(snapshot);
+      savedFingerprintRef.current = projectDraftFingerprint(loadedDraft);
+      savedDraftRef.current = loadedDraft;
     } catch (caught: unknown) {
       setStatus("error");
       setError(caught instanceof Error ? caught.message : "项目打开失败，内存内容已保留");
@@ -205,15 +212,17 @@ export function useProjectPersistence(): ProjectPersistenceApi {
     if (revision === undefined || revision === null) throw new Error("项目尚未保存或缺少当前修订号，无法执行此操作。请先保存或刷新项目列表。" );
     return revision;
   }, [projectId]);
-
   const updateVersionMetadata = useCallback(async (versionId: string, metadata: VersionMetadata) => {
     setStatus("saving");
     setError(null);
+    const cleanBeforeUpdate = savedDraftRef.current !== null
+      && projectDraftFingerprintWithoutVersionMetadata(draft, versionId) === projectDraftFingerprintWithoutVersionMetadata(savedDraftRef.current, versionId);
     try {
       if (expectedRevisionRef.current === null) {
         updateVersionMetadataInStore(versionId, metadata);
+        setWarning("当前项目尚未保存，版本标签和备注已暂存；保存项目后才会写入本地项目。" );
         setStatus("idle");
-        return;
+        return "memory";
       }
       const result = await repositoryRef.current!.updateVersionMetadata(
         projectId,
@@ -225,11 +234,16 @@ export function useProjectPersistence(): ProjectPersistenceApi {
       const nextVersions = draft.versions.map((version) => version.versionId === versionId
         ? { ...version, label: result.version.label, notes: result.version.notes }
         : version);
-      savedFingerprintRef.current = projectDraftFingerprint({ ...draft, versions: nextVersions });
+      if (cleanBeforeUpdate) {
+        const nextDraft = { ...draft, versions: nextVersions };
+        savedFingerprintRef.current = projectDraftFingerprint(nextDraft);
+        savedDraftRef.current = nextDraft;
+      }
       expectedRevisionRef.current = result.revision;
       setWarning(null);
       setStatus("saved");
       await refreshProjects();
+      return "saved";
     } catch (caught: unknown) {
       setStatus("error");
       setError(caught instanceof Error ? caught.message : "版本元数据更新失败，当前内容已保留");
@@ -246,6 +260,7 @@ export function useProjectPersistence(): ProjectPersistenceApi {
         setCurrentProject(result.projectId, result.name);
         expectedRevisionRef.current = result.revision;
         savedFingerprintRef.current = projectDraftFingerprint({ ...draft, name: result.name });
+        savedDraftRef.current = { ...draft, name: result.name };
         setWarning(null);
       }
       setStatus(targetProjectId === projectId ? "saved" : "idle");
@@ -266,6 +281,7 @@ export function useProjectPersistence(): ProjectPersistenceApi {
       if (targetProjectId === projectId) {
         expectedRevisionRef.current = null;
         savedFingerprintRef.current = null;
+        savedDraftRef.current = null;
         setWarning(null);
         setStatus("idle");
       } else {

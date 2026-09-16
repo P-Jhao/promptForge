@@ -86,6 +86,15 @@ export function projectDraftFingerprint(draft: ProjectDraft): string {
   });
 }
 
+export function projectDraftFingerprintWithoutVersionMetadata(draft: ProjectDraft, versionId: string): string {
+  return projectDraftFingerprint({
+    ...draft,
+    versions: draft.versions.map((version) => version.versionId === versionId
+      ? { ...version, label: undefined, notes: undefined }
+      : version),
+  });
+}
+
 /** Rebuild the same durable fields used for dirty comparison after a load. */
 export function snapshotToDraft(snapshot: ProjectSnapshot): ProjectDraft {
   return {

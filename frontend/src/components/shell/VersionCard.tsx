@@ -16,11 +16,13 @@ export function VersionCard({
   const [notes, setNotes] = useState(version.notes ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const beginEditing = (): void => {
     setLabel(version.label ?? "");
     setNotes(version.notes ?? "");
     setError(null);
+    setNotice(null);
     setEditing(true);
   };
 
@@ -29,10 +31,11 @@ export function VersionCard({
     setSaving(true);
     setError(null);
     try {
-      await onMetadataSave(version.versionId, {
+      const mode = await onMetadataSave(version.versionId, {
         label: label.trim() || undefined,
         notes: notes.trim() || undefined,
       });
+      setNotice(mode === "memory" ? "已暂存于未保存项目；保存项目后才会写入本地项目。" : "版本元数据已保存。" );
       setEditing(false);
     } catch (caught: unknown) {
       setError(caught instanceof Error ? caught.message : "版本元数据保存失败");
@@ -76,6 +79,7 @@ export function VersionCard({
             </div>
           ) : (
             <>
+              {notice !== null && <p className="mt-2 text-xs text-blue-700" role="status">{notice}</p>}
               {version.label !== undefined && <p className="mt-2 text-sm font-medium text-gray-800">标签：{version.label}</p>}
               {version.notes !== undefined && <p className="mt-1 whitespace-pre-wrap text-xs text-gray-600">备注：{version.notes}</p>}
               {onMetadataSave !== undefined && <button type="button" onClick={beginEditing} className="mt-2 inline-flex items-center gap-1 rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"><Pencil size={12} /> 编辑标签/备注</button>}
