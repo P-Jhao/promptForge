@@ -5,7 +5,7 @@
   "files": [
     "/index.tsx",
     "/styles.css",
-    "/public/book-cover.svg",
+    "/book-cover.svg",
     "/App.tsx",
     "/lib/utils.ts",
     "/types/Novel.ts",
@@ -59,7 +59,7 @@
       "kind": "image",
       "required": true,
       "hostPath": "/book-cover.svg",
-      "sandpackPath": "/public/book-cover.svg",
+      "sandpackPath": "/book-cover.svg",
       "exportPath": "public/book-cover.svg",
       "contentType": "image/svg+xml",
       "sizeBytes": 750,

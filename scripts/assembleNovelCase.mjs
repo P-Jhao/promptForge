@@ -24,7 +24,7 @@ function createResourceMetadata(content) {
     kind: "image",
     required: true,
     hostPath: "/book-cover.svg",
-    sandpackPath: "/public/book-cover.svg",
+    sandpackPath: "/book-cover.svg",
     exportPath: "public/book-cover.svg",
     contentType: "image/svg+xml",
     sizeBytes: Buffer.byteLength(content, "utf8"),
@@ -251,7 +251,7 @@ async function main() {
   const files = {};
   add(files, "/index.tsx", patchCaseEntry(index));
   add(files, "/styles.css", templateStyles);
-  add(files, "/public/book-cover.svg", coverAsset);
+  add(files, "/book-cover.svg", coverAsset);
   add(files, app.path, app.content);
   addFileList(files, utils.files, "code");
   if (generatedStyles.path !== undefined && generatedStyles.content !== undefined) {
@@ -288,6 +288,7 @@ async function main() {
 
   await mkdir(generatedDir, { recursive: true });
   await rm(join(generatedDir, "book-cover.svg"), { force: true });
+  await rm(join(generatedDir, "public", "book-cover.svg"), { force: true });
   for (const [path, content] of Object.entries(files)) {
     const output = join(generatedDir, path.slice(1));
     await mkdir(dirname(output), { recursive: true });

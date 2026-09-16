@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { readCandidateEvidence } from "./realCandidateEvidence.mjs";
 
 export class RecorderError extends Error {
   constructor(message, category = "recording") {
@@ -53,6 +54,7 @@ export async function finishAttempt(attempt, capture, terminal) {
   const finalEntry = {
     ...attempt.runningEntry, status, endedAt: new Date().toISOString(), terminal,
     modeEvidence: capture.mode, flow: capture.flow, eventTypes: capture.events,
+    candidateEvidence: capture.candidate,
     fileCount: capture.files === undefined ? 0 : Object.keys(capture.files).length,
     rawSsePath: path.relative(attempt.rootDir ?? process.cwd(), rawPath),
     filesPath: filesPath === undefined ? undefined : path.relative(attempt.rootDir ?? process.cwd(), filesPath),
@@ -97,6 +99,12 @@ export function inspectEvent(event, capture) {
     const files = readFiles(event.data);
     if (files === undefined) throw new RecorderError("files 事件格式无效", "protocol");
     capture.files = files;
+  } else if (event.type === "candidate") {
+    const candidate = readCandidateEvidence(event.data, readFiles, redactSecrets, sha256);
+    if (candidate === undefined) throw new RecorderError("candidate 事件格式无效或缺少完整 files", "protocol");
+    if (capture.candidate !== undefined) throw new RecorderError("SSE 重复 candidate 事件", "protocol");
+    capture.candidate = candidate.evidence;
+    capture.files = candidate.files;
   } else if (event.type === "error") {
     capture.streamError = redactSecrets(readEventMessage(event));
   } else if (event.type === "done") {

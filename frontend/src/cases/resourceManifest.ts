@@ -20,8 +20,9 @@ export interface CaseResourceManifest {
 
 /**
  * One manifest is shared by the host case route, Sandpack and ZIP export.
- * The host path and app URL are root-relative; Sandpack's Vite adapter needs
- * public assets under /public so that the same app URL resolves in the iframe.
+ * The host path and app URL are root-relative. Sandpack's runtime resolves
+ * preview requests by their exact root-relative file key, so the case keeps
+ * the asset at /book-cover.svg and maps it to public/book-cover.svg on export.
  */
 export const NOVEL_CASE_RESOURCE_MANIFEST: CaseResourceManifest = {
   version: 1,
@@ -32,7 +33,7 @@ export const NOVEL_CASE_RESOURCE_MANIFEST: CaseResourceManifest = {
       kind: "image",
       required: true,
       hostPath: "/book-cover.svg",
-      sandpackPath: "/public/book-cover.svg",
+      sandpackPath: "/book-cover.svg",
       exportPath: "public/book-cover.svg",
       contentType: "image/svg+xml",
     },

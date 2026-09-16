@@ -45,7 +45,7 @@ async function main() {
   const stop = () => { interrupted = true; controller.abort(); };
   process.once("SIGINT", stop);
   process.once("SIGTERM", stop);
-  const capture = { raw: [], events: [], files: undefined, mode: undefined, flow: undefined, streamError: undefined, done: false };
+  const capture = { raw: [], events: [], files: undefined, candidate: undefined, mode: undefined, flow: undefined, streamError: undefined, done: false };
   let terminal;
   try {
     const response = await fetch(`${baseUrl}/chat`, {
@@ -62,7 +62,7 @@ async function main() {
     if (capture.streamError !== undefined) throw new RecorderError(capture.streamError, "backend");
     if (!capture.done) throw new RecorderError("SSE 响应缺少 done，结果不完整", "incomplete");
     if (capture.files === undefined || Object.keys(capture.files).length === 0) throw new RecorderError("SSE 响应缺少完整 files，结果不完整", "protocol");
-    terminal = { category: "success", message: "收到 real/forced=false、files 和 done" };
+    terminal = { category: "success", message: "收到 real/forced=false、完整 files 和 done" };
   } catch (error) {
     controller.abort();
     terminal = { category: interrupted ? "interrupted" : (error instanceof RecorderError ? error.category : "request"), message: safeErrorMessage(error) };

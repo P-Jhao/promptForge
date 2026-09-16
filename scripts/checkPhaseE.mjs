@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
-import { createAttempt } from "./lib/realRunRecorder.mjs";
+import { createAttempt, finishAttempt, inspectEvent } from "./lib/realRunRecorder.mjs";
 import { inspectRealRun } from "./lib/realRunReadiness.mjs";
 import { classifyAssertionFailure } from "./lib/taskBoardAssertion.mjs";
 import { createEvaluationPlan, isReusableEval01Summary, readRecorderState } from "./runTaskBoardEvaluation.mjs";
@@ -73,6 +73,32 @@ try {
   assert.equal(summarizeAttempts(fixtureAttempts, "FIXED-INTERACTION").N_raw_success, 0);
   assert.equal(summarizeAttempts(fixtureAttempts, "FIXED-INTERACTION").rawSuccessRate, null);
 
+  const candidateFiles = { "/src/App.tsx": "export default function App() { return <main>Candidate</main>; }" };
+  const candidateData = {
+    candidateId: "candidate-phase-e-fixture", runId: "run-phase-e-fixture", operation: "edit",
+    projectId: "project-phase-e-fixture", baseVersionId: null,
+    baseHash: "a".repeat(64), acceptanceBaseHash: "b".repeat(64), files: candidateFiles,
+    resources: [{ id: "fixture-style", kind: "stylesheet", hostPath: "/style.css", sandpackPath: "/src/style.css", exportPath: "src/style.css", contentType: "text/css", contentHash: null, hashStatus: "unknown" }],
+    changes: [{ operation: "modify", path: "/src/App.tsx", content: candidateFiles["/src/App.tsx"] }],
+    summary: "fixture candidate",
+  };
+  const candidateCapture = createCapture();
+  inspectEvent({ type: "candidate", data: candidateData }, candidateCapture);
+  inspectEvent({ type: "done" }, candidateCapture);
+  assert.deepEqual(candidateCapture.files, candidateFiles);
+  assert.equal(candidateCapture.candidate.source, "candidate");
+  assert.equal(candidateCapture.candidate.baseHash, candidateData.baseHash);
+  assert.equal(candidateCapture.candidate.acceptanceBaseHash, candidateData.acceptanceBaseHash);
+  assert.equal(candidateCapture.candidate.resourceCount, 1);
+  assert.equal(candidateCapture.candidate.changes[0].path, "/src/App.tsx");
+  assert.equal(candidateCapture.candidate.changes[0].contentSha256, sha256(candidateFiles["/src/App.tsx"]));
+  const chatOnlyCapture = createCapture();
+  inspectEvent({ type: "chat", data: { delta: "普通聊天文本" } }, chatOnlyCapture);
+  inspectEvent({ type: "done" }, chatOnlyCapture);
+  assert.equal(chatOnlyCapture.files, undefined);
+  assert.throws(() => inspectEvent({ type: "candidate", data: { ...candidateData, files: undefined } }, createCapture()), /candidate 事件格式无效/);
+  assert.throws(() => inspectEvent({ type: "candidate", data: { ...candidateData, changes: [] } }, createCapture()), /candidate 事件格式无效/);
+
   const reuseRoot = path.join(tempRoot, "reuse-runs");
   const reuseRunId = "reuse-success-fixture";
   await mkdir(path.join(reuseRoot, reuseRunId), { recursive: true });
@@ -89,6 +115,18 @@ try {
     metadata: { scenarioId: "EVAL-01", samplePool: "REAL-EVAL" },
   });
   assert.equal(reused.reused, true);
+  const candidateRoot = path.join(tempRoot, "candidate-runs");
+  const candidateAttempt = await createAttempt({
+    outputRoot: candidateRoot, runId: "run-phase-e-fixture",
+    request: { prompt: EVAL_PROMPTS["EVAL-02"], baseUrl: "http://fixture", body: { operation: "edit", projectId: "project-phase-e-fixture", runId: "run-phase-e-fixture", mockConfig: { global: false } } },
+    configSummary: {}, metadata: { scenarioId: "EVAL-02", samplePool: "REAL-EVAL" },
+  });
+  const candidateResult = await finishAttempt({ ...candidateAttempt, rootDir: ROOT_DIR }, candidateCapture, { category: "success", message: "fixture" });
+  assert.equal(candidateResult.finalEntry.candidateEvidence.candidateId, candidateData.candidateId);
+  assert.equal(candidateResult.finalEntry.candidateEvidence.changeCount, 1);
+  assert.equal(candidateResult.finalEntry.fileCount, 1);
+  const persistedCandidateFiles = JSON.parse(await readFile(path.resolve(ROOT_DIR, candidateResult.finalEntry.filesPath), "utf8"));
+  assert.deepEqual(persistedCandidateFiles, candidateFiles);
   const interruptedRoot = path.join(tempRoot, "orchestration-status");
   const interruptedRunId = "interrupted-status-fixture";
   await mkdir(path.join(interruptedRoot, interruptedRunId), { recursive: true });
@@ -181,6 +219,10 @@ function attempt(samplePool, status, scenarioId, options = {}) {
     repairSuccess: options.repairSuccess === true,
     terminal: options.category === undefined ? undefined : { category: options.category },
   };
+}
+
+function createCapture() {
+  return { raw: [], events: [], files: undefined, candidate: undefined, mode: undefined, flow: undefined, streamError: undefined, done: false };
 }
 
 function runTaskBoardCheck() {

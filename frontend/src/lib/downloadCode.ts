@@ -105,9 +105,15 @@ export async function downloadGeneratedCode(
 ): Promise<void> {
   const zip = new JSZip();
   const allFiles = { ...templateFiles, ...generatedFiles };
+  const relocatedResourcePaths = new Set<string>();
 
   if (resourceManifest !== undefined) {
     validateResourceManifest(allFiles, resourceManifest);
+    for (const resource of resourceManifest.resources) {
+      if (toZipPath(resource.exportPath) !== toZipPath(resource.sandpackPath)) {
+        relocatedResourcePaths.add(resource.sandpackPath);
+      }
+    }
     zip.file(
       "promptforge-resource-manifest.json",
       JSON.stringify(resourceManifest, null, 2),
@@ -122,11 +128,13 @@ export async function downloadGeneratedCode(
 
   // 2. 添加模板文件（保持 Sandpack 的扁平结构）
   Object.entries(templateFiles).forEach(([path, file]) => {
+    if (relocatedResourcePaths.has(path)) return;
     zip.file(toZipPath(path), file.code);
   });
 
   // 3. 添加生成的文件（保持 Sandpack 的扁平结构，包括子目录）
   Object.entries(generatedFiles).forEach(([path, file]) => {
+    if (relocatedResourcePaths.has(path)) return;
     zip.file(toZipPath(path), file.code);
   });
 

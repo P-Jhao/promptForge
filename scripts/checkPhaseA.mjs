@@ -23,19 +23,19 @@ assert.ok(manifestResource, "generated manifest lacks book-cover");
 assert.equal(manifestResource.sizeBytes, Buffer.byteLength(cover, "utf8"));
 assert.equal(manifestResource.sha256, createHash("sha256").update(cover).digest("hex"));
 assert.equal(manifestResource.hostPath, "/book-cover.svg");
-assert.equal(manifestResource.sandpackPath, "/public/book-cover.svg");
+assert.equal(manifestResource.sandpackPath, "/book-cover.svg");
 assert.equal(manifestResource.exportPath, "public/book-cover.svg");
-assert.ok(generatedManifest.files.includes("/public/book-cover.svg"));
-assert.equal(generatedManifest.files.includes("/book-cover.svg"), false);
+assert.ok(generatedManifest.files.includes("/book-cover.svg"));
+assert.equal(generatedManifest.files.includes("/public/book-cover.svg"), false);
 const generatedNovelData = await readFile(path.join(rootDir, "frontend/src/cases/generated/data/novels.ts"), "utf8");
 assert.match(generatedNovelData, /coverImage: '\/book-cover\.svg'/);
-const generatedCover = await readFile(path.join(rootDir, "frontend/src/cases/generated/public/book-cover.svg"), "utf8");
+const generatedCover = await readFile(path.join(rootDir, "frontend/src/cases/generated/book-cover.svg"), "utf8");
 assert.equal(generatedCover, cover);
 
 const files = {
   "/index.tsx": { code: "import { createRoot } from 'react-dom/client'; const root = createRoot(document.getElementById('root')); root.render(<App />);" },
   "/App.tsx": { code: "export default function App() { return null; }" },
-  "/public/book-cover.svg": { code: cover },
+  "/book-cover.svg": { code: cover },
 };
 runtimeManifestModule.exports.validateResourceManifest(files, runtimeManifest);
 assert.throws(
