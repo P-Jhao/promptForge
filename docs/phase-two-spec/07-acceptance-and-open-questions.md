@@ -1,6 +1,6 @@
 # 07 验收映射与待决问题
 
-本文件把稳定需求映射到可审查的验收条目。阶段 A/B/C/D 已有代码和 fixture 证据；2026-09-16 已完成 EVAL-01、EVAL-02 各 3 次真实 recorder 记录，并保留 EVAL-02 首次协议误判；独立任务看板案例 `task-board-real-eval` 已以真实来源、构建检查和 Edge 临时 Vite EVAL-03 人工证据标为 `READY`，首页链接和 `/workspace?case=task-board-real-eval` 的静态入口代码已接入；同日目标工作台还有一次 Edge Sandpack 渲染/握手和关键词/优先级筛选证据。该状态和单次现场不覆盖完整状态矩阵、纯键盘完整流程、移动端键盘/交互、导出构建、离线、原生 ZIP、第五类 IndexedDB 或其他目标工作台浏览器路径；相关项目仍需现场或用户手动验证。阶段 F 的 F1/F2/F3 代码已实现，并有 fixture、前端 tsc、lint/build 证据；完整浏览器现场、真实聊天链路、移动端/键盘、ZIP 和 IndexedDB 第五类故障仍待人工验收。其验收使用独立 `UX-SESSION-*`、`UX-PROJECT-*`、`UX-VERSION-*`、`UX-MIGRATION-*` 编号，不改写 A-E 历史证据。阶段 A-E 的实现与证据边界见 [`phase-a.md`](../phase-two-plan/phase-a.md)、[`phase-b.md`](../phase-two-plan/phase-b.md)、[`phase-c.md`](../phase-two-plan/phase-c.md)、[`phase-d.md`](../phase-two-plan/phase-d.md) 和 [`phase-e.md`](../phase-two-plan/phase-e.md)。阶段 F 交接见 [`phase-f.md`](../phase-two-plan/phase-f.md)。
+本文件把稳定需求映射到可审查的验收条目。阶段 A/B/C/D 已有代码和 fixture 证据；2026-09-16 已完成 EVAL-01、EVAL-02 各 3 次真实 recorder 记录，并保留 EVAL-02 首次协议误判；独立任务看板案例 `task-board-real-eval` 已以真实来源、构建检查和 Edge 临时 Vite EVAL-03 人工证据标为 `READY`，首页链接和 `/workspace?case=task-board-real-eval` 的静态入口代码已接入；同日目标工作台还有一次 Edge Sandpack 渲染/握手和关键词/优先级筛选证据。该状态和单次现场不覆盖完整状态矩阵、纯键盘完整流程、移动端键盘/交互、导出构建、离线、原生 ZIP、第五类 IndexedDB 或其他目标工作台浏览器路径；相关项目仍需现场或用户手动验证。阶段 F 的 F1/F2/F3 代码已实现，并有 fixture、前端 tsc、lint/build 证据；上述局部 Edge 桌面现场已验证空白项目状态、示例/真实切换及“请新建一个项目”的确认/取消保持，完整浏览器矩阵、真实聊天链路、移动端/键盘、ZIP 和 IndexedDB 第五类故障仍待人工验收。其验收使用独立 `UX-SESSION-*`、`UX-PROJECT-*`、`UX-VERSION-*`、`UX-MIGRATION-*` 编号，不改写 A-E 历史证据。阶段 A-E 的实现与证据边界见 [`phase-a.md`](../phase-two-plan/phase-a.md)、[`phase-b.md`](../phase-two-plan/phase-b.md)、[`phase-c.md`](../phase-two-plan/phase-c.md)、[`phase-d.md`](../phase-two-plan/phase-d.md) 和 [`phase-e.md`](../phase-two-plan/phase-e.md)。阶段 F 交接见 [`phase-f.md`](../phase-two-plan/phase-f.md)。
 
 `e9bbb1d` 修复任务看板 source 的 5 个 ESLint error 后，lint 为 0 errors、23 个既有 warnings；主代理独立复跑 tsc、build、案例组装一致性、案例检查和 `git diff --check` 均通过。修复后 Edge 目标工作台刷新任务看板约 25 秒内收到真实 `done(compilatonError=false)` + `app-mounted`，并完成三列/4 条任务、空标题校验、新增计数 5、编辑描述、状态移动、关键词“登录”筛选 1 条及优先级筛选清除/重置的单次回归。控制台没有应用运行失败；扩展 hydration、Tailwind CDN、React Router 和扩展日志均按警告记录。该证据不扩展为完整验收。
 
@@ -16,8 +16,8 @@
 | A-CASE-02 | R-PREVIEW-01、R-GEN-01 | 人为拉长模板/沙盒启动并制造运行错误；代码可见但未 ready 时保持启动状态；真实 ready 后才显示可用；超时/错误可重试且不清除已有结果。 |
 | A-CASE-03 | R-CASE-01、R-CASE-02、R-CASE-03 | **固化门槛已完成：** `frontend/src/cases/task-board/` 的 `caseId=task-board-real-eval`、manifest、provenance、真实来源 `task-board-eval-01-003`/`task-board-case-edit-20260916` 和 EVAL-03 证据均已核对，evaluator 返回 `READY`，且不是小说 48 文件或 Mock 新回放；首页链接和 `/workspace?case=task-board-real-eval` 的静态接入代码已检查。2026-09-16 Edge 目标工作台在 lint 修复后约 25 秒内完成一次 Sandpack ready/app-mounted 回归，观察到三列/4 条任务、筛选、新增、编辑和状态移动。**仍需验证：** 完整状态矩阵、纯键盘完整流程、移动端键盘/交互、删除、导出、离线、ZIP、IndexedDB 和其他目标浏览器路径未覆盖。 |
 | A-PROJECT-01 | R-PROJECT-01、R-PROJECT-02 | **Edge 现场已完成桌面主路径：** 项目名和 `App.tsx` 手改保存、刷新、重开后恢复，列表显示修订号（A/B 历史证据，不决定阶段 F 普通 UI）；**仍需用户手动验证：** 保存失败、配额、损坏数据、多标签冲突和刷新/移动端边界。 |
-| A-SESSION-01 | R-SESSION-01、R-SESSION-02 | **F1 代码已实现，fixture/tsc/lint/build 已通过；完整浏览器和真实聊天链路仍未验证：** 新建空白主会话、打开恢复 `Project.messages`/文件/版本、内部 `generate`/`edit`/`chat` 判定、聊天不建候选/版本和歧义先澄清；不提供普通 UI 模式开关。对应 `UX-SESSION-01`。 |
-| A-SESSION-02 | R-SESSION-03 | **F1 代码与新建保护 fixture 已实现并通过；跨项目背景选择和浏览器现场未验证：** 已有主会话请求另一个项目时先确认，背景按用户选择带入，原项目文件/候选/版本不混用。对应 `UX-SESSION-02`。 |
+| A-SESSION-01 | R-SESSION-01、R-SESSION-02 | **F1 代码已实现，fixture/tsc/lint/build 已通过；上述局部 Edge 现场已验证，完整矩阵和真实聊天链路仍未验证：** 新建空白主会话、打开恢复 `Project.messages`/文件/版本、内部 `generate`/`edit`/`chat` 判定、聊天不建候选/版本和歧义先澄清；不提供普通 UI 模式开关。对应 `UX-SESSION-01`。 |
+| A-SESSION-02 | R-SESSION-03 | **F1 代码与新建保护 fixture 已实现并通过；Edge 已验证“请新建一个项目”出现 `alertdialog`，取消后原项目和输入不变；确认后的独立项目、背景选择和隔离仍未验证：** 已有主会话请求另一个项目时先确认，背景按用户选择带入，原项目文件/候选/版本不混用。对应 `UX-SESSION-02`。 |
 | A-SESSION-03 | R-CONTEXT-01 | **F1 代码与类型检查已通过，真实请求现场未验证：** edit 请求以发送时编辑器完整快照（含未保存）和 hash 为代码真相，默认上下文最多最近 6 条 `Project.messages`，不声称完整记忆。对应 `UX-SESSION-03`。 |
 | A-PROJECT-02 | R-PROJECT-03 | **F2 代码与重命名 fixture 已通过，浏览器现场未验证：** 项目列表重命名保持 `projectId` 和历史身份不变。对应 `UX-PROJECT-01`。 |
 | A-PROJECT-03 | R-PROJECT-04 | **F2 代码与事务/失效写入 fixture 已通过，删除故障和多标签现场未验证：** 删除入口明确范围并保护 dirty、进行中写入/生成/验证/修复、候选和其他标签页；删除事务失败保留列表/工作副本，成功删除当前项目进入空白入口，旧标签写入被拒绝。对应 `UX-PROJECT-01`。 |
@@ -37,7 +37,7 @@
 
 ## 本轮已确认的阶段 F 决策
 
-以下决策已纳入 `plan.md` 和本目录规格；阶段 F1/F2/F3 的代码和 fixture 已完成，现场验收仍未完成：
+以下决策已纳入 `plan.md` 和本目录规格；阶段 F1/F2/F3 的代码和 fixture 已完成，上述局部 Edge 现场已验证，完整现场验收仍未完成：
 
 - 首版使用 IndexedDB 和显式手动保存；不做自动保存、云同步或通用多会话/线程架构。
 - 一个项目只有一个主会话，复用 `Project.messages`；新建项目为空白，打开项目恢复已保存的消息、代码和版本。普通 UI 不提供首次生成/当前代码修改开关，内部判定 `generate`、`edit`、`chat`。
@@ -71,7 +71,7 @@
 
 ## 手动验收项目
 
-以下项目按截至 2026-09-16 的证据标记；“已完成”只覆盖括号中的范围，剩余项仍需在目标环境留下证据：
+以下项目按截至 2026-09-17 的证据标记；“已完成”只覆盖括号中的范围，剩余项仍需在目标环境留下证据：
 
 1. **已完成（真实协议/来源）**：EVAL-01 的 `task-board-eval-01-001`、`task-board-eval-01-002`、`task-board-eval-01-003` 和 EVAL-02 的 `task-board-eval-02-001`、`task-board-eval-02-002`、`task-board-eval-02-003` 均已保存真实 run、可读文件或候选文件和 `done`；完整应用预览与功能通过仍未由 recorder 记录代替。
 2. **已完成（独立案例固化与入口局部现场）**：`task-board-real-eval` 已检查真实来源、人工修正、依赖、manifest 和 provenance，EVAL-03 已在 Edge 临时 Vite 页完成；首页链接和 `/workspace?case=task-board-real-eval` 已接入并可直接选取静态文件，lint 修复后目标工作台另有一次约 25 秒完成的 Sandpack ready/app-mounted 回归，观察到三列/4 条任务、筛选、新增、编辑和状态移动；桌面 Edge 另有焦点顺序和表单局部键盘操作证据；完整状态矩阵、纯键盘完整流程、移动端键盘/交互、删除、导出和离线环境中的运行仍未验证。
@@ -84,8 +84,8 @@
 9. **部分完成，仍需用户手动验证**：EVAL-03 固定任务板的三列、筛选、新增、编辑、校验和状态切换已在 Edge 临时 Vite 页确认；lint 修复后目标工作台已观察三列、初始任务、关键词/优先级筛选、新增计数、编辑描述和状态移动；桌面 Edge 已完成焦点顺序和“键盘验收”表单局部操作，In-app Browser `390x844` 仅有工作台布局与加载提示证据，窄屏表单/筛选操作、移动端键盘与 ready、纯键盘完整流程、删除和完整动作矩阵仍需验证。
 10. **仍需用户手动验证**：清除站点数据、模拟配额不足、损坏记录和打开两个标签页，记录只能确认的 IndexedDB 状态，不能把可能原因写成确定原因。
 11. **范围保留**：Vue 仍未实现；只保留后续范围评估，不把未实现能力写入阶段完成结论。
-12. **F1 代码已实现，fixture/tsc/lint/build 已通过；浏览器和真实聊天链路仍需人工验收（`UX-SESSION-01`）**：新建空白项目、打开恢复同一 `Project.messages`/代码/版本；普通 UI 不出现首次生成/当前代码修改开关；内部 `generate`/`edit`/`chat` 判定正确，聊天不建候选/版本，歧义先澄清。
-13. **F1 代码与新建保护 fixture 已通过；跨项目浏览器流程仍需人工验收（`UX-SESSION-02`）**：已有主会话请求另一个项目时确认；取消不改变原项目，确认后新项目独立，背景按用户选择带入且文件/版本不混用。
+12. **F1 代码已实现，fixture/tsc/lint/build 已通过；上述局部 Edge 现场已验证，完整矩阵和真实聊天链路仍需人工验收（`UX-SESSION-01`）**：已观察 `/workspace` 空白项目的“尚无已接受版本 · 未保存”、示例/真实切换和 Sandpack 加载提示到就绪；打开恢复同一 `Project.messages`/代码/版本、内部 `generate`/`edit`/`chat` 判定、聊天不建候选/版本、歧义先澄清仍需完整现场核对。
+13. **F1 代码与新建保护 fixture 已通过；Edge 已完成确认/取消局部验证，确认后的跨项目流程仍需人工验收（`UX-SESSION-02`）**：真实体验输入“请新建一个项目”出现 `alertdialog`，取消不改变原项目和输入；确认后新项目独立、背景按用户选择带入且文件/版本不混用仍需验证。
 14. **F1 代码与类型检查已通过；真实请求现场仍需人工验收（`UX-SESSION-03`）**：未保存编辑随当前编辑器快照/hash 进入 edit 请求；默认上下文最多最近 6 条消息，不对模型或用户声称拥有完整记忆。
 15. **F2 代码与事务 fixture 已通过；删除故障和多标签浏览器流程仍需人工验收（`UX-PROJECT-01`）**：项目列表重命名保持 ID；删除范围、dirty/进行中写入/生成/验证/修复、候选和其他标签页保护、事务失败保留、当前项目删除后空白入口及旧标签失效写入均需现场验证。
 16. **F3 代码与版本 fixture 已通过；完整浏览器版本/恢复流程仍需人工验收（`UX-VERSION-01`）**：顶部项目名/版本/保存状态、无版本文案、v1–v4 自动序列、历史/当前/工作副本区分、`1.0.0` 标签元数据、v2 直接恢复为 v5 并保留后续历史、手动保存不建版本。

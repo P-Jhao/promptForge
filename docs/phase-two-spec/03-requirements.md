@@ -2,7 +2,7 @@
 
 需求 ID 是后续设计、实现、验证和验收的共同索引。ID 一经采用不应因为实现文件或界面文案变化而重命名。优先级含义：P0 是第二阶段核心门槛，P1 是完整交付需要，P2 是未来评估或增强项。
 
-本轮新增的 `R-SESSION-*`、`R-CONTEXT-01`、`R-PROJECT-03/04`、`R-VERSION-02/03` 和 `R-MIGRATION-01` 已由阶段 F1/F2/F3 落到代码，并由对应 fixture、前端 tsc、lint/build 检查；完整浏览器现场、真实聊天链路、移动端/键盘、ZIP 和 IndexedDB 第五类故障仍未验证。A–E 既有需求和历史证据保持原样。
+本轮新增的 `R-SESSION-*`、`R-CONTEXT-01`、`R-PROJECT-03/04`、`R-VERSION-02/03` 和 `R-MIGRATION-01` 已由阶段 F1/F2/F3 落到代码，并由对应 fixture、前端 tsc、lint/build 检查；2026-09-17 已有局部 Edge 桌面现场验证空白项目状态、示例/真实切换及“新项目”确认取消保持。完整浏览器矩阵、真实聊天链路、移动端/键盘、ZIP 和 IndexedDB 第五类故障仍未验证。A–E 既有需求和历史证据保持原样。
 
 ## P0 需求
 
