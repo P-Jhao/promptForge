@@ -1,6 +1,6 @@
 # 阶段 E 交接：独立任务看板评测与固化门槛
 
-状态：评测契约、真实运行记录复用、统计报告和独立案例来源门槛已实现；当前没有真实任务看板 run、固定交互页面或可审查来源，因此独立任务看板案例保持 `NOT_READY`，没有写入 `frontend/src/cases/`，也没有把小说案例改名复用。
+状态：评测契约、真实运行记录复用、统计报告和独立案例来源门槛已实现；当前没有通过来源门槛的真实任务看板 run、固定交互页面或可审查来源，因此独立任务看板案例保持 `NOT_READY`，没有写入 `frontend/src/cases/`，也没有把小说案例改名复用。
 
 权威范围见[第二阶段执行计划](../phase-two-spec/plan.md)的“阶段 E”。本记录描述实现与证据，不替代计划。
 
@@ -28,6 +28,12 @@ EVAL-02 sha256 = 66504c0c354b7c678030ecbaef2570663ddf71fd946adfbc71e4cf5088600d8
 
 EVAL-01 的 prompt 文本来自既有 `recordRealTaskBoard.mjs` 固定需求；本次只是抽到共享契约供记录器、报告和 fixture 共用。EVAL-02 不会在没有 EVAL-01 成功文件基线时发送请求。
 
+## 负向 recorder 证据（2026-09-16）
+
+本地强制 Mock 记录保存在 `artifacts/real-runs/task-board/task-board-mock-rejection-20260916/record.json`：`runId=task-board-mock-rejection-20260916`、`attempt=1`、`samplePool=REAL-EVAL`、`status=failed`，终态 `terminal.category=mode`，收到的模式为 `mode=mock`、`forced=true`。该 attempt 虽收到完整的 48 个文件和 `done` 事件，记录器仍拒绝登记为真实成功。
+
+这是一条防止 Mock 冒充真实结果的负向证据，不是 EVAL-01 成功；未记录完整请求或任何密钥。该记录不提供 EVAL-02 基线，独立任务板案例继续保持 `NOT_READY`。
+
 ## 当前环境检查
 
 ```text
@@ -42,7 +48,7 @@ node scripts/checkPhaseE.mjs
 node scripts/reportTaskBoardEvaluation.mjs --runs-dir artifacts/real-runs/task-board --case-dir frontend/src/cases/task-board
 ```
 
-`checkPhaseE.mjs` 通过了 prompt hash、EVAL-02 保留要求、三个样本池分离、分母/未验证计数、成功 run 复用、缺失真实来源拒绝和无真实成功声明检查。当前报告为 `NOT_READY`：REAL-EVAL 和 PROTOCOL-FIXTURE 没有已登记 run；固定交互 8 条断言因没有 Playwright/URL 均为 `not-verified`。报告脚本同样返回缺失独立 case descriptor 的 `CASE_DESCRIPTOR_MISSING`，不创建案例。
+`checkPhaseE.mjs` 通过了 prompt hash、EVAL-02 保留要求、三个样本池分离、分母/未验证计数、成功 run 复用、缺失真实来源拒绝和无真实成功声明检查。当前报告为 `NOT_READY`：REAL-EVAL 有上述 1 条实际 recorder 记录（`N_all=1`、原始成功 `0`、修复后成功 `0`、`mode` 失败 `1`），没有可复用的 EVAL-01 成功基线，因此 EVAL-02 未执行；固定交互 8 条断言因没有 Playwright/URL 均为 `not-verified`。报告脚本同样返回缺失独立 case descriptor 的 `CASE_DESCRIPTOR_MISSING`，不创建案例。
 
 已有真实环境时的可复制流程：
 
