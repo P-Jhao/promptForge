@@ -27,6 +27,14 @@
     "/layouts/MainLayout.tsx",
     "/package.json"
   ],
+  "supportFiles": [
+    "/tailwind.config.cjs",
+    "/postcss.config.cjs"
+  ],
+  "buildFiles": [
+    "/tsconfig.json",
+    "/pnpm-lock.yaml"
+  ],
   "resources": [],
   "externalResources": [],
   "sourcePolicy": "real-model-artifact-with-declared-manual-corrections",

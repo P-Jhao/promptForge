@@ -8,10 +8,15 @@
     "EVIDENCE_NOT_PASS:EVAL-03"
   ],
   "checks": {
-    "sourceFileCount": 23,
+    "sourceFileCount": 25,
     "manifestPaths": 21,
+    "supportFiles": 2,
+    "buildFiles": 2,
     "noAnyOrTsNocheck": true,
     "requiredBoardFeatures": true,
+    "toolbarSemantics": true,
+    "tailwindPipeline": true,
+    "tailwindCss": "pass",
     "realSourcesResolved": true,
     "typeCheck": "pass",
     "build": "pass",

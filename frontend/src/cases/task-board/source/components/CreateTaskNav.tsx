@@ -20,7 +20,7 @@ export default function CreateTaskNav() {
             <LayoutDashboard className="h-5 w-5" />
           </div>
           <h1 className="text-base sm:text-lg font-semibold text-gray-900 truncate">
-            新建任务
+            任务看板
           </h1>
         </div>
       </div>

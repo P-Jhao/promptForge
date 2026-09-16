@@ -58,12 +58,25 @@ try {
 
   const sourceNames = new Set(sourceFiles.map((filePath) => `/${path.relative(SOURCE_DIR, filePath).replaceAll(path.sep, "/")}`));
   for (const sourceName of manifest.sourceFiles) assert.equal(sourceNames.has(sourceName), true, `manifest 缺少源码：${sourceName}`);
+  for (const supportName of manifest.supportFiles) assert.equal(sourceNames.has(supportName), true, `manifest 缺少构建支持文件：${supportName}`);
+  for (const buildName of manifest.buildFiles) assert.equal(sourceNames.has(buildName), true, `manifest 缺少构建文件：${buildName}`);
   const taskList = await readFile(path.join(SOURCE_DIR, "components", "TaskList.tsx"), "utf8");
   const filter = await readFile(path.join(SOURCE_DIR, "components", "TaskFilterSearch.tsx"), "utf8");
+  const toolbar = await readFile(path.join(SOURCE_DIR, "components", "CreateTaskNav.tsx"), "utf8");
+  const styles = await readFile(path.join(SOURCE_DIR, "styles.css"), "utf8");
+  const tailwindConfig = await readFile(path.join(SOURCE_DIR, "tailwind.config.cjs"), "utf8");
+  const postcssConfig = await readFile(path.join(SOURCE_DIR, "postcss.config.cjs"), "utf8");
   assert.match(taskList, /lg:grid-cols-3/);
   assert.match(taskList, /todo.*doing.*done/s);
   assert.match(filter, /priorityFilter/);
   assert.match(filter, /按优先级筛选/);
+  assert.match(toolbar, /任务看板/);
+  assert.match(toolbar, /\/tasks\/new/);
+  assert.match(styles, /@tailwind base;/);
+  assert.match(styles, /@tailwind components;/);
+  assert.match(styles, /@tailwind utilities;/);
+  assert.match(tailwindConfig, /content:/);
+  assert.match(postcssConfig, /tailwindcss:/);
 
   const caseProvenance = await evaluateCaseProvenance(CASE_DIR, RUNS_DIR);
   assert.equal(caseProvenance.status, "NOT_READY");
@@ -81,8 +94,13 @@ try {
     checks: {
       sourceFileCount: sourceFiles.length,
       manifestPaths: manifest.sourceFiles.length,
+      supportFiles: manifest.supportFiles.length,
+      buildFiles: manifest.buildFiles.length,
       noAnyOrTsNocheck: true,
       requiredBoardFeatures: true,
+      toolbarSemantics: true,
+      tailwindPipeline: true,
+      tailwindCss: build.tailwindCss,
       realSourcesResolved: true,
       typeCheck: build.typeCheck.status === 0 ? "pass" : "fail",
       build: build.build.status === 0 ? "pass" : "fail",
@@ -118,7 +136,12 @@ async function runBuildCheck() {
     assert.equal(typeCheck.status, 0, `案例 TypeScript 检查失败：${typeCheck.output}`);
     const build = run(PACKAGE_MANAGER, ["run", "build"], temporarySource);
     assert.equal(build.status, 0, `案例 Vite 构建失败：${build.output}`);
-    return { typeCheck, build };
+    const cssFiles = (await collectFiles(path.join(temporarySource, "dist")))
+      .filter((filePath) => filePath.endsWith(".css"));
+    assert.ok(cssFiles.length > 0, "案例构建没有生成 CSS 产物");
+    const css = (await Promise.all(cssFiles.map((filePath) => readFile(filePath, "utf8")))).join("\n");
+    assert.match(css, /\.max-w-6xl/, "Tailwind utility 未进入构建 CSS");
+    return { typeCheck, build, tailwindCss: "pass" };
   } finally {
     await rm(temporaryRoot, { recursive: true, force: true });
   }

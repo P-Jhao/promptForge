@@ -62,6 +62,16 @@
       "source": "EVAL-01/EVAL-02 source files"
     },
     {
+      "paths": ["source/styles.css", "source/tailwind.config.cjs", "source/postcss.config.cjs"],
+      "reason": "补齐真实产物使用的 Tailwind utility 构建链；原始 styles.css 只有自定义 CSS，无法支撑 JSX 中的 utility 类。",
+      "source": "EVAL-01/EVAL-02 source files and standalone Vite build evidence"
+    },
+    {
+      "paths": ["source/components/CreateTaskNav.tsx"],
+      "reason": "看板工具栏标题改为“任务看板”；新建按钮仍进入 /tasks/new，新建路由语义不变。",
+      "source": "EVAL-01/EVAL-02 functional requirement"
+    },
+    {
       "paths": ["source/App.tsx", "source/pages/TaskForm.tsx", "source/components/TaskList.tsx"],
       "reason": "补齐 /tasks 与 /tasks/new 路由语义、已有任务编辑入口，并将任务呈现整理为待办/进行中/已完成三列。",
       "source": "EVAL-01/EVAL-02 functional requirement"
