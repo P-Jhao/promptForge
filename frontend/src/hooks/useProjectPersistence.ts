@@ -218,7 +218,7 @@ export function useProjectPersistence(): ProjectPersistenceApi {
     const cleanBeforeUpdate = savedDraftRef.current !== null
       && projectDraftFingerprintWithoutVersionMetadata(draft, versionId) === projectDraftFingerprintWithoutVersionMetadata(savedDraftRef.current, versionId);
     try {
-      if (expectedRevisionRef.current === null) {
+      if (expectedRevisionRef.current === null || savedDraftRef.current?.versions.some((version) => version.versionId === versionId) !== true) {
         updateVersionMetadataInStore(versionId, metadata);
         setWarning("当前项目尚未保存，版本标签和备注已暂存；保存项目后才会写入本地项目。" );
         setStatus("idle");
