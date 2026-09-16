@@ -9,7 +9,7 @@ import type { MockConfig } from "@/types/mock";
 import { createBaseSnapshot, hashEditBase, hashResourceReferences } from "@/lib/changeContract";
 import { canAttemptRepair, repairErrorSignature } from "@/lib/validationReport";
 import type { RepairRequestContext } from "@/lib/validationReport";
-import { classifyRequestIntent } from "@/lib/requestIntent";
+import { classifyRequestIntent, isNewProjectRequest } from "@/lib/requestIntent";
 import { applyStagedCandidate } from "./candidateActions";
 import { runChatRequest } from "./chatRequestRunner";
 import type { ActiveRequest, Attachment, RetryableRequest } from "./chatStreamUtils";
@@ -57,6 +57,10 @@ export function useChat() {
       const sandpack = useSandpackStore.getState();
       const files = sandpack.currentFiles ?? sandpack.generatedFiles;
       const hasFiles = files !== null && Object.keys(files).length > 0;
+      if (isNewProjectRequest(content)) {
+        toast.info("请先确认创建独立项目；当前项目内容不会自动带入。");
+        return;
+      }
       const classification = classifyRequestIntent(content, hasFiles);
       if (classification.intent === "clarify") {
         const clarification = classification.clarification ?? "请补充你希望完成的页面或修改内容。";

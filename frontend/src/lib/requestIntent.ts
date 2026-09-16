@@ -27,6 +27,18 @@ const QUESTION_PATTERNS: RegExp[] = [
 ];
 
 const DIRECT_EDIT_PATTERN = /^(?:请|帮我|请帮我|能否|可以)?\s*(?:把|将|给我|新增|添加|增加|加入|修改|更改|编辑|修复|解决|删除|移除|重构|优化|调整|替换|更新|完善|补充|重命名|改成|去掉|修正)/u;
+const CHINESE_NEW_PROJECT_PATTERN = /^(?:请|帮我|我想|我要|能否|可以)?\s*(?:新建|创建|另建|新开|另起|开始|开启|做|生成|打开|切换到)\s*(?:(?:一个|一份|一套)\s*)?(?:(?:全新|新的?|独立的?|另一个)\s*)?(?:项目|工程|工作区|工作台)(?:\s*(?:来|用于|开始|吧)|\s*[，,。！？].*)?$/u;
+const CHINESE_NEW_PROJECT_NOUN_PATTERN = /^(?:(?:请|帮我|我想|我想要|我要)\s*)?(?:一个|一份|一套)?\s*(?:全新的?|新的?|独立的?|另一个)\s*(?:项目|工程|工作区|工作台)$/u;
+const ENGLISH_NEW_PROJECT_PATTERN = /^(?:please\s+)?(?:create|start|open|begin|make)\s+(?:a\s+)?(?:new|separate|another)\s+(?:project|workspace)(?:\s+(?:for|to|with)\b.*)?$/i;
+
+export function isNewProjectRequest(content: string): boolean {
+  const normalized = content.trim().replace(/\s+/gu, " ");
+  if (normalized.length === 0) return false;
+  return CHINESE_NEW_PROJECT_PATTERN.test(normalized)
+    || CHINESE_NEW_PROJECT_NOUN_PATTERN.test(normalized)
+    || ENGLISH_NEW_PROJECT_PATTERN.test(normalized);
+}
+
 const CLARIFICATION_MESSAGE = "请说明你希望创建一个新页面、调整当前页面，还是先讨论需求；需求不明确时我会先询问，不会修改代码。";
 
 function matchesAny(value: string, patterns: RegExp[]): boolean {
