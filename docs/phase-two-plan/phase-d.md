@@ -1,6 +1,6 @@
 # 阶段 D 交接：分层校验与有限修复
 
-状态：阶段 D 的 React 候选校验和有限修复最小切片已实现，主代理仍需在真实 Sandpack、真实后端和固定任务看板页面上现场验收。固定任务看板不要求 Playwright E2E，采用单元/集成检查或用户人工确认；缺少 Playwright 或外部预览超时都不能写成通过。
+状态：阶段 D 的 React 候选校验和有限修复最小切片已实现，主代理仍需在真实 Sandpack、真实后端和固定任务看板页面上现场验收。阶段 E 已记录一次 EVAL-01 真实生成成功和一次 EVAL-02 首次协议误判；固定任务看板不要求 Playwright E2E，采用单元/集成检查或用户人工确认；缺少 Playwright 或外部预览超时都不能写成通过。
 
 权威范围见[第二阶段执行计划](../phase-two-spec/plan.md)的“阶段 D”，本记录只描述实现和证据，不替代计划。
 
@@ -36,7 +36,7 @@ frontend: pnpm exec eslint [阶段 D 相关文件]
 git diff --check
 ```
 
-`checkPhaseD.mjs` 的协议样本池是 `PROTOCOL-FIXTURE`，不能证明真实模型、真实 Sandpack 或固定任务板通过。`checkTaskBoard.mjs` 的固定交互样本池是 `FIXED-INTERACTION`；真实任务板页面和 Playwright 可执行环境准备好后，可通过 `TASK_BOARD_URL=... node scripts/checkTaskBoard.mjs` 重跑。真实模型记录仍使用阶段 A 的 recorder，不能用 fixture 结果冒充 `REAL-EVAL`。
+`checkPhaseD.mjs` 的协议样本池是 `PROTOCOL-FIXTURE`，不能证明真实模型、真实 Sandpack 或固定任务板通过。`checkTaskBoard.mjs` 的固定交互样本池是 `FIXED-INTERACTION`；若需运行可选页面辅助脚本且已有 URL/Playwright，可通过 `TASK_BOARD_URL=... node scripts/checkTaskBoard.mjs` 重跑；没有这些条件时保持 `not-verified`，不影响单元/集成或人工验收口径。真实模型记录仍使用阶段 A 的 recorder，不能用 fixture 结果冒充 `REAL-EVAL`。
 
 本次执行结果：`checkPhaseA.mjs`、`checkPhaseB.mjs`（含验证 run 摘要读回）、`checkPhaseC.mjs`、`checkPhaseD.mjs`、两个新增脚本的 `node --check`、前端定向 ESLint、前端 `tsc --noEmit`、前端生产构建、后端构建和 `git diff --check` 均退出 0。`checkPhaseD.mjs` 报告 `L0/L1` fixture 通过、L2 为 `not-verified`；固定任务板没有单元/集成或人工确认来源，页面脚本的 8 条断言保持 `not-verified`，这些状态不汇总成真实成功率。`checkPhaseB.mjs` 同时确认带候选校验报告的运行摘要可经 IndexedDB fixture 保存并读回。
 
@@ -51,7 +51,7 @@ git diff --check
 
 ## 未验证和明确限制
 
-- 本阶段没有运行 `recordRealTaskBoard.mjs`，没有调用付费模型；真实 SSE、供应商输出、成本和模型耗时未验证。
+- 阶段 E 已运行 `recordRealTaskBoard.mjs` 完成一次 EVAL-01 真实探测，并保留一次 EVAL-02 首次协议误判及 raw SSE；真实供应商输出、成本和模型耗时仍未完成三次评测与完整功能验收。
 - 当前没有固定任务板的单元/集成或人工确认来源，因此八条辅助页面断言均为 `not-verified`。阶段 D 不固化任务看板，也不宣称形成成功率。
 - 真实 Sandpack ready 仍需主代理在浏览器确认 `done`、`compilatonError=false` 和入口 `app-mounted`；外部 `TIME_OUT`/模板或依赖网络失败应保留为环境分类。
 - L3 固定功能、L4 保存恢复和导出构建没有被协议 fixture 冒充通过；L4 继续由阶段 B 的手动 IndexedDB 语义负责。原生 ZIP 下载和第五类 IndexedDB 故障场景由用户手动确认，当前代理不因其阻塞，证据保持未验证。有限修复预算和验证超时是客户端可读默认值，真实环境仍需现场核对实际等待。

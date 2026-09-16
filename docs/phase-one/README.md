@@ -67,5 +67,5 @@ Assembled 48 novel case files from backend/mock
 
 ### 针对图片与预览加载反馈的基线补充
 
-- `frontend/public/book-cover.svg` 确实存在，案例数据和宿主继续引用 `/book-cover.svg`；Sandpack 运行时文件键也使用 `/book-cover.svg`，导出时映射到 `public/book-cover.svg`。`checkPhaseA.mjs` 已覆盖静态映射、缺失资源拒绝和 ZIP 条目；此前 `/public/book-cover.svg` 键在工作台浏览器中导致资源加载失败，当前根键修复仍待现场复验，不能把静态检查写成浏览器通过。
+- `frontend/public/book-cover.svg` 确实存在，案例数据和宿主继续引用 `/book-cover.svg`；Sandpack 运行时文件键也使用 `/book-cover.svg`，导出时映射到 `public/book-cover.svg`。`checkPhaseA.mjs` 已覆盖静态映射、缺失资源拒绝和 ZIP 条目；此前 `/public/book-cover.svg` 键、以及随后复验的根键在工作台浏览器中都导致资源加载失败，当前 CRA Sandpack 资源交付仍未解决，不能把静态检查写成浏览器通过。
 - `SandpackView.tsx` 在 `sandpack.status` 为 `initial` 或 `running` 时显示等待文案；当前没有以真实运行 ready 事件确认预览已经启动。代码已经渲染而状态仍为 `running` 时可能持续等待，外部 Sandpack 运行还曾出现 `TIME_OUT`，所以该反馈仍属于待修正、待验证状态。

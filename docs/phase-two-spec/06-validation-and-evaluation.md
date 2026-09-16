@@ -53,7 +53,7 @@
 
 ### 样本池和分母
 
-真实生成、协议夹具和固定交互必须分成三个样本池，不能混合计算成功率：`REAL-EVAL` 只收真实模型/真实服务 run，`PROTOCOL-FIXTURE` 只收 `feedbackFixture.ts` 等可控夹具，`FIXED-INTERACTION` 只收实际任务看板页面的 Playwright 断言。每个计划中的尝试都要有样本 ID 和终态分类。
+真实生成、协议夹具和固定交互必须分成三个样本池，不能混合计算成功率：`REAL-EVAL` 只收真实模型/真实服务 run，`PROTOCOL-FIXTURE` 只收 `feedbackFixture.ts` 等可控夹具，`FIXED-INTERACTION` 只收任务看板的单元/集成检查或用户人工确认；Playwright 页面断言可以作为辅助来源。每个计划中的尝试都要有样本 ID 和终态分类。
 
 对一个样本池定义 `N_all` 为该指标范围内所有已登记尝试数，包含成功、失败、用户取消/断开、外部环境阻断和未验证样本；`N_cancelled`、`N_env_blocked`、`N_not_verified` 单列报告，不能从分母中删除来美化比例。若一次尝试同时具备多个标记，按约定的主终态计数，并保留附加原因。尚未登记为样本的未来工作不进入结果，但必须在报告中列为未执行计划项，不能写成通过。
 

@@ -30,7 +30,7 @@ node scripts/checkPhaseA.mjs
 
 `checkPhaseA.mjs` 是可执行的资源/导出 fixture：核对生成 manifest 的封面大小和 SHA-256、缺资源拒绝、bridge 剥离、导出 ZIP 中的封面和 manifest，并确认 ZIP 不含 bridge、文件名使用 `promptforge-project-*`。另用本地 SSE fixture 检查了 mock 拒绝、real/forced=false 成功和相同 runID 成功记录复用；这些 fixture 都不是 Sandpack 运行通过证据。
 
-主代理已现场确认首页案例的 6 张封面 `src=/book-cover.svg` 且 `naturalWidth=113`，工作台代码视图没有 bridge 文件。此前工作台 Sandpack 使用 `/public/book-cover.svg` 文件键时，6 张封面 `complete=true` 但 `naturalWidth=0`，并报告资源加载失败；本次恢复为 `/book-cover.svg` 运行时键后需重新现场确认。静态 manifest/ZIP fixture 不能替代浏览器资源请求或真实 Sandpack ready 证据。
+主代理已现场确认首页案例的 6 张封面 `src=/book-cover.svg` 且 `naturalWidth=113`，工作台代码视图没有 bridge 文件。工作台 Sandpack 在 `/public/book-cover.svg` 和恢复为 `/book-cover.svg` 两种文件键下都出现 6 张封面 `complete=true`、`naturalWidth=0`，并报告 `资源加载失败：https://2-19-8-sandpack.codesandbox.io/book-cover.svg`。当前没有足够证据确认 CRA Sandpack 的 public 资源交付方式，保留现有资源错误卡，不再猜测路径；静态 manifest/ZIP fixture 已通过但不能替代浏览器资源请求或真实 Sandpack ready 证据。
 
 ## 2026-09-16 本地现场 / Mock smoke
 

@@ -21,7 +21,7 @@
 | 校验层 | [`validationReport.ts`](../../frontend/src/lib/validationReport.ts) 提供 L0-L5 报告；[`usePreviewDiagnostics.ts`](../../frontend/src/components/preview/usePreviewDiagnostics.ts) 监听真实 Sandpack `done` 和桥接 `app-mounted`，把构建和挂载分开。编辑结构校验位于 [`changeContract.ts`](../../frontend/src/lib/changeContract.ts)。 | L0/L1 的可序列化文件和变更契约可以作为候选，但 L2 必须增加 Vue 构建、挂载和运行错误证据；固定功能断言也必须绑定 Vue 案例，不能把 React 的 `data-testid` 结果移植后当作 Vue 通过。 |
 | 项目保存格式 | [`projectSerialization.ts`](../../frontend/src/lib/projectSerialization.ts) 保存字符串文件映射、消息、版本、运行摘要和资源；[`types/project.ts`](../../frontend/src/types/project.ts) 的文件字段本身没有 React 节点。 | 文件映射可以容纳 `.vue` 文本，但当前快照没有明确 framework/template 身份。若保存 Vue 项目，应增加可迁移的模板标识并在加载时校验，避免用 React 模板恢复 Vue 文件；IndexedDB schema 和损坏/旧版本路径需要单独验证。 |
 | 案例与资源 | [`resourceManifest.ts`](../../frontend/src/cases/resourceManifest.ts) 定义通用资源字段，现有 [`novelCase.ts`](../../frontend/src/cases/novelCase.ts) 和 `frontend/src/cases/generated/` 是小说 React 预置成果。阶段 E 尚未有独立任务看板案例。 | Vue 案例需要独立 case ID、入口、源码、资源、manifest、来源和验收证据；不得复用小说文件、小说 manifest 或 fixture 结果。资源在宿主、Sandpack 和导出路径中的一致性仍需单独检查。 |
-| 测试和评测 | `checkPhaseA/B/C/D/E.mjs` 覆盖资源、仓储、候选、校验和来源报告 fixture；`checkTaskBoard.mjs` 是固定任务板 Playwright 检查。当前没有 Vue 页面、Vue fixture 或 Vue 真实运行样本，固定任务板环境也仍需现场条件。 | 至少要增加 Vue 模板构建/挂载 fixture、资源和导出检查、候选隔离检查、保存恢复检查，以及独立固定交互样本池。所有真实模型、真实 Sandpack 和浏览器结果都要按 `pass`、`fail`、`skipped`、`not-verified` 记录，不能用缺环境结果计算成功率。 |
+| 测试和评测 | `checkPhaseA/B/C/D/E.mjs` 覆盖资源、仓储、候选、校验和来源报告 fixture；`checkTaskBoard.mjs` 是可选的固定任务板页面辅助检查。当前没有 Vue 页面、Vue fixture 或 Vue 真实运行样本，固定任务板仍需单元/集成检查或用户人工确认。 | 至少要增加 Vue 模板构建/挂载 fixture、资源和导出检查、候选隔离检查、保存恢复检查，以及独立固定交互样本池。所有真实模型、真实 Sandpack 和浏览器结果都要按 `pass`、`fail`、`skipped`、`not-verified` 记录，不能用缺环境结果计算成功率。 |
 
 ## 后续立项门槛
 

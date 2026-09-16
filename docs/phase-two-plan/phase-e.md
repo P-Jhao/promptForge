@@ -1,6 +1,6 @@
 # 阶段 E 交接：独立任务看板评测与固化门槛
 
-状态：评测契约、真实运行记录复用、统计报告和独立案例来源门槛已实现。2026-09-16 已有一次 EVAL-01 真实探测成功；EVAL-02 的首次 attempt 因 recorder 只识别 `files` 事件而误判协议失败，原始 candidate 仍保留在 raw SSE。修复后已用原始 SSE 做只读解析确认候选结构可识别，但没有重复调用模型，也没有把这两次探测写成三次成功率。固定任务板功能仍需单元/集成检查或用户人工确认，独立任务看板案例保持 `NOT_READY`，没有写入 `frontend/src/cases/`，也没有把小说案例改名复用。
+状态：评测契约、真实运行记录复用、统计报告和独立案例来源门槛已实现。2026-09-16 已有一次 EVAL-01 真实探测成功；EVAL-02 的首次 attempt 因 recorder 只识别 `files` 事件而误判协议失败，原始 candidate 仍保留在 raw SSE；修复后重跑 `task-board-real-edit-probe-20260916-r2` 成功。当前是一条 EVAL-01 成功、一条 EVAL-02 首次失败和一条 EVAL-02 修复后成功，不能写成各三次评测成功率。固定任务板功能仍需单元/集成检查或用户人工确认，独立任务看板案例保持 `NOT_READY`，没有写入 `frontend/src/cases/`，也没有把小说案例改名复用。
 
 权威范围见[第二阶段执行计划](../phase-two-spec/plan.md)的“阶段 E”。本记录描述实现与证据，不替代计划。
 
@@ -9,7 +9,7 @@
 | 需求 | 代码证据 | 行为和边界 |
 | --- | --- | --- |
 | 固定评测需求 | [`taskBoardEvaluation.mjs`](../../scripts/lib/taskBoardEvaluation.mjs)、[`recordRealTaskBoard.mjs`](../../scripts/recordRealTaskBoard.mjs) | EVAL-01 沿用原 recorder 的完整固定 prompt，输出 SHA-256 和字符数；EVAL-02 固定增量包含“按优先级筛选”，并要求保留标题、新增/编辑、状态切换、关键词筛选、初始数据和优先级字段。记录器支持 `--scenario EVAL-01/EVAL-02`；EVAL-02 必须提供成功的 EVAL-01 `--base-run-id`，不会退化成首次生成。 |
-| EVAL-03 故障隔离 | [`taskBoardEvaluation.mjs`](../../scripts/lib/taskBoardEvaluation.mjs)、[`checkPhaseE.mjs`](../../scripts/checkPhaseE.mjs) | EVAL-03 归入 `PROTOCOL-FIXTURE`；固定任务板浏览器断言归入独立的 `FIXED-INTERACTION`。三类样本池不会合并统计。 |
+| EVAL-03 故障隔离 | [`taskBoardEvaluation.mjs`](../../scripts/lib/taskBoardEvaluation.mjs)、[`checkPhaseE.mjs`](../../scripts/checkPhaseE.mjs) | EVAL-03 归入 `PROTOCOL-FIXTURE`；固定任务板的单元/集成检查或用户人工确认归入独立的 `FIXED-INTERACTION`，页面断言仅作可选辅助。三类样本池不会合并统计。 |
 | 真实 run 与 attempt 复用 | [`realRunRecorder.mjs`](../../scripts/lib/realRunRecorder.mjs)、[`realCandidateEvidence.mjs`](../../scripts/lib/realCandidateEvidence.mjs)、[`realRunReadiness.mjs`](../../scripts/lib/realRunReadiness.mjs) | 成功 run ID 在场景和 prompt hash 一致时复用；不同场景或 prompt 不复用。running 记录在下一次启动前标记为 interrupted；每次新尝试保留独立 `attempt-NNN`。raw SSE、脱敏 files、配置摘要、项目/版本/base hash 摘要、mode evidence、事件类型和终态指针均保留。编辑候选从 `candidate.data.files` 记录文件，并在 `candidateEvidence` 中保留 candidate ID、双基线 hash、资源元数据、变更路径/操作/内容 hash 摘要和 summary；缺字段、空 files 或重复 candidate 会拒绝。来源门槛还要求顶层和 latest 均为 success、明确 `REAL-EVAL`、`mode=real/forced=false`、事件含 `done`，且 files 指针可读、文件数一致；否则只能是 `NOT_READY/not-verified`。 |
 | 统计报告 | [`reportTaskBoardEvaluation.mjs`](../../scripts/reportTaskBoardEvaluation.mjs)、[`taskBoardEvaluation.mjs`](../../scripts/lib/taskBoardEvaluation.mjs) | 报告列出每个样本池的 `N_all`、取消、环境阻断、未验证、原始成功、修复后成功、失败分类和 recorder 墙钟耗时口径；零分母或全为未验证时成功率为 `null/not-verified`，不制造比例。可读取既有 run summary/attempt 和人工修正记录。 |
 | 固定次数串行编排 | [`runTaskBoardEvaluation.mjs`](../../scripts/runTaskBoardEvaluation.mjs) | 默认先串行执行 3 次 EVAL-01；仅从这 3 个固定 run ID 中找到可复用的 `REAL-EVAL`、`real/forced=false`、`success`、`done`、完整 files 且 `latest.request.promptSha256` 等于固定 EVAL-01 hash 的基线后，才串行执行 3 次 EVAL-02。成功 run 交给 recorder 按 run ID 复用；失败、取消、中断、环境阻断和未验证的 recorder 终态与分类原样保留，缺基线时 EVAL-02 明确列为未执行。编排末尾调用既有 report，不创建或固化案例。 |
@@ -32,8 +32,9 @@ EVAL-01 的 prompt 文本来自既有 `recordRealTaskBoard.mjs` 固定需求；�
 
 - EVAL-01 `task-board-real-probe-20260916` 的 `attempt-001` 已收到 `mode=real`、`forced=false`、`done` 和 21 个文件，终态为 `success`。这是一次真实探测成功，不能代表默认三次评测或稳定成功率。
 - EVAL-02 `task-board-real-edit-probe-20260916` 的 `attempt-001` 收到相同的真实模式证据、`candidate` 和 `done`，但旧版 `inspectEvent` 只在 `type=files` 时读取文件，遂以“缺少完整 files”记录为 `failed/protocol`。原始 SSE 的 `candidate.data.files`、`resources`、`changes`、`baseHash` 和 `acceptanceBaseHash` 仍保存在 `attempt-001/raw-sse.txt`。
-- recorder 修复后，`candidate.data.files` 会进入脱敏 `files.json`，候选元数据进入 `candidateEvidence`；对上述 raw SSE 的只读重放已确认 21 个文件和候选摘要可解析。没有重新调用模型，也没有改写首次失败 attempt 的历史终态。
-- 本节只记录一条 EVAL-01 成功探测和一条 EVAL-02 首次协议误判/修复证据；三次 EVAL-01/EVAL-02 串行评测仍需按计划单独执行，当前报告不计算三次成功率。
+- recorder 修复后，对上述首次 raw SSE 的只读重放确认 21 个文件和候选摘要可解析；随后实际重跑 `task-board-real-edit-probe-20260916-r2` 的 `attempt-001` 收到 `mode=real`、`forced=false`、`candidate`、`done` 和 21 个文件，终态为 `success`。该记录的 `candidateEvidence` 保留 candidate ID、双 base hash、0 个资源、2 条 modify 变更及变更内容 hash；模型重跑是主代理明确执行的第二次 EVAL-02 探测，没有改写首次失败 attempt 的历史终态。
+- 本节记录一条 EVAL-01 成功、EVAL-02 一次首次协议误判和一次修复后成功；三次 EVAL-01/EVAL-02 串行评测仍需按计划单独执行，当前报告不计算三次成功率。
+- 主代理当前汇总已有 `artifacts/real-runs/task-board` 记录时，`REAL-EVAL` 显示 `N_all=4`、`N_raw_success=2`；四条记录混合了 EVAL-01 成功、EVAL-02 首次协议失败、EVAL-02 修复后成功和历史 Mock 拒绝，不能把 `2/4` 解读为 EVAL-01/EVAL-02 三次成功率。`success` 仅表示 recorder 协议门槛满足，固定功能和 Sandpack 资源仍未验证。
 
 ## 负向 recorder 证据（2026-09-16）
 
@@ -67,7 +68,7 @@ node scripts/checkPhaseE.mjs
 node scripts/reportTaskBoardEvaluation.mjs --runs-dir artifacts/real-runs/task-board --case-dir frontend/src/cases/task-board
 ```
 
-`checkPhaseE.mjs` 通过了 prompt hash、EVAL-02 保留要求、candidate 事件解析和非法/缺 files 拒绝、三个样本池分离、分母/未验证计数、成功 run 复用、缺失真实来源拒绝和无真实成功声明检查。其临时 fixture 报告保持 `NOT_READY`，不读取或改写真实探测统计；真实探测只按上一节列为一条 EVAL-01 成功和一条 EVAL-02 首次协议失败，不能汇总为三次成功率。固定任务板没有单元/集成或人工确认来源，辅助页面断言保持 `not-verified`。报告脚本同样返回缺失独立 case descriptor 的 `CASE_DESCRIPTOR_MISSING`，不创建案例。
+`checkPhaseE.mjs` 通过了 prompt hash、EVAL-02 保留要求、candidate 事件解析和非法/缺 files 拒绝、三个样本池分离、分母/未验证计数、成功 run 复用、缺失真实来源拒绝和无真实成功声明检查。其临时 fixture 报告保持 `NOT_READY`，不读取或改写真实探测统计；真实探测按上一节列为一条 EVAL-01 成功、EVAL-02 一次首次协议失败和一次修复后成功，不能汇总为三次成功率。固定任务板没有单元/集成或人工确认来源，辅助页面断言保持 `not-verified`。报告脚本同样返回缺失独立 case descriptor 的 `CASE_DESCRIPTOR_MISSING`，不创建案例。
 
 已有真实环境时的可复制流程：
 
@@ -79,7 +80,7 @@ node scripts/reportTaskBoardEvaluation.mjs --runs-dir artifacts/real-runs/task-b
 
 ## 未验证和限制
 
-- 本阶段只完成一次 EVAL-01 和一次 EVAL-02 真实探测，没有完成各三次的固定评测，没有写入真实任务看板案例，也没有将小说 48 文件 mock 作为评测样本。
+- 本阶段完成一次 EVAL-01 成功、一次 EVAL-02 首次协议误判和一次修复后 EVAL-02 成功，没有完成各三次的固定评测，没有写入真实任务看板案例，也没有将小说 48 文件 mock 作为评测样本。
 - 固定任务板没有单元/集成或人工确认来源，辅助页面结果不能标成通过。真实 Sandpack ready、导出构建、保存/恢复和 EVAL-01/EVAL-02 功能保留仍需现场验收；原生 ZIP 下载与第五类 IndexedDB 故障场景由用户手动完成，当前保持未验证。
 - recorder 记录的是客户端接收的 SSE 墙钟起止时间；没有服务端节点耗时，也不会把客户端取消写成供应商已终止。
 - 配置摘要只读取白名单键，raw SSE、文件和人工修正说明经过脱敏；密钥不写入案例或报告。真实案例仍需人工审查脱敏结果后再固化。
