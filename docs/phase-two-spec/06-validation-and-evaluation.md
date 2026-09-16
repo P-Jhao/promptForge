@@ -1,6 +1,6 @@
 # 06 验证与评测
 
-截至 2026-09-16，固定真实 recorder 已串行完成 EVAL-01 3/3（`task-board-eval-01-001`、`task-board-eval-01-002`、`task-board-eval-01-003`）和 EVAL-02 3/3（`task-board-eval-02-001`、`task-board-eval-02-002`、`task-board-eval-02-003`）。六次均为 `mode=real`、`forced=false`、终态 `success`、含 `done`，并有可读 files；EVAL-02 的 files 从 `candidate.data.files` 及其脱敏指针读取。独立案例 `task-board-real-eval` 的 EVAL-03 在 Edge 临时 Vite 页 `http://127.0.0.1:4176/#/` 完成固定交互人工验收，案例 metadata/provenance/report 已为 `READY`，首页链接和 `/workspace?case=task-board-real-eval` 的静态入口代码也已接入。该 READY 只覆盖真实来源、构建检查和临时 Vite 证据，不代表入口在 Sandpack 中运行、导出构建、离线、原生 ZIP、第五类 IndexedDB 或目标工作台浏览器验收已通过。
+截至 2026-09-16，固定真实 recorder 已串行完成 EVAL-01 3/3（`task-board-eval-01-001`、`task-board-eval-01-002`、`task-board-eval-01-003`）和 EVAL-02 3/3（`task-board-eval-02-001`、`task-board-eval-02-002`、`task-board-eval-02-003`）。六次均为 `mode=real`、`forced=false`、终态 `success`、含 `done`，并有可读 files；EVAL-02 的 files 从 `candidate.data.files` 及其脱敏指针读取。独立案例 `task-board-real-eval` 的 EVAL-03 在 Edge 临时 Vite 页 `http://127.0.0.1:4176/#/` 完成固定交互人工验收，案例 metadata/provenance/report 已为 `READY`，首页链接和 `/workspace?case=task-board-real-eval` 的静态入口代码也已接入；同日 Edge 目标工作台还观察到一次该入口的 Sandpack 渲染、`done(compilatonError=false)` + `app-mounted` 握手及关键词/优先级筛选。该 READY 和单次现场只覆盖相应路径，不代表完整状态矩阵、移动端/键盘、导出构建、离线、原生 ZIP、第五类 IndexedDB 或其他目标工作台浏览器路径已通过。
 
 验证的目标是回答“这份结果在什么范围内成立”，而不是给生成成功事件换一种说法。每层都记录 `pass`、`fail`、`skipped` 或 `not-verified`，后者不能被汇总为通过。
 
@@ -22,7 +22,7 @@
 - 代码/依赖失败：运行环境已启动，但候选编译、导入、资源或运行时报错；
 - 产品状态错误：代码可能已经运行，但 UI 仍显示等待，或代码未运行却显示完成。
 
-一期的 Sandpack `TIME_OUT`、本地后端模板 HTTP500 和外部依赖失败，都只能作为未验证/失败证据，不能改成 L2 通过。上述六条 REAL-EVAL 记录只证明 recorder 收到真实模式下的协议、文件或候选文件，不提供 Sandpack L2 ready 或固定功能通过证据。
+一期的 Sandpack `TIME_OUT`、本地后端模板 HTTP500 和外部依赖失败，都只能作为未验证/失败证据，不能改成 L2 通过。上述六条 REAL-EVAL 记录只证明 recorder 收到真实模式下的协议、文件或候选文件；本次目标工作台现场仅为任务看板一条入口路径的 `done(compilatonError=false)` + `app-mounted` 和筛选观察，不替代 Sandpack L2 的完整状态矩阵或固定功能全量证据。
 
 ### L3：固定功能场景
 
@@ -88,7 +88,7 @@
 
 墙钟时长按 recorder 的 `startedAt→endedAt` 计算，只表示客户端接收 SSE 的墙钟跨度，不表示服务端节点或模型节点耗时。`reportTaskBoardEvaluation.mjs` 会读入目录中的历史 probe、修复重跑和 Mock 拒绝记录；这些混合样本不能改变上表六个 run 的 3/3 结论，也不能将混合报告的分母、成功数或比例当作固定评测成功率。
 
-独立案例 EVAL-03 属于 `FIXED-INTERACTION`，不是 REAL-EVAL：主代理使用 Edge 在临时 Vite 页完成三列、关键词/优先级筛选、新增、编辑、表单校验和状态切换验收。该证据写入 `frontend/src/cases/task-board/evidence/eval-03.md`，并使 `evaluateCaseProvenance` 返回 `READY`；首页和 `/workspace?case=task-board-real-eval` 的代码接入另有静态检查，但不覆盖入口在 Sandpack 或目标工作台浏览器中的运行。
+独立案例 EVAL-03 属于 `FIXED-INTERACTION`，不是 REAL-EVAL：主代理使用 Edge 在临时 Vite 页完成三列、关键词/优先级筛选、新增、编辑、表单校验和状态切换验收。该证据写入 `frontend/src/cases/task-board/evidence/eval-03.md`，并使 `evaluateCaseProvenance` 返回 `READY`；首页和 `/workspace?case=task-board-real-eval` 的代码接入另有静态检查。2026-09-16 目标工作台又为该 URL 提供一次 Sandpack 渲染/握手和筛选现场证据，但不覆盖完整状态矩阵、移动端/键盘、导出、离线、ZIP、IndexedDB 或其他浏览器路径。
 
 ### EVAL-01：任务看板基础交付
 

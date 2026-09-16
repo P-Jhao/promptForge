@@ -1,6 +1,6 @@
 # 阶段 E 交接：独立任务看板评测与固化门槛
 
-状态：评测契约、真实运行记录复用、统计报告和独立案例来源门槛已实现。2026-09-16 串行评测已完成 EVAL-01 3/3、EVAL-02 3/3；每次均满足 `mode=real`、`forced=false`、终态 `success`、可读 files（EVAL-02 为 `candidate.data.files`）和 `done`。EVAL-02 的首次独立探测仍因旧 recorder 只识别 `files` 事件而误判协议失败，原始 candidate 保留在 raw SSE，修复后重跑 `task-board-real-edit-probe-20260916-r2` 成功。串行三次记录与历史探测、Mock 拒绝样本分开解释，不能用混合报告宣称三次成功率。独立任务看板案例 `task-board-real-eval` 已根据真实来源、构建检查和主代理 Edge 临时 Vite 人工 EVAL-03 证据标为 `READY`；该状态不覆盖 Sandpack、离线、原生 ZIP 或第五类 IndexedDB 故障场景，也没有把小说案例改名复用。
+状态：评测契约、真实运行记录复用、统计报告和独立案例来源门槛已实现。2026-09-16 串行评测已完成 EVAL-01 3/3、EVAL-02 3/3；每次均满足 `mode=real`、`forced=false`、终态 `success`、可读 files（EVAL-02 为 `candidate.data.files`）和 `done`。EVAL-02 的首次独立探测仍因旧 recorder 只识别 `files` 事件而误判协议失败，原始 candidate 保留在 raw SSE，修复后重跑 `task-board-real-edit-probe-20260916-r2` 成功。串行三次记录与历史探测、Mock 拒绝样本分开解释，不能用混合报告宣称三次成功率。独立任务看板案例 `task-board-real-eval` 已根据真实来源、构建检查和主代理 Edge 临时 Vite 人工 EVAL-03 证据标为 `READY`；2026-09-16 又在 Edge 目标工作台观察到该入口一次 Sandpack 渲染、`done(compilatonError=false)` 与 `app-mounted` 握手，以及关键词/优先级筛选。该状态和这次现场不覆盖完整状态矩阵、移动端/键盘、ZIP/导出、离线或第五类 IndexedDB 故障场景，也没有把小说案例改名复用。
 
 权威范围见[第二阶段执行计划](../phase-two-spec/plan.md)的“阶段 E”。本记录描述实现与证据，不替代计划。
 
@@ -53,7 +53,7 @@ EVAL-01 的 prompt 文本来自既有 `recordRealTaskBoard.mjs` 固定需求；�
 
 主代理使用 Edge 在临时 Vite 页 `http://127.0.0.1:4176/#/` 完成 EVAL-03 人工验收：初始页面显示看板三列和 4 条任务；关键词“登录”得到 1 条，优先级“高”得到 2 条，均可清除/重置；空标题保存显示“标题不能为空”；新建“验收任务”返回 `/tasks`；进入新任务编辑页字段正确加载，修改描述保存后显示“已验证新增后编辑流程”；状态改为“进行中”后任务从待办列移入进行中列。截图确认 Tailwind utility 样式正常呈现。
 
-上述三项来源证据和构建检查使 `evaluateCaseProvenance` 返回 `READY`，案例 metadata 与 validation report 已同步为 `READY`。案例现已通过首页链接和 `/workspace?case=task-board-real-eval` 的静态入口接入检查，示例体验直接读取已固化文件，不发送 `/api/chat`。这里的 `READY` 只表示真实来源、固定模板构建和临时 Vite 人工 EVAL-03 已满足独立案例固化门槛；不代表任务板在 Sandpack 中运行、离线可用、原生 ZIP 或第五类 IndexedDB 故障场景已验证。
+上述三项来源证据和构建检查使 `evaluateCaseProvenance` 返回 `READY`，案例 metadata 与 validation report 已同步为 `READY`。案例现已通过首页链接和 `/workspace?case=task-board-real-eval` 的静态入口接入检查，示例体验直接读取已固化文件，不发送 `/api/chat`。此外，2026-09-16 主代理在该目标工作台入口观察到任务看板 Sandpack iframe 显示三列和 4 条初始任务；createRoot bridge fixture 修复后中央等待覆盖层消失，表明本次收到 `done(compilatonError=false)` 和对应 `app-mounted`，关键词“登录”得到 1 条并可清除，优先级“高”可选并可恢复。浏览器日志只有扩展注入、React Router 和 Tailwind CDN 警告，没有应用运行时错误；未做删除操作。这里的 `READY` 和这次现场只覆盖真实来源、固定模板构建、临时 Vite EVAL-03 及一次目标 Sandpack 路径，不代表完整状态矩阵、移动端/键盘、ZIP/导出、离线或第五类 IndexedDB 故障场景已验证。
 
 ## 负向 recorder 证据（2026-09-16）
 
@@ -101,7 +101,7 @@ node scripts/reportTaskBoardEvaluation.mjs --runs-dir artifacts/real-runs/task-b
 ## 未验证和限制
 
 - 本阶段已完成串行 EVAL-01 3/3、EVAL-02 3/3，以及独立案例 EVAL-03 的 Edge 临时 Vite 人工验收；历史 EVAL-02 协议误判和修复重跑仍保留。混合历史报告不用于替代固定三次统计，也没有将小说 48 文件 mock 作为真实评测样本。
-- 独立案例的人工证据只覆盖临时 Vite 页面。真实 Sandpack ready、导出构建、保存/恢复和 EVAL-01/EVAL-02 功能保留仍需单独现场验收；原生 ZIP 下载与第五类 IndexedDB 故障场景由用户手动完成，当前保持未验证。
+- 独立案例已有临时 Vite 人工证据，以及一次 Edge 目标工作台 Sandpack 渲染/握手和筛选证据；完整状态矩阵、移动端/键盘、导出构建、保存/恢复、EVAL-01/EVAL-02 功能保留和其他候选仍需单独现场验收。原生 ZIP 下载、离线行为与第五类 IndexedDB 故障场景由用户手动完成，当前保持未验证。
 - recorder 记录的是客户端接收的 SSE 墙钟起止时间；没有服务端节点耗时，也不会把客户端取消写成供应商已终止。
 - 配置摘要只读取白名单键，raw SSE、文件和人工修正说明经过脱敏；密钥不写入案例或报告。真实案例仍需人工审查脱敏结果后再固化。
 - 本阶段没有实现 Vue、多框架选择器、工作台核心 UI 或自动生成案例；报告工具不会凭 fixture 结果创建可用案例。
