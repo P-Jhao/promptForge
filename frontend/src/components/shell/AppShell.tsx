@@ -8,6 +8,7 @@ import Link from "next/link";
 import { ChatPanel } from "./ChatPanel";
 import { PreviewPanel } from "./PreviewPanel";
 import { useSandpackStore } from "@/store/sandpackStore";
+import { useChatStore } from "@/store/chatStore";
 import { Eye, Code2 } from "lucide-react";
 import { ProjectManager } from "./ProjectManager";
 // import { Settings, LogOut } from "lucide-react";
@@ -23,11 +24,12 @@ import type { LayoutMode, AppShellProps } from "@/types/components";
  * 不负责：
  * - 不处理任何业务逻辑
  * - 不关心 prompt / sandpack / AI
- * - 不直接依赖 store（未来可由上层注入）
+ * - 仅用项目 ID 控制聊天面板生命周期，业务状态仍由子组件负责
  */
 
 export function AppShell({ children }: AppShellProps) {
   const { viewMode, setViewMode } = useSandpackStore();
+  const projectId = useChatStore((state) => state.currentProjectId);
 
   /**
    * 当前布局模式
@@ -192,7 +194,7 @@ export function AppShell({ children }: AppShellProps) {
           }`}
         >
           <div className="flex-1 min-h-0 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-            <ChatPanel />
+            <ChatPanel key={projectId} />
           </div>
         </div>
 

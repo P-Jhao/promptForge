@@ -4,17 +4,19 @@ import { useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useChatStore } from "@/store/chatStore";
 import { useSandpackStore } from "@/store/sandpackStore";
+import type { ChatMessage } from "@/types/message";
 import type { MockConfig } from "@/types/mock";
 import { createBaseSnapshot, hashEditBase, hashResourceReferences } from "@/lib/changeContract";
 import { canAttemptRepair, repairErrorSignature } from "@/lib/validationReport";
 import type { RepairRequestContext } from "@/lib/validationReport";
+import { classifyRequestIntent } from "@/lib/requestIntent";
 import { applyStagedCandidate } from "./candidateActions";
 import { runChatRequest } from "./chatRequestRunner";
-import type { ActiveRequest, Attachment, RequestOperation, RetryableRequest } from "./chatStreamUtils";
+import type { ActiveRequest, Attachment, RetryableRequest } from "./chatStreamUtils";
 
 export function useChat() {
   const {
-    messages, isLoading, markPendingThoughts, setGeneration, setLoading, candidate, finishCandidateRepair,
+    messages, isLoading, markPendingThoughts, setGeneration, setLoading, candidate, finishCandidateRepair, addMessage,
   } = useChatStore();
   const { setIsAssembling } = useSandpackStore();
   const activeRequestRef = useRef<ActiveRequest | null>(null);
@@ -49,12 +51,26 @@ export function useChat() {
     content: string,
     attachments: Attachment[] | undefined,
     mockConfig: MockConfig,
-    operation: RequestOperation = "generate",
   ) => {
     const state = useChatStore.getState();
     try {
       const sandpack = useSandpackStore.getState();
       const files = sandpack.currentFiles ?? sandpack.generatedFiles;
+      const hasFiles = files !== null && Object.keys(files).length > 0;
+      const classification = classifyRequestIntent(content, hasFiles);
+      if (classification.intent === "clarify") {
+        const clarification = classification.clarification ?? "请补充你希望完成的页面或修改内容。";
+        const userMessage: ChatMessage = {
+          id: crypto.randomUUID(), role: "user", content, attachments,
+        };
+        const assistantMessage: ChatMessage = {
+          id: crypto.randomUUID(), role: "assistant", content: clarification,
+        };
+        addMessage(userMessage);
+        addMessage(assistantMessage);
+        return;
+      }
+      const operation = classification.intent === "edit" ? "edit" : "generate";
       const base = await createBaseSnapshot(
         state.currentProjectId,
         state.versions.at(-1)?.versionId ?? null,
@@ -64,14 +80,21 @@ export function useChat() {
       if (operation === "edit" && Object.keys(base.files).length === 0) {
         throw new Error("编辑请求需要当前编辑器文件作为基线");
       }
+      const latestState = useChatStore.getState();
+      if (latestState.currentProjectId !== state.currentProjectId) {
+        throw new Error("项目已切换，请在当前项目中重新发送需求");
+      }
+      if (latestState.isLoading || latestState.candidate !== null) {
+        throw new Error("当前项目正在处理其他请求，请稍后再试");
+      }
       await runRequest({
         content, attachments, mockConfig, history: [...state.messages],
-        projectId: state.currentProjectId, operation, base,
+        projectId: state.currentProjectId, operation, intent: classification.intent, base,
       });
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : "无法冻结当前编辑文件");
     }
-  }, [runRequest]);
+  }, [addMessage, runRequest]);
 
   const retryLastMessage = useCallback(async () => {
     const request = lastRequestRef.current;
@@ -131,6 +154,7 @@ export function useChat() {
         history: [...state.messages],
         projectId: currentCandidate.projectId,
         operation: "edit",
+        intent: "edit",
         runId,
         base,
         repair,

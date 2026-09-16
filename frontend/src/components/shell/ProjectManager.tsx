@@ -1,23 +1,31 @@
 "use client";
 
-import { FolderOpen, History, Save, Copy, X } from "lucide-react";
+import { Copy, FolderOpen, History, Plus, Save, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { useChatStore } from "@/store/chatStore";
+import { useSandpackStore } from "@/store/sandpackStore";
 import { useProjectPersistence } from "@/hooks/useProjectPersistence";
 import { storageStatusLabel } from "@/lib/projectStorage";
+import { evaluateNewProjectDecision } from "@/lib/newProjectGuard";
 import type { ProjectVersion } from "@/types/store";
 
 type PendingAction =
+  | { kind: "new" }
   | { kind: "open"; projectId: string }
   | { kind: "restore"; version: ProjectVersion };
 
 export function ProjectManager() {
+  const router = useRouter();
   const projectId = useChatStore((state) => state.currentProjectId);
   const projectName = useChatStore((state) => state.projectName);
   const versions = useChatStore((state) => state.versions);
   const isLoading = useChatStore((state) => state.isLoading);
   const candidate = useChatStore((state) => state.candidate);
+  const createNewProject = useChatStore((state) => state.createNewProject);
   const updateProjectName = useChatStore((state) => state.updateProjectName);
+  const clearGeneratedFiles = useSandpackStore((state) => state.clearGeneratedFiles);
   const persistence = useProjectPersistence();
   const { refreshProjects } = persistence;
   const [showBrowser, setShowBrowser] = useState(false);
@@ -32,10 +40,28 @@ export function ProjectManager() {
   }, [refreshProjects]);
 
   const execute = async (action: PendingAction): Promise<void> => {
+    if (action.kind === "new") {
+      const decision = evaluateNewProjectDecision({
+        dirty: false,
+        isLoading: useChatStore.getState().isLoading,
+        candidatePresent: useChatStore.getState().candidate !== null,
+      });
+      if (decision !== "allow") {
+        toast.info(decision === "blocked-loading" ? "当前请求仍在进行，请稍后再新建项目" : "请先应用或放弃当前候选");
+        return;
+      }
+    }
     setBusy(true);
     try {
-      if (action.kind === "open") await persistence.openProject(action.projectId);
-      else await persistence.restoreVersion(action.version);
+      if (action.kind === "new") {
+        createNewProject();
+        clearGeneratedFiles();
+        router.replace("/workspace");
+      } else if (action.kind === "open") {
+        await persistence.openProject(action.projectId);
+      } else {
+        await persistence.restoreVersion(action.version);
+      }
       setShowBrowser(false);
       setPending(null);
     } catch {
@@ -43,6 +69,23 @@ export function ProjectManager() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const requestNewProject = (): void => {
+    const decision = evaluateNewProjectDecision({
+      dirty: persistence.dirty,
+      isLoading,
+      candidatePresent: candidate !== null,
+    });
+    if (decision === "allow") {
+      void execute({ kind: "new" });
+      return;
+    }
+    if (decision === "confirm-dirty") {
+      setPending({ kind: "new" });
+      return;
+    }
+    toast.info(decision === "blocked-loading" ? "当前请求仍在进行，请稍后再新建项目" : "请先应用或放弃当前候选");
   };
 
   const requestAction = (action: PendingAction): void => {
@@ -122,6 +165,9 @@ export function ProjectManager() {
           title="项目名称"
         />
         <span className={statusClass} role="status">{statusText}</span>
+        <button type="button" onClick={requestNewProject} disabled={busy || isLoading || candidateBlocksSwitch} title={isLoading ? "生成进行中，暂不能新建项目" : candidateBlocksSwitch ? "请先应用或放弃候选" : "新建空白项目"}>
+          <Plus size={13} /> 新建项目
+        </button>
         <button type="button" onClick={save} disabled={busy || persistence.status === "saving"} title="保存当前工作副本">
           <Save size={13} /> 保存
         </button>
@@ -188,7 +234,7 @@ export function ProjectManager() {
         <div className="project-modal-backdrop" role="presentation">
           <section className="project-modal project-modal-small" role="dialog" aria-modal="true" aria-labelledby="dirty-title">
             <div className="project-modal-head"><h2 id="dirty-title">当前项目有未保存修改</h2></div>
-            <p className="project-modal-note">切换项目或恢复版本前，请选择如何处理当前工作副本。</p>
+            <p className="project-modal-note">切换项目、恢复版本或新建项目之前，请选择如何处理当前工作副本。</p>
             <div className="project-modal-actions project-modal-actions-stack">
               <button type="button" onClick={() => choosePending("save")} disabled={busy}>保存并继续</button>
               <button type="button" onClick={() => choosePending("saveAs")} disabled={busy}>另存为并继续</button>

@@ -149,6 +149,7 @@ export async function runChatRequest(
         const flowTimings = { ...useChatStore.getState().generation.stageTimings, flow: flowReceivedAt - startedAt };
         lastStageAt = flowReceivedAt;
         if (event.data.operation === "edit" && request.operation !== "edit") { fail("收到未请求的编辑流程事件"); return; }
+        if (activeFlow === "traditional" && request.intent === "chat") { fail("这条需求需要先说明要交付或调整的页面"); return; }
         if (activeFlow !== "traditional") {
           setGeneration({ currentPhase: undefined, currentStep: undefined, stageTimings: flowTimings });
           return;
@@ -165,7 +166,7 @@ export async function runChatRequest(
         return;
       }
       if (event.type === "candidate") {
-        if (activeFlow !== "traditional" || request.operation !== "edit") { fail("收到未请求的候选编辑结果"); return; }
+        if (activeFlow !== "traditional" || request.operation !== "edit" || request.intent !== "edit") { fail("收到未请求的候选编辑结果"); return; }
         if (event.data.projectId !== request.projectId || event.data.baseHash !== request.base.hash || event.data.baseVersionId !== request.base.versionId) {
           fail("候选与本次编辑基线不一致");
           return;
@@ -192,6 +193,7 @@ export async function runChatRequest(
       }
       if (event.type === "done") {
         if (activeFlow === null) { fail("生成响应缺少流程事件"); return; }
+        if (activeFlow === "traditional" && request.intent === "chat") { fail("这条需求需要先说明要交付或调整的页面"); return; }
         if (activeFlow === "traditional" && latestFiles === null) { fail("生成完成事件缺少完整文件结果"); return; }
         if (activeFlow === "traditional" && request.operation === "edit" && streamedCandidate === null) { fail("编辑完成事件缺少候选元数据"); return; }
         streamCompleted = true;

@@ -6,14 +6,12 @@ import { ArrowUpRight, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { useChat } from "@/hooks/useChat";
 import { useChatStore } from "@/store/chatStore";
-import { useSandpackStore } from "@/store/sandpackStore";
 import { MockModeToggle } from "./MockModeToggle";
 import { ThoughtChain } from "./ThoughtChain";
 import { VersionCard } from "./VersionCard";
 import { GenerationStatusPanel } from "./GenerationStatusPanel";
 import { CandidatePanel } from "./CandidatePanel";
 import type { MockConfig } from "@/types/mock";
-import type { RequestOperation } from "@/hooks/chatStreamUtils";
 
 const REQUEST_SUGGESTIONS = [
   "做一个支持搜索和状态筛选的小说书库管理页",
@@ -30,9 +28,6 @@ export function ChatPanel() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [inputValue, setInputValue] = useState("");
   const [mockConfig, setMockConfig] = useState<MockConfig>({ global: true });
-  const [operation, setOperation] = useState<RequestOperation>("generate");
-  const currentFiles = useSandpackStore((state) => state.currentFiles ?? state.generatedFiles);
-  const canEdit = currentFiles !== null && Object.keys(currentFiles).length > 0;
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -41,7 +36,7 @@ export function ChatPanel() {
   const submit = (value: string) => {
     const content = value.trim();
     if (!content || isLoading || mockConfig.global || candidate !== null) return;
-    void sendMessage(content, undefined, mockConfig, operation);
+    void sendMessage(content, undefined, mockConfig);
     setInputValue("");
   };
 
@@ -49,7 +44,6 @@ export function ChatPanel() {
     setMockConfig({ global: enabled });
     if (enabled) {
       setInputValue("");
-      setOperation("generate");
     }
   };
 
@@ -122,13 +116,7 @@ export function ChatPanel() {
 
       <div className="shrink-0 border-t border-gray-200 p-2">
         <MockModeToggle enabled={mockConfig.global === true} onChange={setExampleMode} />
-        {!mockConfig.global && (
-          <div className="chat-operation-toggle" aria-label="请求类型">
-            <button type="button" onClick={() => setOperation("generate")} aria-pressed={operation === "generate"} disabled={isLoading || candidate !== null}>首次生成</button>
-            <button type="button" onClick={() => setOperation("edit")} aria-pressed={operation === "edit"} disabled={isLoading || candidate !== null || !canEdit} title={canEdit ? "以当前编辑器文件为基线" : "需要先有当前编辑器文件"}>基于当前代码修改</button>
-          </div>
-        )}
-        <p className="chat-boundary">当前为{mockConfig.global ? "示例体验" : operation === "edit" ? "基于当前代码修改" : "真实首次生成"}。示例体验只加载预置成果；生成或修改结果会先进入候选，确认应用后才更新当前编辑器。</p>
+        <p className="chat-boundary">当前为{mockConfig.global ? "示例体验" : "真实体验"}。示例体验只加载预置成果；真实请求会结合当前项目和你的描述处理新页面、现有页面调整或问题讨论，需要补充信息时会先请你澄清。</p>
         <Sender
           value={inputValue}
           onChange={setInputValue}

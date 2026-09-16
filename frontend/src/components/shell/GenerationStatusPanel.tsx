@@ -17,6 +17,7 @@ function formatElapsed(milliseconds: number | undefined): string {
 export function GenerationStatusPanel() {
   const generation = useChatStore((state) => state.generation);
   const candidate = useChatStore((state) => state.candidate);
+  const currentFlow = useChatStore((state) => state.currentFlow);
   const phaseCompletion = useChatStore((state) => state.phaseCompletion);
   const [clock, setClock] = useState(() => Date.now());
 
@@ -32,12 +33,13 @@ export function GenerationStatusPanel() {
 
   const phase = generation.currentPhase;
   const phaseProgress = phase === undefined ? undefined : phaseCompletion[phase];
+  const isChatFlow = currentFlow === "chat";
   const statusCopy = {
-    running: "正在生成",
+    running: isChatFlow ? "正在回复" : "正在生成",
     success: candidate === null
-      ? "生成完成"
+      ? isChatFlow ? "回复完成" : "生成完成"
       : candidate.validation.preview === "pass" ? "候选待应用" : "候选待校验",
-    error: "生成失败",
+    error: isChatFlow ? "回复失败" : "生成失败",
     cancelled: "已取消",
   }[generation.status];
   const StatusIcon = generation.status === "running"

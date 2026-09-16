@@ -4,6 +4,7 @@ import type { StepType } from "@/types/flow";
 import type { MockConfig } from "@/types/mock";
 import type { EditBaseSnapshot } from "@/lib/changeContract";
 import type { RepairRequestContext } from "@/lib/validationReport";
+import type { RequestIntent } from "@/lib/requestIntent";
 import { useChatStore } from "@/store/chatStore";
 import { NODE_TO_STEP_MAP, STEP_DEFINITIONS } from "@/constants/chat";
 
@@ -26,6 +27,7 @@ export interface RetryableRequest {
   history: ChatMessage[];
   projectId: string;
   operation: RequestOperation;
+  intent: Exclude<RequestIntent, "clarify">;
   base: EditBaseSnapshot;
   runId?: string;
   repair?: RepairRequestContext;

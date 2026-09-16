@@ -56,9 +56,7 @@ export function SandpackView({ initialFiles, initialManifest }: SandpackViewProp
     key: templateRequestKey,
     status: initialFiles === undefined ? "loading" : "ready",
   }));
-  const isPresetCase = initialFiles !== undefined && (
-    candidate === null && (generatedFiles === null || sameFiles(generatedFiles, initialFiles))
-  );
+  const isPresetCase = initialFiles !== undefined && candidate === null && generatedFiles !== null && sameFiles(generatedFiles, initialFiles);
 
   useEffect(() => {
     if (initialFiles === undefined) return;
@@ -99,7 +97,7 @@ export function SandpackView({ initialFiles, initialManifest }: SandpackViewProp
     ? toSandpackFiles(candidate.files)
     : initialFiles === undefined
       ? (currentFiles ?? generatedFiles)
-      : (caseLoadedSignature === caseSignature ? (currentFiles ?? generatedFiles ?? initialFiles) : initialFiles);
+      : (caseLoadedSignature === caseSignature ? (currentFiles ?? generatedFiles) : initialFiles);
   const hasResultFiles = resultFiles !== null && resultFiles !== undefined && Object.keys(resultFiles).length > 0;
   const templateStatus = templateLoad.key === templateRequestKey ? templateLoad.status : "loading";
   const templateError = templateStatus === "error" ? templateLoad.error ?? "React 模板加载失败" : null;
@@ -130,7 +128,7 @@ export function SandpackView({ initialFiles, initialManifest }: SandpackViewProp
   return (
     <div className="relative h-full w-full">
       <SandpackProvider
-        key={`${viewMode}:${caseSignature ?? "generated"}:${candidate?.candidateId ?? "accepted"}`}
+        key={`${viewMode}:${caseSignature ?? "generated"}:${candidate?.candidateId ?? "accepted"}:${hasResultFiles ? "files" : "blank"}`}
         template="react-ts"
         theme="light"
         files={previewFiles}
@@ -146,7 +144,7 @@ export function SandpackView({ initialFiles, initialManifest }: SandpackViewProp
       >
         <div className="relative h-full w-full border-none sandpack-wrapper">
           <SandpackLayout style={{ height: "100%", border: "none", borderRadius: 0 }}>
-            <SandpackContent viewMode={viewMode} syncEditor={!candidatePreview} templateError={templateError} />
+            <SandpackContent viewMode={viewMode} syncEditor={!candidatePreview} templateError={templateError} hasProjectFiles={hasResultFiles} templateFiles={templateFiles} />
           </SandpackLayout>
         </div>
       </SandpackProvider>
@@ -160,11 +158,13 @@ export function SandpackView({ initialFiles, initialManifest }: SandpackViewProp
   );
 }
 
-function SandpackContent({ viewMode, syncEditor, templateError }: { viewMode: ViewMode; syncEditor: boolean; templateError: string | null }) {
-  return viewMode === "preview" ? <PreviewContent syncEditor={syncEditor} templateError={templateError} /> : <CodeContent />;
+function SandpackContent({ viewMode, syncEditor, templateError, hasProjectFiles, templateFiles }: { viewMode: ViewMode; syncEditor: boolean; templateError: string | null; hasProjectFiles: boolean; templateFiles: SandpackFiles }) {
+  return viewMode === "preview"
+    ? <PreviewContent syncEditor={syncEditor} templateError={templateError} hasProjectFiles={hasProjectFiles} templateFiles={templateFiles} />
+    : <CodeContent hasProjectFiles={hasProjectFiles} templateFiles={templateFiles} />;
 }
 
-function PreviewContent({ syncEditor, templateError }: { syncEditor: boolean; templateError: string | null }) {
+function PreviewContent({ syncEditor, templateError, hasProjectFiles, templateFiles }: { syncEditor: boolean; templateError: string | null; hasProjectFiles: boolean; templateFiles: SandpackFiles }) {
   const { sandpack, listen } = useSandpack();
   const { setCurrentFiles } = useSandpackStore();
   const candidateId = useChatStore((state) => state.candidate?.candidateId);
@@ -181,10 +181,13 @@ function PreviewContent({ syncEditor, templateError }: { syncEditor: boolean; te
 
   useEffect(() => {
     const files = stripPreviewFiles(toStoreFiles(sandpack.files));
-    if (lastFilesRef.current !== null && areSandpackFilesEqual(lastFilesRef.current, files)) return;
+    const previousFiles = lastFilesRef.current;
     lastFilesRef.current = files;
+    if (previousFiles === null && !hasProjectFiles) return;
+    if (!hasProjectFiles && areSandpackFilesEqual(templateFiles, files)) return;
+    if (previousFiles !== null && areSandpackFilesEqual(previousFiles, files)) return;
     if (syncEditor) setCurrentFiles(files);
-  }, [sandpack.files, setCurrentFiles, syncEditor]);
+  }, [hasProjectFiles, sandpack.files, setCurrentFiles, syncEditor, templateFiles]);
 
   const retryPreview = (): void => {
     setRetryKey((value) => value + 1);
@@ -244,7 +247,7 @@ function PreviewContent({ syncEditor, templateError }: { syncEditor: boolean; te
   );
 }
 
-function CodeContent() {
+function CodeContent({ hasProjectFiles, templateFiles }: { hasProjectFiles: boolean; templateFiles: SandpackFiles }) {
   const { sandpack } = useSandpack();
   const { setCurrentFiles } = useSandpackStore();
   const [isFileTreeOpen, setIsFileTreeOpen] = useState(true);
@@ -252,10 +255,13 @@ function CodeContent() {
 
   useEffect(() => {
     const files = toStoreFiles(sandpack.files);
-    if (lastFilesRef.current !== null && areSandpackFilesEqual(lastFilesRef.current, files)) return;
+    const previousFiles = lastFilesRef.current;
     lastFilesRef.current = files;
+    if (previousFiles === null && !hasProjectFiles) return;
+    if (!hasProjectFiles && areSandpackFilesEqual(templateFiles, files)) return;
+    if (previousFiles !== null && areSandpackFilesEqual(previousFiles, files)) return;
     setCurrentFiles(files);
-  }, [sandpack.files, setCurrentFiles]);
+  }, [hasProjectFiles, sandpack.files, setCurrentFiles, templateFiles]);
 
   return (
     <div className="relative h-full w-full bg-white">
