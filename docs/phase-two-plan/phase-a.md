@@ -32,6 +32,14 @@ node scripts/checkPhaseA.mjs
 
 主代理已现场确认首页案例的 6 张封面 `src=/book-cover.svg` 且 `naturalWidth=113`，工作台代码视图没有 bridge 文件。当前外部 Sandpack 环境返回 `TIME_OUT`，界面已显示中文超时原因和重试入口；这项保持未验证，不能算作真实 Sandpack ready。
 
+## 2026-09-16 本地现场 / Mock smoke
+
+- 390px 首页和工作台未见横向溢出；首页书库案例的 6 张封面均为 `/book-cover.svg`、`naturalWidth=113`，搜索“星辰”只剩一行，详情和阅读数据可达。
+- 工作台示例体验与真实模式控件可切换，中心预览加载提示可见。导出按钮可见，但 CUA 未捕获原生 `download` 事件，导出下载仍是未验证项。
+- 控制台 `MutationObserver.observe` 异常的调用栈指向 `@ant-design/x` 的 `BubbleList/useCompatibleScroll` 依赖路径；项目源码没有对应调用，本轮未修改 `node_modules`。
+
+以上是本地页面 smoke 观察，不是付费模型、真实 Sandpack ready、导出 ZIP 下载或固定任务板通过证据。
+
 ## 主代理需继续现场验收
 
 1. 在已有前端开发服务和真实 Sandpack 网络环境中打开小说案例，确认无旧 waiting 残留，能看到 `app-mounted` 后才显示 ready；确认封面请求成功。

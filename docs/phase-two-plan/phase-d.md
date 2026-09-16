@@ -40,6 +40,15 @@ git diff --check
 
 本次执行结果：`checkPhaseA.mjs`、`checkPhaseB.mjs`（含验证 run 摘要读回）、`checkPhaseC.mjs`、`checkPhaseD.mjs`、两个新增脚本的 `node --check`、前端定向 ESLint、前端 `tsc --noEmit`、前端生产构建、后端构建和 `git diff --check` 均退出 0。`checkPhaseD.mjs` 报告 `L0/L1` fixture 通过、L2 为 `not-verified`，固定任务板 8 条断言因 Playwright 未安装而全部 `not-verified`；这些状态保留为限制，不汇总成真实成功率。`checkPhaseB.mjs` 同时确认带候选校验报告的运行摘要可经 IndexedDB fixture 保存并读回。
 
+## 2026-09-16 本地现场 / Mock smoke
+
+- 390px 首页和工作台未见横向溢出；预置书库案例的 6 张封面均为 `/book-cover.svg`、`naturalWidth=113`，搜索“星辰”只剩一行，详情和阅读数据可达。
+- 工作台示例体验与真实模式可切换，中心预览加载提示可见。强制 Mock 首次生成进入候选且项目名保持“新项目”，放弃候选后名称未改变；编辑请求明确失败、保留已有结果并显示“重新执行原始请求”。
+- 项目管理 smoke 已保存并重新打开项目，dirty 保护弹窗分支已出现；这是单标签观察。导出按钮可见，但 CUA 未捕获原生 `download` 事件，导出仍未验证。
+- 控制台 MutationObserver 错误证据指向 `@ant-design/x` 依赖内部滚动 hook；项目没有对应调用，本轮未修改 `node_modules`。
+
+以上是本地 Mock smoke，不是付费模型、真实 Sandpack ready、固定任务板、导出 ZIP 下载或多标签故障通过证据。
+
 ## 未验证和明确限制
 
 - 本阶段没有运行 `recordRealTaskBoard.mjs`，没有调用付费模型；真实 SSE、供应商输出、成本和模型耗时未验证。
