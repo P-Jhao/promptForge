@@ -1,6 +1,6 @@
 # 阶段 E 交接：独立任务看板评测与固化门槛
 
-状态：评测契约、真实运行记录复用、统计报告和独立案例来源门槛已实现。2026-09-16 串行评测已完成 EVAL-01 3/3、EVAL-02 3/3；每次均满足 `mode=real`、`forced=false`、终态 `success`、可读 files（EVAL-02 为 `candidate.data.files`）和 `done`。EVAL-02 的首次独立探测仍因旧 recorder 只识别 `files` 事件而误判协议失败，原始 candidate 保留在 raw SSE，修复后重跑 `task-board-real-edit-probe-20260916-r2` 成功。串行三次记录与历史探测、Mock 拒绝样本分开解释，不能用混合报告宣称三次成功率。独立任务看板案例 `task-board-real-eval` 已根据真实来源、构建检查和主代理 Edge 临时 Vite 人工 EVAL-03 证据标为 `READY`；2026-09-16 又在 Edge 目标工作台观察到该入口一次 Sandpack 渲染、`done(compilatonError=false)` 与 `app-mounted` 握手，以及关键词/优先级筛选。该状态和这次现场不覆盖完整状态矩阵、移动端/键盘、ZIP/导出、离线或第五类 IndexedDB 故障场景，也没有把小说案例改名复用。
+状态：评测契约、真实运行记录复用、统计报告和独立案例来源门槛已实现。2026-09-16 串行评测已完成 EVAL-01 3/3、EVAL-02 3/3；每次均满足 `mode=real`、`forced=false`、终态 `success`、可读 files（EVAL-02 为 `candidate.data.files`）和 `done`。EVAL-02 的首次独立探测仍因旧 recorder 只识别 `files` 事件而误判协议失败，原始 candidate 保留在 raw SSE，修复后重跑 `task-board-real-edit-probe-20260916-r2` 成功。串行三次记录与历史探测、Mock 拒绝样本分开解释，不能用混合报告宣称三次成功率。独立任务看板案例 `task-board-real-eval` 已根据真实来源、构建检查和主代理 Edge 临时 Vite 人工 EVAL-03 证据标为 `READY`；2026-09-16 又在 Edge 目标工作台观察到该入口一次 Sandpack 渲染、`done(compilatonError=false)` 与 `app-mounted` 握手，以及关键词/优先级筛选。`e9bbb1d` 修复任务看板 source 的 5 个 ESLint error 后，lint 为 0 errors、23 个既有 warnings；主代理独立复跑 tsc、build、案例组装一致性和案例检查均通过，并在同日完成一次目标工作台 Sandpack 回归。该状态和这些现场不覆盖完整状态矩阵、移动端/键盘、ZIP/导出、离线或第五类 IndexedDB 故障场景，也没有把小说案例改名复用。
 
 权威范围见[第二阶段执行计划](../phase-two-spec/plan.md)的“阶段 E”。本记录描述实现与证据，不替代计划。
 
@@ -55,6 +55,12 @@ EVAL-01 的 prompt 文本来自既有 `recordRealTaskBoard.mjs` 固定需求；�
 
 上述三项来源证据和构建检查使 `evaluateCaseProvenance` 返回 `READY`，案例 metadata 与 validation report 已同步为 `READY`。案例现已通过首页链接和 `/workspace?case=task-board-real-eval` 的静态入口接入检查，示例体验直接读取已固化文件，不发送 `/api/chat`。此外，2026-09-16 主代理在该目标工作台入口观察到任务看板 Sandpack iframe 显示三列和 4 条初始任务；createRoot bridge fixture 修复后中央等待覆盖层消失，表明本次收到 `done(compilatonError=false)` 和对应 `app-mounted`，关键词“登录”得到 1 条并可清除，优先级“高”可选并可恢复。浏览器日志只有扩展注入、React Router 和 Tailwind CDN 警告，没有应用运行时错误；未做删除操作。这里的 `READY` 和这次现场只覆盖真实来源、固定模板构建、临时 Vite EVAL-03 及一次目标 Sandpack 路径，不代表完整状态矩阵、移动端/键盘、ZIP/导出、离线或第五类 IndexedDB 故障场景已验证。
 
+### lint 修复后的目标工作台回归（2026-09-16）
+
+`e9bbb1d` 修复了任务看板 source 中的 5 个 ESLint error：筛选组件同步 `setState` 的 effect 和表单渲染函数内定义的 `ErrorMsg`。主代理随后在 Edge 目标工作台刷新 `/workspace?case=task-board-real-eval`，约 25 秒内收到真实 `done(compilatonError=false)` 与对应 `app-mounted`，Sandpack 显示三列和 4 条初始任务。空标题保存显示“标题不能为空”；新增“验收任务”后计数为 5；编辑该任务描述后返回列表并显示更新文本；将状态切换为“进行中”后任务从待办列移到进行中列；关键词“登录”筛选得到 1 条，优先级“高”可选并可清除/重置。
+
+这是一次目标工作台路径回归，不能扩展为完整状态矩阵或全量功能通过。控制台没有应用运行错误；仅见浏览器扩展注入造成的 hydration 警告，以及 Tailwind CDN、React Router 和扩展相关日志，均按警告记录，不归为应用失败。
+
 ## 负向 recorder 证据（2026-09-16）
 
 本地强制 Mock 记录保存在 `artifacts/real-runs/task-board/task-board-mock-rejection-20260916/record.json`：`runId=task-board-mock-rejection-20260916`、`attempt=1`、`samplePool=REAL-EVAL`、`status=failed`，终态 `terminal.category=mode`，收到的模式为 `mode=mock`、`forced=true`。该 attempt 虽收到完整的 48 个文件和 `done` 事件，记录器仍拒绝登记为真实成功。
@@ -83,12 +89,17 @@ node --check scripts/recordTaskBoardCorrection.mjs
 node --check scripts/runTaskBoardEvaluation.mjs
 node --check scripts/reportTaskBoardEvaluation.mjs
 node --check scripts/checkPhaseE.mjs
+pnpm --dir frontend run lint
+pnpm --dir frontend exec tsc --noEmit
+pnpm --dir frontend run build
+node scripts/assembleTaskBoardCase.mjs --check
 node scripts/checkTaskBoardCase.mjs --write-report
 node scripts/checkPhaseE.mjs
 node scripts/reportTaskBoardEvaluation.mjs --runs-dir artifacts/real-runs/task-board --case-dir frontend/src/cases/task-board
+git diff --check
 ```
 
-`checkPhaseE.mjs` 通过了 prompt hash、EVAL-02 保留要求、candidate 事件解析和非法/缺 files 拒绝、三个样本池分离、分母/未验证计数、成功 run 复用、缺失真实来源拒绝和无真实成功声明检查。其临时 fixture 报告仍保持 `NOT_READY`，不读取或改写真实探测统计；独立案例的 `checkTaskBoardCase.mjs` 另行读取真实来源和人工 EVAL-03，返回 `READY`。报告脚本会混合目录中的历史记录，不能把混合报告的统计当作上一节固定六个 run 的三次结论。报告脚本同样返回缺失独立 case descriptor 的 `CASE_DESCRIPTOR_MISSING`，不创建案例。
+`e9bbb1d` 后，上述 lint、tsc、build、`assembleTaskBoardCase.mjs --check`、`checkTaskBoardCase.mjs --write-report` 和 `git diff --check` 均通过；lint 结果为 0 errors、23 个既有 warnings。`checkPhaseE.mjs` 通过了 prompt hash、EVAL-02 保留要求、candidate 事件解析和非法/缺 files 拒绝、三个样本池分离、分母/未验证计数、成功 run 复用、缺失真实来源拒绝和无真实成功声明检查。它的临时 fixture 报告仍保持 `NOT_READY`：fixture 没有真实输入，且固定交互检查在未安装 Playwright 时按预期保持 `skipped/not-verified`；这不是代码或评测失败，也不读取或改写真实探测统计。独立案例的 `checkTaskBoardCase.mjs` 另行读取真实来源和人工 EVAL-03，返回 `READY`。报告脚本会混合目录中的历史记录，不能把混合报告的统计当作上一节固定六个 run 的三次结论。报告脚本同样返回缺失独立 case descriptor 的 `CASE_DESCRIPTOR_MISSING`，不创建案例。
 
 已有真实环境时的可复制流程：
 
@@ -101,7 +112,7 @@ node scripts/reportTaskBoardEvaluation.mjs --runs-dir artifacts/real-runs/task-b
 ## 未验证和限制
 
 - 本阶段已完成串行 EVAL-01 3/3、EVAL-02 3/3，以及独立案例 EVAL-03 的 Edge 临时 Vite 人工验收；历史 EVAL-02 协议误判和修复重跑仍保留。混合历史报告不用于替代固定三次统计，也没有将小说 48 文件 mock 作为真实评测样本。
-- 独立案例已有临时 Vite 人工证据，以及一次 Edge 目标工作台 Sandpack 渲染/握手和筛选证据；完整状态矩阵、移动端/键盘、导出构建、保存/恢复、EVAL-01/EVAL-02 功能保留和其他候选仍需单独现场验收。原生 ZIP 下载、离线行为与第五类 IndexedDB 故障场景由用户手动完成，当前保持未验证。
+- 独立案例已有临时 Vite 人工证据，以及一次 Edge 目标工作台 Sandpack 回归（ready/app-mounted、三列/4 条任务、筛选和新增/编辑/状态切换）证据；完整状态矩阵、移动端/键盘、删除、其他浏览器、完整失败/取消/超时/资源矩阵、导出构建、保存/恢复、EVAL-01/EVAL-02 功能保留和其他候选仍需单独现场验收。原生 ZIP 下载、离线行为与第五类 IndexedDB 故障场景由用户手动完成，当前保持未验证。
 - recorder 记录的是客户端接收的 SSE 墙钟起止时间；没有服务端节点耗时，也不会把客户端取消写成供应商已终止。
 - 配置摘要只读取白名单键，raw SSE、文件和人工修正说明经过脱敏；密钥不写入案例或报告。真实案例仍需人工审查脱敏结果后再固化。
 - 本阶段没有实现 Vue、多框架选择器、工作台核心 UI 或自动生成案例；报告工具不会凭 fixture 结果创建可用案例。

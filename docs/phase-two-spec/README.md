@@ -18,6 +18,8 @@
 - 资源清单同时约束宿主案例、Sandpack 文件和 Vite 导出；小说案例的六个固定 Unsplash 封面放在 `externalResources`，导出只保留 URL 元数据，不把远程字节伪造为本地文件。缺少必需本地资源必须失败，真实生成结果没有对应 manifest 时不沿用小说案例 manifest。
 - 真实生成记录必须收到明确的 `mode={mode:"real",forced:false}`，不允许缺失 mode 或强制 Mock 结果被记录为真实；成功 run ID 复用，中断/失败产生新 attempt。
 - 固定任务板不要求 Playwright E2E，使用单元/集成检查或用户人工确认；独立案例当前以真实来源和 Edge 临时 Vite EVAL-03 人工证据达到 `READY`，并已接入首页链接和 `/workspace?case=task-board-real-eval`。目标工作台已有一次 Sandpack 渲染/握手和关键词/优先级筛选证据，但完整状态矩阵、移动端/键盘、原生 ZIP 下载、导出、离线和第五类 IndexedDB 故障场景由用户手动完成，当前保持未验证。
+- `e9bbb1d` 修复任务看板 source 的 5 个 ESLint error 后，`pnpm --dir frontend run lint` 为 0 errors、23 个既有 warnings；主代理独立复跑 tsc、build、案例组装一致性、案例检查和 `git diff --check` 均通过。修复后 Edge 目标工作台刷新任务看板约 25 秒内收到真实 `done(compilatonError=false)` + `app-mounted`，完成三列/4 条任务、空标题校验、新增计数 5、编辑描述、状态移动、关键词“登录”筛选 1 条及优先级筛选清除/重置的单次回归；该证据不覆盖完整状态矩阵。控制台仅见扩展 hydration、Tailwind CDN、React Router 和扩展日志警告，没有应用运行失败。
+- `checkPhaseE.mjs` 的临时 fixture 没有真实输入；未安装 Playwright 时固定交互检查按预期保持 `NOT_READY`/`skipped/not-verified`，这不是代码或评测失败。独立案例的 `checkTaskBoardCase.mjs` 才读取真实来源和人工 EVAL-03，并返回 `READY`。
 - 工作台 Sandpack 曾因本地 `/book-cover.svg` 文件键交付失败：6 个 iframe 图片 `complete=true` 但 `naturalWidth=0`。现已切换为六个固定 Unsplash URL，主代理已取得六个 URL 的 `200 image/jpeg` HTTP 证据；Edge 目标工作台另观察到小说详情 iframe 封面 `complete=true,naturalWidth=400,naturalHeight=560`。一次资源观察不能替代完整资源矩阵、导出和离线证据；浏览器扩展注入、React Router 和 Tailwind CDN 警告不记录为产品失败。
 
 ## 已确认的阶段边界
