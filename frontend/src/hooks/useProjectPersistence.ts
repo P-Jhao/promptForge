@@ -84,6 +84,8 @@ export function useProjectPersistence(): ProjectPersistenceApi {
     Object.keys(draft.files).length > 0 || draft.messages.length > 0 || draft.versions.length > 0 || draft.name !== "新项目"
   );
   const dirty = savedFingerprintRef.current === null ? hasContent : savedFingerprintRef.current !== fingerprint;
+  const hasSavedBaseline = expectedRevisionRef.current !== null && savedFingerprintRef.current !== null;
+  const visibleStatus: ProjectStorageStatus = status === "saved" && !hasSavedBaseline ? "idle" : status;
 
   const refreshProjects = useCallback(async () => {
     setListLoading(true);
@@ -295,5 +297,5 @@ export function useProjectPersistence(): ProjectPersistenceApi {
     }
   }, [projectId, refreshProjects, resolveRevision]);
 
-  return { status, dirty, error, warning, projects, listLoading, saveCurrentProject, saveAs, openProject, restoreVersion, updateVersionMetadata, renameProject, deleteProject, refreshProjects };
+  return { status: visibleStatus, dirty, error, warning, projects, listLoading, saveCurrentProject, saveAs, openProject, restoreVersion, updateVersionMetadata, renameProject, deleteProject, refreshProjects };
 }
