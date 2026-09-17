@@ -31,7 +31,7 @@ export function LandingPage() {
           <div className={styles.heroGlow} aria-hidden="true" />
           <div className={styles.heroCopy}>
             <p className={styles.eyebrow}><span aria-hidden="true" />前端原型工作台</p>
-            <h1>从一个想法，到可交互的前端原型。</h1>
+            <h1><span>从一个想法，到</span><span>可交互的前端原型。</span></h1>
             <p className={styles.heroLede}>
               描述需求，查看结果，继续调整。PromptForge 把场景、数据和关键动作整理成可预览的页面与代码。
             </p>

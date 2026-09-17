@@ -117,7 +117,7 @@ try {
   assert.doesNotMatch(landingPage, /className="brand-mark">P/);
   assert.match(landingPage, /<Link className=\{styles\.primaryButton\} href="\/workspace\?case=novel&scene=library">/);
   assert.doesNotMatch(landingPage, /href="#hero-case">查看案例/);
-  assert.match(landingPage, /从一个想法，到可交互的前端原型。/);
+  assert.match(landingPage, /从一个想法，到[\s\S]*可交互的前端原型。/);
   assert.match(landingPage, /task-board-workspace\.webp/);
   assert.doesNotMatch(landingPage, /CasePreview|useState|<iframe|resourceCheck/);
   assert.match(landingCss, /landing-hero-bg\.webp/);
