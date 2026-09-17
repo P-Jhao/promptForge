@@ -104,10 +104,10 @@
 .ctaButton:hover{background:#f2f4ff;color:#4358c4;}
 .footer{border-top:1px solid #e5e9f2;color:#96a0b2;display:flex;font-size:11px;justify-content:space-between;margin-top:38px;padding:17px 28px 28px;}
 .footer a{color:#6475c7;}
+.primaryButton:active,.secondaryButton:active,.ctaButton:active,.cardLink:active{transform:translateY(0);}
 .primaryButton:focus-visible,.secondaryButton:focus-visible,.cardLink:focus-visible,.ctaButton:focus-visible,.heroVisual:focus-visible,.brand:focus-visible,.navLinks a:focus-visible,.footer a:focus-visible{outline:3px solid #9aaaf2;outline-offset:3px;}
 .stepGrid article:focus-within,.capabilityGrid > div:focus-within{outline:3px solid #9aaaf2;outline-offset:3px;}
 @media (hover:hover) and (pointer:fine){.heroVisual:hover{box-shadow:0 30px 80px #5269b546;transform:translateY(-3px);}.primaryButton:hover,.secondaryButton:hover,.ctaButton:hover,.cardLink:hover{transform:translateY(-2px);}.primaryButton:hover svg,.secondaryButton:hover svg,.ctaButton:hover svg,.cardLink:hover svg,.heroVisual:hover .visualCaption svg{transform:translateX(3px);}.heroVisual:hover .visualImage{transform:scale(1.02);}.caseCard:hover{box-shadow:0 22px 55px #263d7c18;transform:translateY(-4px);}.caseCard:hover .cardImage{transform:scale(1.02);}.stepGrid article:hover,.capabilityGrid > div:hover{box-shadow:0 18px 42px #263d7c12;transform:translateY(-3px);}}
-.primaryButton:active,.secondaryButton:active,.ctaButton:active,.cardLink:active{transform:translateY(0);}
 @media (max-width:820px){.nav{padding:17px 18px;}
 .navLinks{gap:14px;}
 .navLinks a{font-size:11px;}
@@ -132,4 +132,4 @@
 .caseVisual{min-height:260px;}
 .caseBody{padding:21px 20px 23px;}
 }
-@media (prefers-reduced-motion:reduce){.page *,.page *::before,.page *::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important;}.page .heroVisual:hover,.page .caseCard:hover,.page .stepGrid article:hover,.page .capabilityGrid > div:hover,.page .primaryButton:hover,.page .secondaryButton:hover,.page .ctaButton:hover,.page .cardLink:hover,.page .primaryButton:active,.page .secondaryButton:active,.page .ctaButton:active,.page .cardLink:active{transform:none;}.page .heroVisual:hover .visualImage,.page .caseCard:hover .cardImage,.page .primaryButton:hover svg,.page .secondaryButton:hover svg,.page .ctaButton:hover svg,.page .cardLink:hover svg,.page .heroVisual:hover .visualCaption svg{transform:none;}}
+@media (prefers-reduced-motion:reduce){.page *,.page *::before,.page *::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important;}.page .heroVisual:hover,.page .caseCard:hover,.page .stepGrid article:hover,.page .capabilityGrid > div:hover,.page .primaryButton:hover,.page .secondaryButton:hover,.page .ctaButton:hover,.page .cardLink:hover{transform:none;}.page .heroVisual:hover .visualImage,.page .caseCard:hover .cardImage,.page .primaryButton:hover svg,.page .secondaryButton:hover svg,.page .ctaButton:hover svg,.page .cardLink:hover svg,.page .heroVisual:hover .visualCaption svg{transform:none;}}
