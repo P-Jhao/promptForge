@@ -4,12 +4,22 @@
 
 权威范围见[第二阶段执行计划](../phase-two-spec/plan.md)的“阶段 A”。本记录只描述当前实现和证据，不替代计划。
 
+## 首页展示改造（2026-09-17）
+
+首页展示已从自动挂载小说 `CasePreview` 改为静态产品介绍：首屏使用 `LandingPage.module.css` 的蓝紫背景和任务看板截图，案例区保留小说与任务看板两个独立工作台入口，首页浏览不会启动 iframe、Sandpack、远程封面检查或新的生成请求。原有 `/workspace?case=novel&scene=library|notes` 和 `/workspace?case=task-board-real-eval` 路由继续由工作台加载。
+
+- `frontend/public/landing-hero-bg.webp`（10,050 bytes）和 `landing-cta-bg.webp`（6,818 bytes）是无文字、无 logo 的生成背景素材，由 CSS 装饰性引用，不代表产品运行画面。
+- `frontend/public/task-board-workspace.webp`（47,356 bytes）是实际本地任务看板工作台画面的裁剪压缩图，用于产品展示；它来自已固化案例的现场画面，不是未经修改的模型原始输出。
+- 首页静态文案保留“示例是固定成果、真实请求会调用模型、本地浏览器手动保存”等边界；静态检查覆盖 logo、小说/任务板路由和首页不包含 `CasePreview`/iframe/资源检查。
+
+本轮已完成代码、类型、定向 lint 和案例静态检查；首页桌面/390px 窄屏的实际视觉、焦点顺序、图片加载和路由点击仍需主代理现场复核。
+
 ## 已实现
 
 | 需求/计划条目 | 代码证据 | 行为和边界 |
 | --- | --- | --- |
 | 统一资源清单、封面交付 | [`resourceManifest.ts`](../../frontend/src/cases/resourceManifest.ts)、[`novelCoverUrls.mjs`](../../scripts/lib/novelCoverUrls.mjs)、[`novelCase.ts`](../../frontend/src/cases/novelCase.ts)、[`assembleNovelCase.mjs`](../../scripts/assembleNovelCase.mjs) | 六个固定 Unsplash URL 由 `externalResources` 登记，运行时直接由小说数据引用；Sandpack 文件 map 不伪造远程文件，导出 manifest 保留 URL、类型和 allowlist 来源，不下载或写入远程图片字节。外链不可用时保留资源错误卡。 |
-| R-COVER-01 / R-EXPORT-01 | [`downloadCode.ts`](../../frontend/src/lib/downloadCode.ts)、[`CasePreview.tsx`](../../frontend/src/components/cases/CasePreview.tsx) | 首页检查六个固定外链；导出写入 `promptforge-resource-manifest.json` 的 `externalResources`，不把远程图片当作本地 ZIP 条目。联网运行已有单张详情封面现场证据，完整导出构建仍待现场验收。 |
+| R-COVER-01 / R-EXPORT-01 | [`downloadCode.ts`](../../frontend/src/lib/downloadCode.ts)、[`CasePreview.tsx`](../../frontend/src/components/cases/CasePreview.tsx) | 小说案例工作台入口检查六个固定外链；首页只展示静态案例信息，不自动检查封面。导出写入 `promptforge-resource-manifest.json` 的 `externalResources`，不把远程图片当作本地 ZIP 条目。联网运行已有单张详情封面现场证据，完整导出构建仍待现场验收。 |
 | 模板、动态组件、沙盒启动提示 | [`SandpackView.tsx`](../../frontend/src/components/preview/SandpackView.tsx)、[`BuildingLoadingOverlay.tsx`](../../frontend/src/components/preview/BuildingLoadingOverlay.tsx) | 模板加载失败可重试；首次启动使用中央覆盖层；已有画面重新编译时只显示轻量更新提示。等待阈值默认 30 秒/120 秒，可由 `NEXT_PUBLIC_PREVIEW_LONG_WAIT_MS`、`NEXT_PUBLIC_PREVIEW_TIMEOUT_MS`（兼容 `NEXT_PUBLIC_SANDPACK_*`）配置。 |
 | R-PREVIEW-01 / R-VALIDATE-01 | [`usePreviewDiagnostics.ts`](../../frontend/src/components/preview/usePreviewDiagnostics.ts)、[`previewDiagnosticsState.ts`](../../frontend/src/components/preview/previewDiagnosticsState.ts) | 在 layout effect 中订阅当前 Sandpack `listen` 和对应 iframe 的窗口消息；`done` 且 `compilatonError=false` 只记录构建成功，必须再收到应用入口真实 `app-mounted` 才 ready。若挂载一次性消息早于订阅，使用父子 bridge 握手请求重发；构建错误、运行时错误和外部超时分开显示，iframe load/status 不参与通过判定。 |
 | 桥接只作用于预览副本 | [`previewBridge.ts`](../../frontend/src/components/preview/previewBridge.ts)、[`SandpackView.tsx`](../../frontend/src/components/preview/SandpackView.tsx) | 预览副本才注入 bridge 和入口 ErrorBoundary；写入 `currentFiles`、编辑器和导出前调用 `stripPreviewFiles`。入口注入/剥离的 round-trip fixture 已通过。 |

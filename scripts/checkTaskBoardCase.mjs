@@ -16,6 +16,7 @@ const GENERATED_MAP_FILE = path.join(CASE_DIR, "generatedFiles.ts");
 const CASE_ADAPTER_FILE = path.join(CASE_DIR, "taskBoardCase.ts");
 const WORKSPACE_PAGE = path.join(ROOT_DIR, "frontend", "src", "app", "workspace", "page.tsx");
 const LANDING_PAGE = path.join(ROOT_DIR, "frontend", "src", "components", "landing", "LandingPage.tsx");
+const LANDING_CSS = path.join(ROOT_DIR, "frontend", "src", "components", "landing", "LandingPage.module.css");
 const CHAT_PANEL = path.join(ROOT_DIR, "frontend", "src", "components", "shell", "ChatPanel.tsx");
 const SANDPACK_VIEW = path.join(ROOT_DIR, "frontend", "src", "components", "preview", "SandpackView.tsx");
 const PACKAGE_MANAGER = "pnpm";
@@ -63,6 +64,7 @@ try {
   const caseAdapter = await readFile(CASE_ADAPTER_FILE, "utf8");
   const workspacePage = await readFile(WORKSPACE_PAGE, "utf8");
   const landingPage = await readFile(LANDING_PAGE, "utf8");
+  const landingCss = await readFile(LANDING_CSS, "utf8");
   const chatPanel = await readFile(CHAT_PANEL, "utf8");
   const sandpackView = await readFile(SANDPACK_VIEW, "utf8");
   const sourceTexts = await Promise.all(sourceFiles.filter((filePath) => /\.(ts|tsx)$/.test(filePath)).map(async (filePath) => [
@@ -113,8 +115,14 @@ try {
   assert.doesNotMatch(landingPage, /\/api\/chat/);
   assert.match(landingPage, /<Image[\s\S]*src="\/logo\.png"[\s\S]*alt="PromptForge 标志"/);
   assert.doesNotMatch(landingPage, /className="brand-mark">P/);
-  assert.match(landingPage, /<Link className="button-primary" href="\/workspace\?case=novel&scene=library">查看案例/);
-  assert.doesNotMatch(landingPage, /<a className="button-primary" href="#hero-case">查看案例/);
+  assert.match(landingPage, /<Link className=\{styles\.primaryButton\} href="\/workspace\?case=novel&scene=library">/);
+  assert.doesNotMatch(landingPage, /href="#hero-case">查看案例/);
+  assert.match(landingPage, /从一个想法，到可交互的前端原型。/);
+  assert.match(landingPage, /task-board-workspace\.webp/);
+  assert.doesNotMatch(landingPage, /CasePreview|useState|<iframe|resourceCheck/);
+  assert.match(landingCss, /landing-hero-bg\.webp/);
+  assert.match(landingCss, /landing-cta-bg\.webp/);
+  assert.doesNotMatch(landingCss, /case-preview|iframe/);
   assert.match(chatPanel, /workspace\?case=novel&scene=library/);
   assert.match(chatPanel, /workspace\?case=task-board-real-eval[^<]*打开任务看板案例/);
   assert.doesNotMatch(chatPanel, /workspace\?case=novel&scene=notes/);
