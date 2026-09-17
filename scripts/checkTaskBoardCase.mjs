@@ -129,6 +129,7 @@ try {
   assert.match(landingCss, /font-size:clamp\(44px,4\.8vw,56px\)/);
   assert.match(landingCss, /@media \(hover:hover\) and \(pointer:fine\)/);
   assert.match(landingCss, /prefers-reduced-motion:reduce/);
+  assert.ok(landingCss.lastIndexOf(".primaryButton:active") > landingCss.indexOf("@media (hover:hover) and (pointer:fine)"), "按钮 active 复位必须覆盖 hover 位移");
   assert.doesNotMatch(landingCss, /case-preview|iframe/);
   assert.match(chatPanel, /workspace\?case=novel&scene=library/);
   assert.match(chatPanel, /workspace\?case=task-board-real-eval[^<]*打开任务看板案例/);
