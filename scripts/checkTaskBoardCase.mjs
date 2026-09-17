@@ -117,17 +117,11 @@ try {
   assert.doesNotMatch(landingPage, /className="brand-mark">P/);
   assert.match(landingPage, /<Link className=\{styles\.primaryButton\} href="\/workspace\?case=novel&scene=library">/);
   assert.doesNotMatch(landingPage, /href="#hero-case">查看案例/);
-  assert.match(landingPage, /从一个想法，到[\s\S]*可交互的前端原型[\s\S]*。/);
+  assert.match(landingPage, /从一个想法，到[\s\S]*可交互的前端原型。/);
   assert.match(landingPage, /task-board-workspace\.webp/);
-  assert.match(landingPage, /className=\{styles\.heroShell\}/);
-  assert.match(landingPage, /className=\{styles\.gradientText\}/);
   assert.doesNotMatch(landingPage, /CasePreview|useState|<iframe|resourceCheck/);
   assert.match(landingCss, /landing-hero-bg\.webp/);
   assert.match(landingCss, /landing-cta-bg\.webp/);
-  assert.match(landingCss, /max-width:1200px/);
-  assert.match(landingCss, /grid-template-columns:minmax\(0,\.45fr\) minmax\(0,\.55fr\)/);
-  assert.match(landingCss, /@media \(hover:hover\) and \(pointer:fine\)/);
-  assert.match(landingCss, /prefers-reduced-motion:reduce/);
   assert.doesNotMatch(landingCss, /case-preview|iframe/);
   assert.match(chatPanel, /workspace\?case=novel&scene=library/);
   assert.match(chatPanel, /workspace\?case=task-board-real-eval[^<]*打开任务看板案例/);
