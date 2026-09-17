@@ -164,7 +164,7 @@ export function ChatPanel({ persistence }: { persistence: ProjectPersistenceApi 
                 <p>当前为示例体验，下面的成果已预置，不会根据新输入伪生成。</p>
                 <div className="chat-case-links">
                   <Link href="/workspace?case=novel&scene=library">打开书库管理案例</Link>
-                  <Link href="/workspace?case=novel&scene=notes">打开阅读笔记案例</Link>
+                  <Link href="/workspace?case=task-board-real-eval">打开任务看板案例（预生成成果）</Link>
                 </div>
                 <p className="chat-example-hint">想描述自己的需求，请切换到真实生成。</p>
               </div>

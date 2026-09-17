@@ -16,6 +16,7 @@ const GENERATED_MAP_FILE = path.join(CASE_DIR, "generatedFiles.ts");
 const CASE_ADAPTER_FILE = path.join(CASE_DIR, "taskBoardCase.ts");
 const WORKSPACE_PAGE = path.join(ROOT_DIR, "frontend", "src", "app", "workspace", "page.tsx");
 const LANDING_PAGE = path.join(ROOT_DIR, "frontend", "src", "components", "landing", "LandingPage.tsx");
+const CHAT_PANEL = path.join(ROOT_DIR, "frontend", "src", "components", "shell", "ChatPanel.tsx");
 const SANDPACK_VIEW = path.join(ROOT_DIR, "frontend", "src", "components", "preview", "SandpackView.tsx");
 const PACKAGE_MANAGER = "pnpm";
 const FIXTURE_INDEX = `<!doctype html>
@@ -62,6 +63,7 @@ try {
   const caseAdapter = await readFile(CASE_ADAPTER_FILE, "utf8");
   const workspacePage = await readFile(WORKSPACE_PAGE, "utf8");
   const landingPage = await readFile(LANDING_PAGE, "utf8");
+  const chatPanel = await readFile(CHAT_PANEL, "utf8");
   const sandpackView = await readFile(SANDPACK_VIEW, "utf8");
   const sourceTexts = await Promise.all(sourceFiles.filter((filePath) => /\.(ts|tsx)$/.test(filePath)).map(async (filePath) => [
     filePath,
@@ -109,6 +111,9 @@ try {
   assert.doesNotMatch(workspacePage, /\/api\/chat/);
   assert.match(landingPage, /workspace\?case=task-board-real-eval/);
   assert.doesNotMatch(landingPage, /\/api\/chat/);
+  assert.match(chatPanel, /workspace\?case=novel&scene=library/);
+  assert.match(chatPanel, /workspace\?case=task-board-real-eval[^<]*打开任务看板案例/);
+  assert.doesNotMatch(chatPanel, /workspace\?case=novel&scene=notes/);
   assert.match(sandpackView, /initialManifest\?: CaseResourceManifest/);
   assert.match(sandpackView, /setPreviewManifest\(initialFiles === undefined \? undefined : initialManifest\)/);
   assert.match(await readFile(path.join(ROOT_DIR, "frontend", "src", "components", "cases", "CasePreview.tsx"), "utf8"), /workspace\?case=novel&scene=/);
