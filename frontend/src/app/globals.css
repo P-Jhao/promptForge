@@ -43,7 +43,7 @@ body {
 .landing-nav nav a { color: #64718b; font-size: 13px; font-weight: 650; text-decoration: none; }
 .landing-nav nav a:hover { color: #4358c4; }
 .brand { align-items: center; color: #17213a; display: flex; font-size: 16px; font-weight: 800; gap: 9px; text-decoration: none; }
-.brand-mark { align-items: center; border-radius: 9px; display: inline-flex; height: 30px; justify-content: center; overflow: hidden; width: 30px; }
+.brand-mark { align-items: center; background: #f3f4f6; border-radius: 9px; display: inline-flex; height: 30px; justify-content: center; overflow: hidden; width: 30px; }
 .brand-mark-image { display: block; height: 30px; object-fit: contain; width: 30px; }
 .brand-beta { background: #edf1ff; border: 1px solid #dce4ff; border-radius: 999px; color: #6574be; font-size: 10px; font-weight: 700; padding: 3px 7px; }
 .landing-hero { align-items: center; display: grid; gap: 46px; grid-template-columns: minmax(0, .95fr) minmax(430px, 1.05fr); padding: 62px 28px 54px; }
