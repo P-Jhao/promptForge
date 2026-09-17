@@ -1,0 +1,87 @@
+.shell {
+  --workbench-bg: #f2f5fb;
+  --workbench-line: #dfe5f0;
+  --workbench-ink: #263352;
+  --workbench-muted: #72809a;
+  background: var(--workbench-bg);
+  color: var(--workbench-ink);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 0;
+  overflow: hidden;
+  width: 100vw;
+}
+
+.topbar {
+  align-items: center;
+  background: #fff;
+  border-bottom: 1px solid var(--workbench-line);
+  box-shadow: 0 3px 14px #32487a0b;
+  display: flex;
+  flex: 0 0 64px;
+  gap: 20px;
+  min-width: 0;
+  padding: 0 20px;
+  position: relative;
+  z-index: 20;
+}
+
+.brand {
+  align-items: center;
+  color: var(--workbench-ink);
+  display: flex;
+  flex: 0 0 auto;
+  font-size: 15px;
+  font-weight: 750;
+  gap: 8px;
+  text-decoration: none;
+}
+
+.brandMark {
+  background: #f0f3fa;
+  border: 1px solid #e5eaf4;
+  border-radius: 9px;
+  display: inline-block;
+  height: 32px;
+  overflow: hidden;
+  position: relative;
+  width: 32px;
+}
+
+.brandImage { object-fit: cover; }
+.brandName { white-space: nowrap; }
+.beta { background: #edf0ff; border: 1px solid #dfe4ff; border-radius: 999px; color: #6978bd; font-size: 9px; font-weight: 700; padding: 3px 7px; }
+
+.body {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 14px;
+  grid-template-columns: minmax(320px, 360px) minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+  padding: 14px;
+}
+
+.chatColumn, .previewColumn { min-height: 0; min-width: 0; }
+.panel { background: #fff; border: 1px solid var(--workbench-line); border-radius: 12px; box-shadow: 0 12px 32px #3046760b; height: 100%; min-height: 0; overflow: hidden; }
+.previewColumn { min-height: 0; }
+.mobileTabs { display: none; }
+.previewOnly { grid-template-columns: minmax(0, 1fr); }
+.previewOnly .chatColumn { display: none; }
+
+@media (max-width: 700px) {
+  .topbar { flex-basis: 58px; gap: 8px; padding: 0 10px; }
+  .brandName, .beta { display: none; }
+  .mobileTabs { background: #fff; border-bottom: 1px solid var(--workbench-line); display: flex; gap: 6px; padding: 7px 10px; }
+  .mobileTabs button { background: #f3f5fa; border: 1px solid transparent; border-radius: 7px; color: var(--workbench-muted); flex: 1; font-size: 12px; padding: 8px; }
+  .mobileTabs button[aria-selected="true"] { background: #eef1ff; border-color: #dce3ff; color: #4f62bf; font-weight: 700; }
+  .body { display: block; overflow: hidden; padding: 8px; }
+  .chatColumn, .previewColumn { height: 100%; }
+  .mobileHidden { display: none; }
+  .mobileVisible { display: block; }
+}
+
+@media (min-width: 701px) {
+  .mobileVisible, .mobileHidden { display: block; }
+}

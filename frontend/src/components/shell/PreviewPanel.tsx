@@ -2,8 +2,6 @@
 "use client";
 
 import { PreviewToolbar } from "@/components/preview/PreviewToolbar";
-import { Code2, Eye } from "lucide-react";
-import { useSandpackStore } from "@/store/sandpackStore";
 import type { PreviewPanelProps } from "@/types/components";
 
 /**
@@ -26,39 +24,20 @@ export function PreviewPanel({
   onExitFullScreen,
 }: PreviewPanelProps) {
   const isFullScreen = layoutMode === "preview-only";
-  const { viewMode, setViewMode } = useSandpackStore();
 
   return (
-    <section className="relative h-full w-full overflow-hidden bg-gray-50">
+    <section className="relative h-full w-full overflow-hidden bg-transparent">
       {/* Preview content */}
       <div className="h-full w-full">
-        <div className="relative h-full w-full overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-          <div className="absolute top-1.5 right-3 z-10">
+        <div className="flex h-full w-full flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+          <div className="preview-toolbar-slot flex shrink-0 justify-end border-b border-gray-100 bg-white px-3 py-2">
             <PreviewToolbar
               isFullScreen={isFullScreen}
               onEnterFullScreen={onEnterFullScreen}
               onExitFullScreen={onExitFullScreen}
             />
           </div>
-          <div className="absolute left-3 top-1.5 z-10 flex items-center gap-1 rounded-lg border border-gray-200 bg-white/95 p-1 shadow-sm sm:hidden">
-            <button
-              type="button"
-              onClick={() => setViewMode("preview")}
-              aria-pressed={viewMode === "preview"}
-              className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium ${viewMode === "preview" ? "bg-gray-900 text-white" : "text-gray-600"}`}
-            >
-              <Eye size={13} /> 预览
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("code")}
-              aria-pressed={viewMode === "code"}
-              className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium ${viewMode === "code" ? "bg-gray-900 text-white" : "text-gray-600"}`}
-            >
-              <Code2 size={13} /> 代码
-            </button>
-          </div>
-          {children}
+          <div className="relative min-h-0 flex-1">{children}</div>
         </div>
       </div>
     </section>

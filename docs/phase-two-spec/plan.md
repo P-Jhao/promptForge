@@ -241,3 +241,9 @@ fork_turns: "1"
 长时间或环境阻断的检查可以交接手动执行，但对应项保持“未验证”，不据此宣布整阶段通过。
 
 进入执行后，由 Luna 将本计划及阶段交接记录落到 `docs/phase-two-plan/`，维护需求—实现—验收对应关系。阶段 F 已按 F1/F2/F3 记录代码实现与 fixture/类型/构建证据；浏览器完整现场、真实聊天链路、移动端/键盘、ZIP 和 IndexedDB 第五类故障仍按未验证处理，只有现场证据产生后才更新相应状态。仅当实际核心功能或关键目录结构发生变化时更新 AGENTS.md，不写日常改动日志。
+
+## 工作台重设计规格关联（仅范围，不是执行计划）
+
+工作台重设计已落地，当前实现、来源、检查结果和未验证项记录在 [`docs/workspace-redesign-spec/implementation-status.md`](../workspace-redesign-spec/implementation-status.md)；目标布局、操作映射、案例边界和验收口径仍单独记录在 [`docs/workspace-redesign-spec/`](../workspace-redesign-spec/README.md)。这些文档描述顶部项目栏、约 340–380px 左对话栏、右预览/代码工具栏和状态边界，不新增本计划之外的生成/存储后端能力，也不改写 A–F 历史结果。
+
+仍须复用本计划规定的 `Project.messages`、内部操作判定、当前文件/hash 基线、候选确认应用、IndexedDB 手动保存和预览/导出边界；三个案例已有真实来源、静态固化和工作台入口，但 descriptor 仍为 `PENDING_BROWSER`，不可标记 `READY`。目标 Sandpack 交互和桌面现场证据待主代理验收；历史 A–F 不被改写。

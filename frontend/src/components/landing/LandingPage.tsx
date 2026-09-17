@@ -5,9 +5,6 @@ import Link from "next/link";
 import { ArrowRight, Check, ChevronRight } from "lucide-react";
 import styles from "./LandingPage.module.css";
 
-const novelFeatures = ["书名与作者搜索", "阅读状态筛选", "进度、笔记与书签"];
-const taskBoardFeatures = ["三列任务看板", "关键词与优先级筛选", "新增、编辑与状态切换"];
-
 export function LandingPage() {
   return (
     <div className={styles.page}>
@@ -40,7 +37,7 @@ export function LandingPage() {
               <span>TypeScript</span>
             </div>
             <div className={styles.actions}>
-              <Link className={styles.primaryButton} href="/workspace?case=novel&scene=library">
+              <Link className={styles.primaryButton} href="/workspace?case=customer-management-demo">
                 查看案例 <ArrowRight size={16} aria-hidden="true" />
               </Link>
               <Link className={styles.secondaryButton} href="/workspace">
@@ -50,24 +47,27 @@ export function LandingPage() {
             <p className={styles.heroNote}>示例是固定成果；真实请求会调用模型，并先进入可确认的候选。</p>
           </div>
 
-          <Link className={styles.heroVisual} href="/workspace?case=task-board-real-eval" aria-label="打开任务看板预生成成果">
+          <Link className={styles.heroVisual} href="/workspace?case=customer-management-demo" aria-label="打开客户管理后台案例">
             <span className={styles.visualLabel}>
               <span className={styles.statusDot} aria-hidden="true" />
-              工作台实拍
-              <span className={styles.visualSource}>预生成成果 · 人工修正</span>
+              案例预览
+              <span className={styles.visualSource}>预生成成果 · 待浏览器验收</span>
             </span>
             <span className={styles.visualFrame}>
-              <Image
-                src="/task-board-workspace.webp"
-                alt="任务看板工作台截图，展示看板列、筛选控件和任务卡片"
-                fill
-                sizes="(max-width: 820px) 100vw, 55vw"
-                className={styles.visualImage}
-                priority
-              />
+              <span className={styles.demoHeroPreview} aria-hidden="true">
+                <span className={styles.demoHeroTop}><strong>客户管理后台</strong><small>客户目录</small></span>
+                <span className={styles.demoHeroMetrics}>
+                  <span><strong>248</strong><small>客户总数</small></span>
+                  <span><strong>32</strong><small>本月新增</small></span>
+                  <span><strong>86%</strong><small>活跃率</small></span>
+                </span>
+                <span className={styles.demoHeroRows}>
+                  <span /><span /><span />
+                </span>
+              </span>
             </span>
             <span className={styles.visualCaption}>
-              <span><strong>任务看板</strong><small>三列、筛选与任务卡片</small></span>
+              <span><strong>客户管理后台</strong><small>搜索、筛选与客户详情</small></span>
               <ArrowRight size={17} aria-hidden="true" />
             </span>
           </Link>
@@ -83,49 +83,27 @@ export function LandingPage() {
           <div className={styles.sectionHeading}>
             <p className={styles.sectionKicker}>CASE STUDY</p>
             <h2>先看已经做好的，再决定从哪里开始。</h2>
-            <p>两份预置成果都可以直接进入工作台体验；它们展示的是已有结果，不会因首页浏览而启动 Sandpack 或新的生成请求。</p>
+            <p>已有案例成果可以直接进入工作台体验；首页浏览不会启动 Sandpack 或新的生成请求。</p>
           </div>
 
-          <div className={styles.caseGrid}>
-            <article className={styles.caseCard}>
-              <div className={`${styles.caseVisual} ${styles.novelVisual}`} aria-label="小说阅读管理能力示意">
-                <div className={styles.novelVisualTop}><span>小说阅读管理</span><span>固定成果</span></div>
-                <div className={styles.novelPanel}>
-                  <div className={styles.mockSearch}><span>⌕</span> 搜索书名或作者 <b>阅读中⌄</b></div>
-                  <div className={styles.mockBook}><span className={styles.bookCover} /><span><strong>星辰之上</strong><small>阅读中 · 68%</small></span><em>详情</em></div>
-                  <div className={styles.mockBook}><span className={`${styles.bookCover} ${styles.bookCoverAlt}`} /><span><strong>远方的灯塔</strong><small>未开始 · 0%</small></span><em>详情</em></div>
-                </div>
-                <span className={styles.visualHint}>能力示意 · 无自动预览</span>
-              </div>
-              <div className={styles.caseBody}>
-                <p className={styles.cardKicker}>案例 01 · 预置成果</p>
-                <h3>小说阅读管理</h3>
-                <p>书库、阅读详情和阅读页串起一条可操作的内容管理路径。</p>
-                <ul>{novelFeatures.map((feature) => <li key={feature}><Check size={14} aria-hidden="true" />{feature}</li>)}</ul>
-                <p className={styles.sourceNote}>来源：backend/mock 组装结果；补充了会话内交互与固定远程封面 URL，封面依赖网络。</p>
-                <Link className={styles.cardLink} href="/workspace?case=novel&scene=library">体验小说案例 <ArrowRight size={15} aria-hidden="true" /></Link>
-              </div>
+          <div className={styles.demoCaseGrid} aria-label="案例入口">
+            <article className={styles.demoCaseCard}>
+              <p className={styles.cardKicker}>案例 01 · 真实生成后固化 · 待浏览器验收</p>
+              <h3>客户管理后台</h3>
+              <p>搜索、状态筛选、新增校验、编辑同步与详情抽屉。</p>
+              <Link className={styles.cardLink} href="/workspace?case=customer-management-demo">打开客户管理后台 <ArrowRight size={15} aria-hidden="true" /></Link>
             </article>
-
-            <article className={styles.caseCard}>
-              <div className={`${styles.caseVisual} ${styles.taskVisual}`}>
-                <Image
-                  src="/task-board-workspace.webp"
-                  alt="任务看板工作台截图，展示三列任务和筛选控件"
-                  fill
-                  sizes="(max-width: 820px) 100vw, 50vw"
-                  className={styles.cardImage}
-                />
-                <span className={styles.imageBadge}>实际工作台截图</span>
-              </div>
-              <div className={styles.caseBody}>
-                <p className={styles.cardKicker}>案例 02 · 独立真实案例</p>
-                <h3>任务看板</h3>
-                <p>从真实 EVAL-01/EVAL-02 产物固化而来，经过必要的类型、样式和交互人工修正。</p>
-                <ul>{taskBoardFeatures.map((feature) => <li key={feature}><Check size={14} aria-hidden="true" />{feature}</li>)}</ul>
-                <p className={styles.sourceNote}>临时 Vite 人工验收覆盖上述交互；不代表 Sandpack、离线或原生 ZIP 已完整验证。</p>
-                <Link className={styles.cardLink} href="/workspace?case=task-board-real-eval">打开任务看板案例 <ArrowRight size={15} aria-hidden="true" /></Link>
-              </div>
+            <article className={styles.demoCaseCard}>
+              <p className={styles.cardKicker}>案例 02 · 真实生成后固化 · 待浏览器验收</p>
+              <h3>数据分析看板</h3>
+              <p>固定演示数据、日期联动指标、趋势与分类图。</p>
+              <Link className={styles.cardLink} href="/workspace?case=analytics-dashboard-demo">打开数据分析看板 <ArrowRight size={15} aria-hidden="true" /></Link>
+            </article>
+            <article className={styles.demoCaseCard}>
+              <p className={styles.cardKicker}>案例 03 · 真实生成后固化 · 待浏览器验收</p>
+              <h3>个人博客</h3>
+              <p>文章列表、分类搜索、详情返回与明暗阅读主题。</p>
+              <Link className={styles.cardLink} href="/workspace?case=personal-blog-demo">打开个人博客 <ArrowRight size={15} aria-hidden="true" /></Link>
             </article>
           </div>
         </section>

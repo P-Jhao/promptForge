@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "caseId": "personal-blog-demo",
+  "status": "PENDING_BROWSER",
+  "sourceChecks": "PASS",
+  "interactionChecks": "NOT_VERIFIED",
+  "workspaceChecks": "NOT_VERIFIED",
+  "notes": "源码类型检查、来源一致性和静态组装已通过；目标工作台中的列表、分类、搜索、详情返回和明暗主题待主代理浏览器验收。"
+}

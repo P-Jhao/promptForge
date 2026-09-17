@@ -53,6 +53,12 @@ Vue 只在本阶段做范围评估和问题记录，不实现 Vue 生成、预�
 | [06-validation-and-evaluation.md](./06-validation-and-evaluation.md) | 构建、运行、功能保留、有限修复、指标和固定评测场景 |
 | [07-acceptance-and-open-questions.md](./07-acceptance-and-open-questions.md) | 需求到验收的映射、待决问题、建议默认值和手动验收项 |
 
+## 工作台重设计规格关联（含实施记录）
+
+本次工作台重设计已落地，当前实现、来源、检查结果和未验证项记录在 [`docs/workspace-redesign-spec/implementation-status.md`](../workspace-redesign-spec/implementation-status.md)。顶部项目栏、左对话栏、右预览/代码区以及三份展示案例的规格与验收口径见[工作台重设计规格总览](../workspace-redesign-spec/README.md)、[布局与操作映射](../workspace-redesign-spec/workspace-layout.md)、[展示案例规格](../workspace-redesign-spec/demo-cases.md)和[验收规格](../workspace-redesign-spec/acceptance.md)。这些文档不改写本目录 A–F 的历史验收。
+
+该范围继续复用本目录已有的 `Project.messages` 主会话、内部 `generate`/`edit`/`chat` 判定、候选隔离、IndexedDB 显式手动保存、预览诊断和导出资源边界；案例内部导航留在案例应用内。三个案例已有真实来源、静态固化和工作台入口，但 descriptor 仍为 `PENDING_BROWSER`，不可标记 `READY`；目标 Sandpack 交互和桌面现场证据仍待主代理验收。历史 A–F 不被改写。
+
 ## 术语和判断规则
 
 “当前生成结果”指最近一次已经被接受的完整文件集合；“当前编辑文件”指用户在编辑器中实际看到和修改的文件；两者可能不同。项目保存和案例固化都必须明确保存的是哪一个。

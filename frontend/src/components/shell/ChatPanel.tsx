@@ -20,9 +20,9 @@ import { CandidatePanel } from "./CandidatePanel";
 import type { MockConfig } from "@/types/mock";
 
 const REQUEST_SUGGESTIONS = [
-  "做一个支持搜索和状态筛选的小说书库管理页",
-  "做一个带进度、笔记和书签的阅读详情页",
-  "做一个面向前端开发者的项目管理后台",
+  "做一个支持搜索和状态筛选的客户管理后台",
+  "做一个可按日期查看指标和趋势的数据分析看板",
+  "做一个支持分类搜索和主题切换的个人博客",
 ];
 
 export function ChatPanel({ persistence }: { persistence: ProjectPersistenceApi }) {
@@ -163,8 +163,9 @@ export function ChatPanel({ persistence }: { persistence: ProjectPersistenceApi 
               <div className="chat-example-empty">
                 <p>当前为示例体验，下面的成果已预置，不会根据新输入伪生成。</p>
                 <div className="chat-case-links">
-                  <Link href="/workspace?case=novel&scene=library">打开书库管理案例</Link>
-                  <Link href="/workspace?case=task-board-real-eval">打开任务看板案例（预生成成果）</Link>
+                  <Link href="/workspace?case=customer-management-demo">打开客户管理后台案例（待浏览器验收）</Link>
+                  <Link href="/workspace?case=analytics-dashboard-demo">打开数据分析看板案例（待浏览器验收）</Link>
+                  <Link href="/workspace?case=personal-blog-demo">打开个人博客案例（待浏览器验收）</Link>
                 </div>
                 <p className="chat-example-hint">想描述自己的需求，请切换到真实生成。</p>
               </div>

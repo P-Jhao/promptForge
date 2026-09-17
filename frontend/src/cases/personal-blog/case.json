@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "caseId": "personal-blog-demo",
+  "title": "个人博客（虚构内容）",
+  "status": "PENDING_BROWSER",
+  "entry": "source/index.tsx",
+  "files": "source",
+  "manifest": "manifest.json",
+  "provenance": "provenance.json",
+  "validation": "validation-report.json"
+}

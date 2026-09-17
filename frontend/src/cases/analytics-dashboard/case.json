@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "caseId": "analytics-dashboard-demo",
+  "title": "数据分析看板（合成演示）",
+  "status": "PENDING_BROWSER",
+  "entry": "source/index.tsx",
+  "files": "source",
+  "manifest": "manifest.json",
+  "provenance": "provenance.json",
+  "validation": "validation-report.json"
+}

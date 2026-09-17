@@ -20,6 +20,8 @@ import { useChatStore } from "@/store/chatStore";
 import type { CaseResourceManifest } from "@/cases/resourceManifest";
 import type { SandpackFiles, ViewMode } from "@/types/store";
 import { formatSandpackError, toSandpackFiles, toStoreFiles } from "./sandpackFileUtils";
+import { PREVIEW_REFRESH_EVENT } from "./PreviewToolbar";
+import { PreviewError } from "./PreviewError";
 
 const SandpackProvider = dynamic(
   () => import("@codesandbox/sandpack-react").then((mod) => mod.SandpackProvider),
@@ -154,6 +156,12 @@ export function SandpackView({ initialFiles, initialManifest }: SandpackViewProp
 }
 
 function SandpackContent({ viewMode, syncEditor, templateError, hasProjectFiles, templateFiles }: { viewMode: ViewMode; syncEditor: boolean; templateError: string | null; hasProjectFiles: boolean; templateFiles: SandpackFiles }) {
+  const { sandpack } = useSandpack();
+  useEffect(() => {
+    const handleRefresh = () => { void sandpack.runSandpack().catch(() => undefined); };
+    window.addEventListener(PREVIEW_REFRESH_EVENT, handleRefresh);
+    return () => window.removeEventListener(PREVIEW_REFRESH_EVENT, handleRefresh);
+  }, [sandpack]);
   return viewMode === "preview"
     ? <PreviewContent syncEditor={syncEditor} templateError={templateError} hasProjectFiles={hasProjectFiles} templateFiles={templateFiles} />
     : <CodeContent syncEditor={syncEditor} hasProjectFiles={hasProjectFiles} templateFiles={templateFiles} />;
@@ -188,6 +196,7 @@ function PreviewContent({ syncEditor, templateError, hasProjectFiles, templateFi
     setRetryKey((value) => value + 1);
     void sandpack.runSandpack().catch(() => undefined);
   };
+
   const hasError = buildError !== null || diagnostics.runtimeError !== null;
   const diagnosticsReady = isPreviewDiagnosticsReady(diagnostics);
   const waiting = diagnostics.buildState !== "success" || diagnostics.mountState !== "ready";
@@ -279,16 +288,6 @@ function CodeContent({ syncEditor, hasProjectFiles, templateFiles }: { syncEdito
           {isFileTreeOpen ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
         </button>
       </div>
-    </div>
-  );
-}
-
-function PreviewError({ title, message, onRetry }: { title: string; message: string; onRetry: () => void }) {
-  return (
-    <div className="preview-error" role="alert">
-      <strong>{title}</strong>
-      <span>{message}</span>
-      <button type="button" onClick={onRetry}>重试预览</button>
     </div>
   );
 }

@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "caseId": "analytics-dashboard-demo",
+  "status": "PENDING_BROWSER",
+  "sourceChecks": "PASS",
+  "interactionChecks": "NOT_VERIFIED",
+  "workspaceChecks": "NOT_VERIFIED",
+  "notes": "源码类型检查、来源一致性和静态组装已通过；目标工作台中的日期联动图表和无数据状态待主代理浏览器验收。"
+}

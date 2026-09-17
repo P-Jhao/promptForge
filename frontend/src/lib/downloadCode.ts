@@ -6,6 +6,44 @@ import {
   type CaseResourceManifest,
 } from "@/cases/resourceManifest";
 
+export interface DownloadSourceInput {
+  previewFiles: SandpackFiles | null;
+  currentFiles: SandpackFiles | null;
+  generatedFiles: SandpackFiles | null;
+  templateFiles: SandpackFiles;
+  previewManifest?: CaseResourceManifest;
+  dirty: boolean;
+}
+
+export interface DownloadSource {
+  files: SandpackFiles;
+  templateFiles: SandpackFiles;
+  manifest?: CaseResourceManifest;
+  label: string;
+  hasFiles: boolean;
+}
+
+/** Resolve the single export object used by the top bar and preview toolbar. */
+export function resolveDownloadSource(input: DownloadSourceInput): DownloadSource {
+  const isCase = input.previewFiles !== null;
+  const files = isCase
+    ? input.previewFiles
+    : input.currentFiles ?? input.generatedFiles;
+  const selectedFiles = files ?? input.templateFiles;
+  const label = isCase
+    ? "当前案例"
+    : input.dirty
+      ? "当前工作副本 · 未保存"
+      : "当前工作副本";
+  return {
+    files: selectedFiles,
+    templateFiles: input.templateFiles,
+    manifest: isCase ? input.previewManifest : undefined,
+    label,
+    hasFiles: Object.keys(selectedFiles).length > 0,
+  };
+}
+
 /**
  * 生成 index.html 文件内容
  */

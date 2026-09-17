@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "caseId": "personal-blog-demo",
+  "sourceRun": "artifacts/real-runs/workspace-demos/personal-blog-demo-20260917/record.json",
+  "originalFiles": "artifacts/real-runs/workspace-demos/personal-blog-demo-20260917/attempt-001/files.json",
+  "manualCorrections": "artifacts/real-runs/workspace-demos/personal-blog-demo-20260917/manual-corrections.json",
+  "assembly": "node scripts/assembleWorkspaceDemoCase.mjs --case=personal-blog",
+  "data": "文章、作者和日期均为虚构演示内容；不连接 CMS 或发布后端。",
+  "resources": "无远程资源"
+}

@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "caseId": "customer-management-demo",
+  "sourceRun": "artifacts/real-runs/workspace-demos/customer-management-demo-20260917/record.json",
+  "originalFiles": "artifacts/real-runs/workspace-demos/customer-management-demo-20260917/attempt-001/files.json",
+  "manualCorrections": "artifacts/real-runs/workspace-demos/customer-management-demo-20260917/manual-corrections.json",
+  "assembly": "node scripts/assembleWorkspaceDemoCase.mjs --case=customer-management",
+  "data": "全部客户、联系方式和备注均为合成演示数据；新增和编辑仅保留在当前预览内存。",
+  "resources": "无远程资源"
+}

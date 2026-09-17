@@ -1,6 +1,5 @@
 "use client";
 
-import { Copy, FolderOpen, History, Plus, Save, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -13,6 +12,9 @@ import type { ProjectVersion } from "@/types/store";
 import { DeleteProjectDialog, RenameProjectDialog } from "./ProjectMutationDialogs";
 import { ProjectBrowserModal } from "./ProjectBrowserModal";
 import { useProjectManagerMutations } from "@/hooks/useProjectManagerMutations";
+import { ProjectManagerTopActions } from "./ProjectManagerTopActions";
+import { ProjectManagerSaveAsDialog } from "./ProjectManagerSaveAsDialog";
+import { ProjectManagerPendingDialog, type PendingProjectChoice } from "./ProjectManagerPendingDialog";
 
 type PendingAction =
   | { kind: "new" }
@@ -28,9 +30,12 @@ export function ProjectManager({ persistence }: { persistence: ProjectPersistenc
   const isLoading = useChatStore((state) => state.isLoading);
   const candidate = useChatStore((state) => state.candidate);
   const createNewProject = useChatStore((state) => state.createNewProject);
-  const updateProjectName = useChatStore((state) => state.updateProjectName);
   const clearGeneratedFiles = useSandpackStore((state) => state.clearGeneratedFiles);
   const isAssembling = useSandpackStore((state) => state.isAssembling);
+  const previewFiles = useSandpackStore((state) => state.previewFiles);
+  const currentFiles = useSandpackStore((state) => state.currentFiles);
+  const generatedFiles = useSandpackStore((state) => state.generatedFiles);
+  const previewManifest = useSandpackStore((state) => state.previewManifest);
   const { refreshProjects } = persistence;
   const [showBrowser, setShowBrowser] = useState(false);
   const [showSaveAs, setShowSaveAs] = useState(false);
@@ -178,7 +183,7 @@ export function ProjectManager({ persistence }: { persistence: ProjectPersistenc
     }
   };
 
-  const choosePending = (choice: "save" | "discard" | "saveAs" | "cancel"): void => {
+  const choosePending = (choice: PendingProjectChoice): void => {
     const action = pending;
     if (action === null || choice === "cancel") {
       setPending(null);
@@ -207,33 +212,28 @@ export function ProjectManager({ persistence }: { persistence: ProjectPersistenc
   };
 
   const statusText = persistence.dirty ? "未保存" : storageStatusLabel(persistence.status);
-  const statusClass = persistence.dirty ? "project-status dirty" : `project-status ${persistence.status}`;
   const candidateBlocksSwitch = candidate !== null;
 
   return (
     <>
-      <div className="project-manager" aria-label="项目管理">
-        <input
-          aria-label="项目名称"
-          value={projectName}
-          onChange={(event) => updateProjectName(event.target.value.trim().length === 0 ? "新项目" : event.target.value)}
-          title="项目名称"
-        />
-        <span className={statusClass} role="status">{acceptedVersion === undefined ? "尚无已接受版本" : `已接受版本 v${String(acceptedVersion.versionNumber)}`} · {statusText}</span>
-        <button type="button" onClick={requestNewProject} disabled={busy || storageBusy || isLoading || candidateBlocksSwitch} title={isLoading ? "生成进行中，暂不能新建项目" : candidateBlocksSwitch ? "请先应用或放弃候选" : "新建空白项目"}>
-          <Plus size={13} /> 新建项目
-        </button>
-        <button type="button" onClick={save} disabled={busy || storageBusy} title="保存当前工作副本">
-          <Save size={13} /> 保存
-        </button>
-        <button type="button" onClick={() => setShowBrowser(true)} disabled={busy || storageBusy || isLoading || candidateBlocksSwitch} title={isLoading ? "生成进行中，暂不能切换项目" : candidateBlocksSwitch ? "请先应用或放弃候选" : "打开本地项目"}>
-          <FolderOpen size={13} /> 打开
-        </button>
-        <button type="button" onClick={() => setShowBrowser(true)} disabled={busy || storageBusy || isLoading || candidateBlocksSwitch} title="查看当前项目版本历史"><History size={13} /> 版本历史</button>
-        <button type="button" onClick={beginSaveAs} disabled={busy || storageBusy || isLoading || candidateBlocksSwitch} title={isLoading ? "生成进行中，暂不能另存为" : candidateBlocksSwitch ? "请先应用或放弃候选" : "另存为新项目"}>
-          <Copy size={13} /> 另存为
-        </button>
-      </div>
+      <ProjectManagerTopActions
+        projectName={projectName}
+        acceptedVersion={acceptedVersion}
+        statusText={statusText}
+        dirty={persistence.dirty}
+        busy={busy}
+        storageBusy={storageBusy}
+        isLoading={isLoading}
+        candidatePresent={candidateBlocksSwitch}
+        previewFiles={previewFiles}
+        currentFiles={currentFiles}
+        generatedFiles={generatedFiles}
+        previewManifest={previewManifest}
+        onOpenProjects={() => setShowBrowser(true)}
+        onSave={save}
+        onNewProject={requestNewProject}
+        onSaveAs={beginSaveAs}
+      />
 
       {persistence.error !== null && <p className="project-storage-error" role="alert">{persistence.error}</p>}
       {persistence.warning !== null && <p className="project-storage-warning" role="status">{persistence.warning}</p>}
@@ -258,20 +258,13 @@ export function ProjectManager({ persistence }: { persistence: ProjectPersistenc
       )}
 
       {showSaveAs && (
-        <div className="project-modal-backdrop" role="presentation">
-          <section className="project-modal project-modal-small" role="dialog" aria-modal="true" aria-labelledby="save-as-title">
-            <div className="project-modal-head">
-              <h2 id="save-as-title">另存为新项目</h2>
-              <button type="button" onClick={() => { setShowSaveAs(false); setPendingAfterSaveAs(null); }} aria-label="关闭另存为"><X size={16} /></button>
-            </div>
-            <label className="project-name-label" htmlFor="save-as-name">项目名称</label>
-            <input id="save-as-name" autoFocus value={saveAsName} onChange={(event) => setSaveAsName(event.target.value)} />
-            <div className="project-modal-actions">
-              <button type="button" onClick={() => { setShowSaveAs(false); setPendingAfterSaveAs(null); }}>取消</button>
-              <button type="button" onClick={() => void submitSaveAs()} disabled={busy || saveAsName.trim().length === 0}>保存副本</button>
-            </div>
-          </section>
-        </div>
+        <ProjectManagerSaveAsDialog
+          name={saveAsName}
+          busy={busy}
+          onNameChange={setSaveAsName}
+          onClose={() => { setShowSaveAs(false); setPendingAfterSaveAs(null); }}
+          onSubmit={() => void submitSaveAs()}
+        />
       )}
 
       {mutations.renameTarget !== null && (
@@ -295,18 +288,7 @@ export function ProjectManager({ persistence }: { persistence: ProjectPersistenc
       )}
 
       {pending !== null && (
-        <div className="project-modal-backdrop" role="presentation">
-          <section className="project-modal project-modal-small" role="dialog" aria-modal="true" aria-labelledby="dirty-title">
-            <div className="project-modal-head"><h2 id="dirty-title">当前项目有未保存修改</h2></div>
-            <p className="project-modal-note">切换项目、恢复版本或新建项目之前，请选择如何处理当前工作副本。</p>
-            <div className="project-modal-actions project-modal-actions-stack">
-              <button type="button" onClick={() => choosePending("save")} disabled={busy}>保存并继续</button>
-              <button type="button" onClick={() => choosePending("saveAs")} disabled={busy}>另存为并继续</button>
-              <button type="button" onClick={() => choosePending("discard")} disabled={busy}>放弃当前修改</button>
-              <button type="button" onClick={() => choosePending("cancel")} disabled={busy}>取消</button>
-            </div>
-          </section>
-        </div>
+        <ProjectManagerPendingDialog busy={busy} onChoose={choosePending} />
       )}
     </>
   );

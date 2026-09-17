@@ -156,6 +156,18 @@ body {
 .candidate-apply:hover { background: #485cae; }
 .candidate-apply:disabled,.candidate-panel-head > button:disabled { cursor: wait; opacity: .55; }
 
+/* Workbench preview controls stay in their own layout space. */
+.preview-toolbar { align-items: center; background: #fffffff2; border: 1px solid #dce3ef; border-radius: 9px; box-shadow: 0 8px 20px #2f467b14; display: inline-flex; gap: 4px; padding: 4px; }
+.preview-toolbar > button,.preview-view-toggle button { align-items: center; background: transparent; border: 0; border-radius: 6px; color: #64718b; cursor: pointer; display: inline-flex; font-size: 11px; gap: 5px; padding: 6px 8px; white-space: nowrap; }
+.preview-toolbar > button:hover,.preview-view-toggle button:hover { background: #f0f3ff; color: #4f62c0; }
+.preview-view-toggle { align-items: center; background: #f4f6fb; border: 1px solid #e7ebf4; border-radius: 7px; display: inline-flex; gap: 2px; padding: 2px; }
+.preview-view-toggle button[aria-pressed="true"] { background: #fff; box-shadow: 0 1px 3px #2f467b1c; color: #4e61bf; font-weight: 700; }
+
+@media (max-width: 700px) {
+  .preview-toolbar > button span { display: none; }
+  .preview-toolbar > button,.preview-view-toggle button { padding: 6px; }
+}
+
 @media (max-width: 520px) {
   .case-preview-header { align-items: flex-start; flex-direction: column; }
   .case-preview-actions { justify-content: flex-start; }
