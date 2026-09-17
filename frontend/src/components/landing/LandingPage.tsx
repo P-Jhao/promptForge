@@ -11,66 +11,70 @@ const taskBoardFeatures = ["三列任务看板", "关键词与优先级筛选", 
 export function LandingPage() {
   return (
     <div className={styles.page}>
-      <header className={styles.nav}>
-        <Link className={styles.brand} href="/" aria-label="PromptForge 首页">
-          <span className={styles.brandMark}>
-            <Image src="/logo.png" alt="PromptForge 标志" width={30} height={30} priority className={styles.brandMarkImage} />
-          </span>
-          <span>PromptForge</span>
-          <span className={styles.brandBeta}>Beta</span>
-        </Link>
-        <nav className={styles.navLinks} aria-label="主导航">
-          <a href="#hero-case">案例</a>
-          <a href="#workflow">流程</a>
-          <Link href="/workspace">工作台</Link>
-        </nav>
+      <header className={styles.navShell}>
+        <div className={styles.nav}>
+          <Link className={styles.brand} href="/" aria-label="PromptForge 首页">
+            <span className={styles.brandMark}>
+              <Image src="/logo.png" alt="PromptForge 标志" width={30} height={30} priority className={styles.brandMarkImage} />
+            </span>
+            <span>PromptForge</span>
+            <span className={styles.brandBeta}>Beta</span>
+          </Link>
+          <nav className={styles.navLinks} aria-label="主导航">
+            <a href="#hero-case">案例</a>
+            <a href="#workflow">流程</a>
+            <Link href="/workspace">工作台</Link>
+          </nav>
+        </div>
       </header>
 
       <main>
-        <section className={styles.hero} id="hero-case">
-          <div className={styles.heroGlow} aria-hidden="true" />
-          <div className={styles.heroCopy}>
-            <p className={styles.eyebrow}><span aria-hidden="true" />前端原型工作台</p>
-            <h1><span>从一个想法，到</span><span>可交互的前端原型。</span></h1>
-            <p className={styles.heroLede}>
-              描述需求，查看结果，继续调整。PromptForge 把场景、数据和关键动作整理成可预览的页面与代码。
-            </p>
-            <div className={styles.tagRow} aria-label="支持技术">
-              <span>React</span>
-              <span>TypeScript</span>
+        <section className={styles.heroShell} id="hero-case">
+          <div className={styles.hero}>
+            <div className={styles.heroGlow} aria-hidden="true" />
+            <div className={styles.heroCopy}>
+              <p className={styles.eyebrow}><span aria-hidden="true" />前端原型工作台</p>
+              <h1><span>从一个想法，到</span><span><em className={styles.gradientText}>可交互的前端原型</em>。</span></h1>
+              <p className={styles.heroLede}>
+                描述需求，查看结果，继续调整。PromptForge 把场景、数据和关键动作整理成可预览的页面与代码。
+              </p>
+              <div className={styles.tagRow} aria-label="支持技术">
+                <span>React</span>
+                <span>TypeScript</span>
+              </div>
+              <div className={styles.actions}>
+                <Link className={styles.primaryButton} href="/workspace?case=novel&scene=library">
+                  查看案例 <ArrowRight size={16} aria-hidden="true" />
+                </Link>
+                <Link className={styles.secondaryButton} href="/workspace">
+                  开始生成 <ChevronRight size={16} aria-hidden="true" />
+                </Link>
+              </div>
+              <p className={styles.heroNote}>示例是固定成果；真实请求会调用模型，并先进入可确认的候选。</p>
             </div>
-            <div className={styles.actions}>
-              <Link className={styles.primaryButton} href="/workspace?case=novel&scene=library">
-                查看案例 <ArrowRight size={16} aria-hidden="true" />
-              </Link>
-              <Link className={styles.secondaryButton} href="/workspace">
-                开始生成 <ChevronRight size={16} aria-hidden="true" />
-              </Link>
-            </div>
-            <p className={styles.heroNote}>示例是固定成果；真实请求会调用模型，并先进入可确认的候选。</p>
-          </div>
 
-          <Link className={styles.heroVisual} href="/workspace?case=task-board-real-eval" aria-label="打开任务看板预生成成果">
-            <span className={styles.visualLabel}>
-              <span className={styles.statusDot} aria-hidden="true" />
-              工作台实拍
-              <span className={styles.visualSource}>预生成成果 · 人工修正</span>
-            </span>
-            <span className={styles.visualFrame}>
-              <Image
-                src="/task-board-workspace.webp"
-                alt="任务看板工作台截图，展示看板列、筛选控件和任务卡片"
-                fill
-                sizes="(max-width: 820px) 100vw, 55vw"
-                className={styles.visualImage}
-                priority
-              />
-            </span>
-            <span className={styles.visualCaption}>
-              <span><strong>任务看板</strong><small>三列、筛选与任务卡片</small></span>
-              <ArrowRight size={17} aria-hidden="true" />
-            </span>
-          </Link>
+            <Link className={styles.heroVisual} href="/workspace?case=task-board-real-eval" aria-label="打开任务看板预生成成果">
+              <span className={styles.visualLabel}>
+                <span className={styles.statusDot} aria-hidden="true" />
+                工作台实拍
+                <span className={styles.visualSource}>预生成成果 · 人工修正</span>
+              </span>
+              <span className={styles.visualFrame}>
+                <Image
+                  src="/task-board-workspace.webp"
+                  alt="任务看板工作台截图，展示看板列、筛选控件和任务卡片"
+                  fill
+                  sizes="(max-width: 820px) 100vw, 55vw"
+                  className={styles.visualImage}
+                  priority
+                />
+              </span>
+              <span className={styles.visualCaption}>
+                <span><strong>任务看板</strong><small>三列、筛选与任务卡片</small></span>
+                <ArrowRight size={17} aria-hidden="true" />
+              </span>
+            </Link>
+          </div>
         </section>
 
         <section className={styles.proofBar} aria-label="当前能力">
