@@ -126,6 +126,7 @@ try {
   assert.match(landingCss, /landing-cta-bg\.webp/);
   assert.match(landingCss, /max-width:1200px/);
   assert.match(landingCss, /grid-template-columns:minmax\(0,\.45fr\) minmax\(0,\.55fr\)/);
+  assert.match(landingCss, /font-size:clamp\(44px,4\.8vw,56px\)/);
   assert.match(landingCss, /@media \(hover:hover\) and \(pointer:fine\)/);
   assert.match(landingCss, /prefers-reduced-motion:reduce/);
   assert.doesNotMatch(landingCss, /case-preview|iframe/);
