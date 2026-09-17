@@ -19,7 +19,7 @@
 .eyebrow,.sectionKicker{color:#6171bf;font-size:11px;font-weight:800;letter-spacing:.13em;margin:0;text-transform:uppercase;}
 .eyebrow{align-items:center;display:flex;gap:9px;}
 .eyebrow > span{background:#6277de;border-radius:50%;height:7px;width:7px;}
-.heroCopy h1{color:#17213b;font-size:clamp(44px,4.8vw,56px);letter-spacing:-.065em;line-height:1.08;margin:20px 0 22px;max-width:590px;overflow-wrap:anywhere;}.heroCopy h1 span{display:block;}.gradientText{background:linear-gradient(105deg,#5369d8,#956eea);-webkit-background-clip:text;background-clip:text;color:transparent;font-style:normal;}
+.heroCopy h1{color:#17213b;font-size:clamp(46px,5.2vw,62px);letter-spacing:-.065em;line-height:1.08;margin:20px 0 22px;max-width:590px;overflow-wrap:anywhere;}.heroCopy h1 span{display:block;}.gradientText{background:linear-gradient(105deg,#5369d8,#956eea);-webkit-background-clip:text;background-clip:text;color:transparent;font-style:normal;}
 .heroLede{color:var(--muted);font-size:16px;line-height:1.85;margin:0;max-width:510px;}
 .tagRow{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px;}
 .tagRow span{background:#ffffffaa;border:1px solid #dbe3f7;border-radius:999px;color:#5e6fb8;font-size:11px;font-weight:750;padding:5px 10px;}
