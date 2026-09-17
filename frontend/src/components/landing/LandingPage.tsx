@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Check, ChevronRight } from "lucide-react";
 import { useState } from "react";
@@ -13,7 +14,9 @@ export function LandingPage() {
     <div className="landing-page">
       <header className="landing-nav">
         <Link className="brand" href="/" aria-label="PromptForge 首页">
-          <span className="brand-mark">P</span>
+          <span className="brand-mark">
+            <Image src="/logo.png" alt="PromptForge 标志" width={30} height={30} priority className="brand-mark-image" />
+          </span>
           <span>PromptForge</span>
           <span className="brand-beta">Beta</span>
         </Link>
@@ -33,7 +36,7 @@ export function LandingPage() {
               用自然语言描述场景、数据和关键动作，PromptForge 会把需求拆成页面结构、组件和代码，让你在一个工作台里继续确认与调整。
             </p>
             <div className="hero-actions">
-              <a className="button-primary" href="#hero-case">查看案例 <ArrowRight size={16} /></a>
+              <Link className="button-primary" href="/workspace?case=novel&scene=library">查看案例 <ArrowRight size={16} /></Link>
               <Link className="button-secondary" href="/workspace">开始生成 <ChevronRight size={16} /></Link>
             </div>
             <p className="hero-note">预置案例无需调用模型；输入自己的需求后，才会发起一次新的生成请求。</p>

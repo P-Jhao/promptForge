@@ -111,6 +111,10 @@ try {
   assert.doesNotMatch(workspacePage, /\/api\/chat/);
   assert.match(landingPage, /workspace\?case=task-board-real-eval/);
   assert.doesNotMatch(landingPage, /\/api\/chat/);
+  assert.match(landingPage, /<Image[\s\S]*src="\/logo\.png"[\s\S]*alt="PromptForge 标志"/);
+  assert.doesNotMatch(landingPage, /className="brand-mark">P/);
+  assert.match(landingPage, /<Link className="button-primary" href="\/workspace\?case=novel&scene=library">查看案例/);
+  assert.doesNotMatch(landingPage, /<a className="button-primary" href="#hero-case">查看案例/);
   assert.match(chatPanel, /workspace\?case=novel&scene=library/);
   assert.match(chatPanel, /workspace\?case=task-board-real-eval[^<]*打开任务看板案例/);
   assert.doesNotMatch(chatPanel, /workspace\?case=novel&scene=notes/);
