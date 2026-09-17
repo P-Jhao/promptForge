@@ -1,123 +1,112 @@
 import { useMemo, useState } from "react";
-import type { ReactNode } from "react";
 
+type TrendKey = "customers" | "revenue" | "orders" | "api";
 type RangeKey = "7" | "30" | "90" | "empty";
-type MetricTone = "blue" | "violet" | "green" | "orange";
+type MetricTone = "blue" | "green" | "violet" | "orange";
+type CustomerStatus = "活跃" | "沉睡";
 
-interface AnalyticsRow {
-  date: string;
-  visits: number;
-  orders: number;
-  revenue: number;
-  categories: Record<string, number>;
-}
+interface TrendPoint { date: string; value: number; }
+interface CustomerRow { company: string; industry: string; level: string; amount: string; created: string; active: string; status: CustomerStatus; }
+interface MetricCardProps { label: string; value: string; change: string; tone: MetricTone; icon: string; }
+interface RangeSnapshot { label: string; startDate: string; endDate: string; metrics: MetricCardProps[]; trends: Record<TrendKey, TrendPoint[]>; }
 
-interface CategoryRow {
-  name: string;
-  value: number;
-}
+const dates = ["03-23", "03-24", "03-25", "03-26", "03-27", "03-28", "03-29", "03-30", "03-31", "04-01", "04-02", "04-03", "04-04", "04-05", "04-06", "04-07", "04-08", "04-09", "04-10", "04-11", "04-12", "04-13", "04-14", "04-15", "04-16", "04-17", "04-18", "04-19", "04-20", "04-21", "04-22"];
+const customerTrend = [78, 84, 102, 128, 119, 118, 142, 168, 181, 196, 173, 165, 185, 199, 211, 207, 239, 268, 222, 204, 201, 218, 238, 204, 231, 252, 235, 260, 278, 284, 302];
+const trendData: Record<TrendKey, TrendPoint[]> = {
+  customers: dates.map((date, index) => ({ date, value: customerTrend[index] })),
+  revenue: dates.map((date, index) => ({ date, value: Math.round(82 + index * 6 + (index % 5) * 13) })),
+  orders: dates.map((date, index) => ({ date, value: Math.round(38 + index * 2.1 + (index % 4) * 5) })),
+  api: dates.map((date, index) => ({ date, value: Math.round(160 + index * 7 + (index % 6) * 15) })),
+};
 
-const CATEGORIES = ["订阅", "咨询", "增值服务"];
-const RANGE_OPTIONS: Array<{ value: RangeKey; label: string }> = [
-  { value: "7", label: "近 7 天" },
-  { value: "30", label: "近 30 天" },
-  { value: "90", label: "近 90 天" },
-  { value: "empty", label: "无数据演示" },
+const metrics: MetricCardProps[] = [
+  { label: "新增客户数", value: "1,268", change: "+12.5%", tone: "blue", icon: "♧" },
+  { label: "总收入（元）", value: "¥ 238,560", change: "+18.2%", tone: "green", icon: "¥" },
+  { label: "订单数", value: "892", change: "+9.4%", tone: "blue", icon: "▤" },
+  { label: "客户转化率", value: "6.8%", change: "+1.2%", tone: "violet", icon: "ϟ" },
+  { label: "活跃用户数", value: "12,480", change: "+14.6%", tone: "blue", icon: "♙" },
+  { label: "API 调用量", value: "86,521", change: "+27.3%", tone: "blue", icon: "◇" },
 ];
-const FIXED_DATA: AnalyticsRow[] = Array.from({ length: 60 }, (_, index) => {
-  const date = new Date(Date.UTC(2024, 5, 1 + index)).toISOString().slice(0, 10);
-  return {
-    date,
-    visits: 420 + (index * 37) % 280,
-    orders: 38 + (index * 11) % 42,
-    revenue: 12800 + (index * 1730) % 9200,
-    categories: {
-      订阅: 18 + (index * 5) % 18,
-      咨询: 9 + (index * 3) % 12,
-      增值服务: 6 + (index * 2) % 9,
-    },
-  };
+const rangeOptions: Array<{ value: RangeKey; label: string }> = [{ value: "7", label: "过去 7 天" }, { value: "30", label: "过去 30 天" }, { value: "90", label: "过去 90 天" }, { value: "empty", label: "无数据演示" }];
+const sevenDates = ["04-16", "04-17", "04-18", "04-19", "04-20", "04-21", "04-22"];
+const sevenCustomerTrend = [236, 248, 261, 276, 284, 294, 309];
+const ninetyDates = Array.from({ length: 90 }, (_, index) => new Date(Date.UTC(2024, 0, 24 + index)).toISOString().slice(5, 10));
+const ninetyCustomerTrend = Array.from({ length: 90 }, (_, index) => 58 + index * 2 + (index % 7) * 9);
+const createTrendSnapshot = (rangeDates: readonly string[], customerValues: readonly number[], base: number): Record<TrendKey, TrendPoint[]> => ({
+  customers: rangeDates.map((date, index) => ({ date, value: customerValues[index] })),
+  revenue: rangeDates.map((date, index) => ({ date, value: base + index * 6 + (index % 5) * 13 })),
+  orders: rangeDates.map((date, index) => ({ date, value: Math.round(base / 2 + index * 2.1 + (index % 4) * 5) })),
+  api: rangeDates.map((date, index) => ({ date, value: base * 2 + index * 7 + (index % 6) * 15 })),
 });
+const emptyMetrics = metrics.map((metric) => ({ ...metric, value: "—", change: "—" }));
+const snapshots: Record<RangeKey, RangeSnapshot> = {
+  "7": { label: "过去 7 天", startDate: "2024-04-16", endDate: "2024-04-22", metrics: [{ label: "新增客户数", value: "309", change: "+8.4%", tone: "blue", icon: "♧" }, { label: "总收入（元）", value: "¥ 56,780", change: "+11.6%", tone: "green", icon: "¥" }, { label: "订单数", value: "198", change: "+6.2%", tone: "blue", icon: "▤" }, { label: "客户转化率", value: "7.1%", change: "+0.8%", tone: "violet", icon: "ϟ" }, { label: "活跃用户数", value: "2,486", change: "+10.1%", tone: "blue", icon: "♙" }, { label: "API 调用量", value: "18,920", change: "+16.8%", tone: "blue", icon: "◇" }], trends: createTrendSnapshot(sevenDates, sevenCustomerTrend, 74) },
+  "30": { label: "过去 30 天", startDate: "2024-03-23", endDate: "2024-04-22", metrics, trends: trendData },
+  "90": { label: "过去 90 天", startDate: "2024-01-24", endDate: "2024-04-22", metrics: [{ label: "新增客户数", value: "3,964", change: "+20.8%", tone: "blue", icon: "♧" }, { label: "总收入（元）", value: "¥ 692,450", change: "+24.6%", tone: "green", icon: "¥" }, { label: "订单数", value: "2,740", change: "+17.3%", tone: "blue", icon: "▤" }, { label: "客户转化率", value: "6.4%", change: "+1.5%", tone: "violet", icon: "ϟ" }, { label: "活跃用户数", value: "38,920", change: "+22.1%", tone: "blue", icon: "♙" }, { label: "API 调用量", value: "254,160", change: "+31.4%", tone: "blue", icon: "◇" }], trends: createTrendSnapshot(ninetyDates, ninetyCustomerTrend, 94) },
+  empty: { label: "无数据演示", startDate: "—", endDate: "—", metrics: emptyMetrics, trends: createTrendSnapshot([], [], 0) },
+};
+
+const channels = [{ name: "官网", value: 1680, color: "#596ff0" }, { name: "内容营销", value: 1240, color: "#40b9e6" }, { name: "社交媒体", value: 892, color: "#54cba5" }, { name: "合作伙伴", value: 680, color: "#f3c45a" }, { name: "其他", value: 420, color: "#f06b76" }];
+const industries = [{ name: "互联网", value: 32.4, color: "#5578ed" }, { name: "科技服务", value: 18.6, color: "#a4c9df" }, { name: "金融", value: 12.8, color: "#59cfaa" }, { name: "教育", value: 10.5, color: "#f0a64a" }, { name: "制造业", value: 8.7, color: "#a477e5" }, { name: "其他", value: 17, color: "#bcd4e5" }];
+const customers: CustomerRow[] = [
+  { company: "腾讯科技有限公司", industry: "互联网", level: "黄金客户", amount: "¥ 58,000", created: "2024-04-20", active: "2024-04-22", status: "活跃" },
+  { company: "阿里巴巴集团", industry: "电子商务", level: "重要客户", amount: "¥ 42,000", created: "2024-04-18", active: "2024-04-21", status: "活跃" },
+  { company: "华为技术有限公司", industry: "通信技术", level: "重要客户", amount: "¥ 35,000", created: "2024-04-16", active: "2024-04-20", status: "活跃" },
+  { company: "字节跳动", industry: "内容媒体", level: "普通客户", amount: "¥ 28,000", created: "2024-04-14", active: "2024-04-20", status: "沉睡" },
+  { company: "美团点评", industry: "本地生活", level: "重要客户", amount: "¥ 26,000", created: "2024-04-12", active: "2024-04-19", status: "活跃" },
+  { company: "小米科技", industry: "智能硬件", level: "普通客户", amount: "¥ 18,000", created: "2024-04-10", active: "2024-04-18", status: "活跃" },
+  { company: "京东集团", industry: "电子商务", level: "普通客户", amount: "¥ 16,000", created: "2024-04-08", active: "2024-04-16", status: "沉睡" },
+  { company: "网易", industry: "游戏文娱", level: "普通客户", amount: "¥ 12,000", created: "2024-04-05", active: "2024-04-15", status: "活跃" },
+];
+const trendTabs: Array<{ key: TrendKey; label: string }> = [{ key: "customers", label: "新增客户" }, { key: "revenue", label: "收入" }, { key: "orders", label: "订单数" }, { key: "api", label: "API 调用量" }];
 
 export default function App() {
+  const [trendKey, setTrendKey] = useState<TrendKey>("customers");
   const [range, setRange] = useState<RangeKey>("30");
-  const filtered = useMemo(() => range === "empty" ? [] : FIXED_DATA.slice(-Number(range)), [range]);
-  const metrics = useMemo(() => filtered.reduce((total, row) => ({
-    visits: total.visits + row.visits,
-    orders: total.orders + row.orders,
-    revenue: total.revenue + row.revenue,
-  }), { visits: 0, orders: 0, revenue: 0 }), [filtered]);
-  const categories = useMemo<CategoryRow[]>(() => CATEGORIES.map((name) => ({
-    name,
-    value: filtered.reduce((total, row) => total + row.categories[name], 0),
-  })), [filtered]);
-  const conversion = metrics.visits === 0 ? 0 : (metrics.orders / metrics.visits) * 100;
-  const averageOrder = metrics.orders === 0 ? 0 : metrics.revenue / metrics.orders;
-  const activeRange = RANGE_OPTIONS.find((option) => option.value === range)?.label ?? "近 30 天";
-  const change = range === "7" ? "+12.8%" : range === "90" ? "+18.4%" : range === "empty" ? "—" : "+16.2%";
+  const [query, setQuery] = useState("");
+  const [activeFilter, setActiveFilter] = useState(false);
+  const snapshot = snapshots[range];
+  const visibleCustomers = useMemo(() => customers.filter((row) => {
+    const matchesQuery = row.company.includes(query) || row.industry.includes(query);
+    return matchesQuery && (!activeFilter || row.status === "活跃");
+  }), [activeFilter, query]);
+  const tableRows = range === "empty" ? [] : visibleCustomers;
 
-  return (
-    <div className="analytics-app">
-      <aside className="analytics-sidebar">
-        <div className="brand-lockup"><span className="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3.5 14.3 8l5 .7-3.6 3.5.9 5-4.6-2.4-4.6 2.4.9-5-3.6-3.5 5-.7L12 3.5Z" /></svg></span><div><strong>PulseBoard</strong><span>业务分析平台</span></div></div>
-        <div className="sidebar-group"><span className="sidebar-label">工作台</span><nav aria-label="工作台导航"><button className="side-nav active" type="button"><span className="nav-icon">▦</span>数据看板</button><button className="side-nav" type="button"><span className="nav-icon">◫</span>统计报表</button><button className="side-nav" type="button"><span className="nav-icon">⌁</span>实时监控</button></nav></div>
-        <div className="sidebar-group"><span className="sidebar-label">管理</span><nav aria-label="管理导航"><button className="side-nav" type="button"><span className="nav-icon">◌</span>团队成员</button><button className="side-nav" type="button"><span className="nav-icon">⚙</span>系统设置</button></nav></div>
-        <div className="sidebar-bottom"><div className="sidebar-help"><span className="help-dot">?</span><div><strong>需要帮助？</strong><span>查看使用指南</span></div><span className="arrow">↗</span></div><div className="sidebar-user"><span className="avatar small-avatar">陈</span><span><strong>陈嘉豪</strong><small>管理员</small></span><span className="more">•••</span></div></div>
-      </aside>
-
-      <div className="analytics-shell">
-        <header className="topbar"><div className="breadcrumbs"><span>工作台</span><b>/</b><strong>数据看板</strong></div><div className="topbar-actions"><button className="top-icon" type="button" aria-label="通知">♧<i /></button><span className="topbar-divider" /><span className="avatar">陈</span><button className="top-name" type="button">陈嘉豪 <span>⌄</span></button></div></header>
-        <main className="dashboard-main">
-          <section className="page-heading"><div><p className="eyebrow">ANALYTICS OVERVIEW</p><h1>经营分析看板</h1><p className="page-subtitle">用数据看见业务变化，让每一次决策都有依据。</p></div><div className="heading-meta"><span className="live-dot" />数据已更新 <strong>刚刚</strong></div></section>
-
-          <section className="filter-bar"><div className="filter-intro"><span className="filter-symbol">⌁</span><div><strong>筛选数据范围</strong><small>所有指标与图表将同步更新</small></div></div><div className="filter-controls"><span className="filter-caption">日期范围</span><label className="range-select"><select value={range} onChange={(event) => setRange(event.target.value as RangeKey)} aria-label="选择数据范围">{RANGE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><span>⌄</span></label><span className="range-active">{activeRange}</span></div></section>
-
-          <section className="metric-grid" aria-label="核心指标"><MetricCard label="总访问量" value={metrics.visits.toLocaleString()} hint="较前一周期" change={change} tone="blue" icon="↗" /><MetricCard label="订单总数" value={metrics.orders.toLocaleString()} hint="较前一周期" change={change} tone="violet" icon="◈" /><MetricCard label="转化率" value={`${conversion.toFixed(1)}%`} hint="订单 / 访问量" change={range === "empty" ? "—" : "+2.6%"} tone="green" icon="◎" /><MetricCard label="总收入" value={`¥${metrics.revenue.toLocaleString()}`} hint="含税收入" change={range === "empty" ? "—" : "+21.3%"} tone="orange" icon="¥" /></section>
-
-          {filtered.length === 0 ? <EmptyState activeRange={activeRange} /> : <>
-            <section className="chart-grid"><article className="panel trend-panel"><PanelHeading title="访问与订单趋势" subtitle={`${filtered[0].date} — ${filtered[filtered.length - 1].date}`} extra={<span className="chart-legend"><i className="legend-visits" />访问量 <i className="legend-orders" />订单数</span>} /><TrendChart rows={filtered} /></article><article className="panel category-panel"><PanelHeading title="业务分类" subtitle="当前范围订单构成" extra={<span className="panel-link">查看明细 ↗</span>} /><CategoryChart rows={categories} /></article></section>
-            <section className="insight-grid"><article className="insight-card"><div className="insight-title"><span className="insight-icon purple">◉</span><span>平均客单价</span><small>较前一周期</small></div><strong>¥{averageOrder.toLocaleString(undefined, { maximumFractionDigits: 0 })}</strong><div className="mini-progress"><i style={{ width: `${Math.min(100, conversion * 12)}%` }} /></div><span className="insight-foot">订单质量持续提升</span></article><article className="insight-card"><div className="insight-title"><span className="insight-icon blue">⌁</span><span>日均访问量</span><small>活跃度</small></div><strong>{Math.round(metrics.visits / filtered.length).toLocaleString()}</strong><div className="spark-bars" aria-hidden="true">{[42, 58, 50, 74, 64, 86, 78].map((height, index) => <i key={index} style={{ height: `${height}%` }} />)}</div><span className="insight-foot">高于上周同期 8.4%</span></article><article className="insight-card"><div className="insight-title"><span className="insight-icon orange">✦</span><span>增长机会</span><small>业务提示</small></div><strong>订阅业务</strong><div className="opportunity-line"><span>贡献订单最多</span><b>{categories[0].value.toLocaleString()}</b></div><span className="insight-foot">建议关注复购转化</span></article></section>
-            <section className="data-note"><span>i</span><p>数据集共 {filtered.length} 天，筛选变化会同步重新计算指标卡、趋势图和分类图。数据为固定合成内容，仅用于产品界面演示。</p><b>合成数据</b></section>
-          </>}
-        </main>
-      </div>
+  return <div className="analytics-app">
+    <header className="topbar"><div className="brand"><span className="brand-mark" aria-hidden="true">✦</span><strong>PromptForge</strong></div><nav className="primary-nav" aria-label="主导航"><button className="active" type="button">数据分析</button><button type="button">客户管理</button><button type="button">产品中心</button><button type="button">团队协作</button></nav><div className="topbar-tools"><label className="global-search"><span>⌕</span><input placeholder="搜索数据看板、指标或功能..." aria-label="搜索" /><kbd>⌘ K</kbd></label><button className="notification" type="button" aria-label="通知">♧<i /></button><span className="top-avatar">Z</span><button className="account" type="button"><strong>张三</strong><small>企业版</small><span>⌄</span></button></div></header>
+    <div className="workspace"><aside className="analytics-sidebar"><div className="side-title"><span>▥</span><strong>数据分析</strong></div><nav className="side-nav" aria-label="数据分析导航"><button className="active" type="button">⌂<span>总览看板</span></button><button type="button">▣<span>业务数据</span></button><button type="button">♙<span>用户分析</span></button><button type="button">◇<span>产品分析</span></button><button type="button">♧<span>渠道分析</span></button><button type="button">▤<span>财务分析</span></button><button type="button">▧<span>自定义报表</span></button></nav><div className="side-divider" /><span className="side-label">数据工具</span><nav className="side-nav tools"><button type="button">⇩<span>数据导出</span></button><button type="button">⌕<span>数据订阅</span></button><button type="button">⚙<span>报表设置</span></button></nav><div className="sync-card"><strong>数据更新</strong><span>● 已实时更新</span><small>最近更新：2024-04-22 10:24</small></div></aside>
+      <main className="dashboard-main"><section className="page-heading"><div><h1>数据分析看板</h1><p>全面掌握业务数据，洞察增长趋势，驱动更好的决策</p></div><div className="date-controls"><label className="date-range"><span>▣</span><input value={snapshot.startDate} readOnly aria-label="开始日期" /><b>→</b><input value={snapshot.endDate} readOnly aria-label="结束日期" /></label><label className="period-select"><select value={range} onChange={(event) => setRange(event.target.value as RangeKey)} aria-label="日期范围">{rangeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><span>⌄</span></label></div></section>
+        <section className="metric-grid" aria-label="核心指标">{snapshot.metrics.map((metric) => <MetricCard key={metric.label} {...metric} />)}</section>
+        {range === "empty" ? <EmptyDashboardState label={snapshot.label} /> : <section className="visual-grid"><article className="panel trend-panel"><div className="panel-title"><h2>业务趋势</h2><div className="trend-tabs">{trendTabs.map((tab) => <button key={tab.key} className={trendKey === tab.key ? "active" : ""} type="button" onClick={() => setTrendKey(tab.key)}>{tab.label}</button>)}</div></div><TrendChart data={snapshot.trends[trendKey]} trendKey={trendKey} /></article><article className="panel channel-panel"><div className="panel-title"><h2>渠道来源</h2><button className="mini-select" type="button">全部渠道　⌄</button></div><ChannelChart /></article><article className="panel industry-panel"><div className="panel-title"><h2>客户行业分布</h2><button className="mini-select" type="button">全部　⌄</button></div><IndustryChart /></article></section>}
+        <section className="panel table-panel"><div className="table-heading"><h2>客户数据明细</h2><div className="table-actions"><label className="table-search"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索客户名称、联系人或行业..." aria-label="搜索客户明细" /></label><button className={activeFilter ? "action active" : "action"} type="button" onClick={() => setActiveFilter((value) => !value)}>▽ 筛选</button><button className="action" type="button">⇩ 导出</button><button className="action more-action" type="button" aria-label="更多">•••</button></div></div><CustomerTable rows={tableRows} /></section>
+      </main>
     </div>
-  );
+  </div>;
 }
 
-function MetricCard({ label, value, hint, change, tone, icon }: { label: string; value: string; hint: string; change: string; tone: MetricTone; icon: string }) {
-  return <article className="metric-card"><div className={`metric-icon ${tone}`}>{icon}</div><div className="metric-copy"><span>{label}</span><small>{hint}</small></div><strong>{value}</strong><em className={change === "—" ? "muted" : ""}>{change}</em></article>;
+function MetricCard({ label, value, change, tone, icon }: MetricCardProps) { return <article className="metric-card"><span className={`metric-icon ${tone}`}>{icon}</span><span className="metric-label">{label}</span><strong>{value}</strong><span className="metric-change">{change === "—" ? "—" : `↗ ${change}`}</span><small>{change === "—" ? "暂无数据" : "较上周期"}</small></article>; }
+
+function EmptyDashboardState({ label }: { label: string }) {
+  return <section className="panel" role="status" style={{ alignItems: "center", display: "flex", flexDirection: "column", gap: "10px", gridColumn: "1 / -1", justifyContent: "center", minHeight: "266px", padding: "28px", textAlign: "center" }}><strong style={{ color: "#17264e", fontSize: "16px" }}>当前范围暂无数据</strong><span style={{ color: "#8290a8", fontSize: "12px" }}>{label} 没有可展示的业务记录，请切换到其他日期范围查看演示。</span></section>;
 }
 
-function PanelHeading({ title, subtitle, extra }: { title: string; subtitle: string; extra: ReactNode }) {
-  return <div className="panel-heading"><div><h2>{title}</h2><p>{subtitle}</p></div>{extra}</div>;
+function TrendChart({ data, trendKey }: { data: TrendPoint[]; trendKey: TrendKey }) {
+  const width = 660; const height = 210; const pad = { left: 40, right: 14, top: 22, bottom: 30 }; const max = trendKey === "customers" ? 400 : trendKey === "revenue" ? 400 : trendKey === "orders" ? 150 : 500; const x = (index: number) => pad.left + index * (width - pad.left - pad.right) / (data.length - 1); const y = (value: number) => pad.top + (1 - value / max) * (height - pad.top - pad.bottom); const points = data.map((point, index) => `${x(index)},${y(point.value)}`).join(" "); const area = `M ${x(0)} ${height - pad.bottom} L ${data.map((point, index) => `${x(index)} ${y(point.value)}`).join(" L ")} L ${x(data.length - 1)} ${height - pad.bottom} Z`; const matchingFocusIndex = data.findIndex((point) => point.date === "04-10"); const focusIndex = matchingFocusIndex >= 0 ? matchingFocusIndex : Math.floor((data.length - 1) / 2); const focus = data[focusIndex]; if (focus === undefined) throw new Error("业务趋势数据不能为空"); const ticks = trendKey === "customers" ? [0, 100, 200, 300, 400] : [0, max / 4, max / 2, max * .75, max]; const labelIndexes = Array.from(new Set([0, Math.floor((data.length - 1) / 3), Math.floor((data.length - 1) * 2 / 3), data.length - 1]));
+  return <div className="chart-wrap"><svg className="trend-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="业务趋势折线图"><defs><linearGradient id="trend-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#5472ee" stopOpacity=".2" /><stop offset="1" stopColor="#5472ee" stopOpacity="0" /></linearGradient></defs><g className="grid-lines">{ticks.map((tick) => <g key={tick}><line x1={pad.left} x2={width - pad.right} y1={y(tick)} y2={y(tick)} /><text x={pad.left - 9} y={y(tick) + 3} textAnchor="end">{Math.round(tick)}</text></g>)}</g><path className="trend-area" d={area} /><polyline className="trend-line" points={points} /><line className="focus-line" x1={x(focusIndex)} x2={x(focusIndex)} y1={y(focus.value) + 8} y2={height - pad.bottom} /><circle className="focus-ring" cx={x(focusIndex)} cy={y(focus.value)} r="6" /><circle className="focus-dot" cx={x(focusIndex)} cy={y(focus.value)} r="3" /><g className="chart-tooltip"><rect x={x(focusIndex) + 8} y={y(focus.value) - 57} width="132" height="53" rx="7" /><text x={x(focusIndex) + 20} y={y(focus.value) - 38}>{focus.date === "04-10" ? "2024-04-10" : `2024-${focus.date}`}</text><circle cx={x(focusIndex) + 21} cy={y(focus.value) - 20} r="4" /><text className="tooltip-value" x={x(focusIndex) + 31} y={y(focus.value) - 16}>{trendKey === "customers" ? "新增客户" : trendTabs.find((tab) => tab.key === trendKey)?.label}　{focus.value}</text></g>{labelIndexes.map((index) => <text className="x-label" key={data[index].date} x={x(index)} y={height - 8} textAnchor={index === 0 ? "start" : index === data.length - 1 ? "end" : "middle"}>{data[index].date}</text>)}</svg></div>;
 }
 
-function TrendChart({ rows }: { rows: AnalyticsRow[] }) {
-  const width = 760; const height = 290; const pad = { left: 42, right: 18, top: 18, bottom: 34 };
-  const max = Math.ceil(Math.max(...rows.map((row) => Math.max(row.visits, row.orders * 8)), 1) / 100) * 100;
-  const x = (index: number) => pad.left + (index / Math.max(rows.length - 1, 1)) * (width - pad.left - pad.right);
-  const y = (value: number) => pad.top + (1 - value / max) * (height - pad.top - pad.bottom);
-  const visits = rows.map((row, index) => `${x(index)},${y(row.visits)}`).join(" ");
-  const orders = rows.map((row, index) => `${x(index)},${y(row.orders * 8)}`).join(" ");
-  const area = `M ${x(0)} ${height - pad.bottom} L ${visits.split(" ").map((point) => point.replace(",", " ")).join(" L ")} L ${x(rows.length - 1)} ${height - pad.bottom} Z`;
-  const ticks = [max, max * .75, max * .5, max * .25, 0];
-  const labelIndexes = Array.from(new Set([0, Math.floor((rows.length - 1) / 3), Math.floor((rows.length - 1) * 2 / 3), rows.length - 1]));
-  return <svg className="trend-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="访问量和订单趋势折线图"><defs><linearGradient id="trend-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#6a7eea" stopOpacity=".18" /><stop offset="1" stopColor="#6a7eea" stopOpacity="0" /></linearGradient></defs><g className="grid-lines">{ticks.map((tick) => <g key={tick}><line x1={pad.left} x2={width - pad.right} y1={y(tick)} y2={y(tick)} /><text x={pad.left - 10} y={y(tick) + 3} textAnchor="end">{tick === 0 ? "0" : `${Math.round(tick / 100) / 10}k`}</text></g>)}</g><path className="trend-area" d={area} /><polyline className="trend-line visits-line" points={visits} /><polyline className="trend-line orders-line" points={orders} /><circle className="trend-point visits-point" cx={x(rows.length - 1)} cy={y(rows[rows.length - 1].visits)} r="4" /><circle className="trend-point orders-point" cx={x(rows.length - 1)} cy={y(rows[rows.length - 1].orders * 8)} r="4" />{labelIndexes.map((index) => <text className="x-label" key={rows[index].date} x={x(index)} y={height - 8} textAnchor={index === 0 ? "start" : index === rows.length - 1 ? "end" : "middle"}>{rows[index].date.slice(5).replace("-", "/")}</text>)}</svg>;
-}
+function ChannelChart() { const max = 2000; return <div className="bar-chart"><div className="bar-y-axis"><span>2,000</span><span>1,500</span><span>1,000</span><span>500</span><span>0</span></div><div className="bars">{channels.map((channel) => <div className="bar-column" key={channel.name}><strong>{channel.value.toLocaleString()}</strong><i style={{ height: `${channel.value / max * 100}%`, background: channel.color }} /><span>{channel.name}</span></div>)}</div></div>; }
 
-function CategoryChart({ rows }: { rows: CategoryRow[] }) {
-  const total = rows.reduce((sum, row) => sum + row.value, 0); const circumference = 2 * Math.PI * 53;
-  const colors = ["#6378e4", "#9b86ef", "#efb561"];
-  const segments = rows.reduce<Array<{ row: CategoryRow; index: number; length: number; offset: number }>>((items, row, index) => {
-    const previous = items[index - 1];
-    const length = total === 0 ? 0 : (row.value / total) * circumference;
+function IndustryChart() {
+  const circumference = 2 * Math.PI * 53;
+  const segments = industries.reduce<Array<{ industry: (typeof industries)[number]; length: number; offset: number }>>((items, industry) => {
+    const previous = items[items.length - 1];
+    const length = industry.value / 100 * circumference;
     const offset = previous === undefined ? 0 : previous.offset + previous.length;
-    return [...items, { row, index, length, offset }];
+    return [...items, { industry, length, offset }];
   }, []);
-  return <div className="category-content"><div className="donut-wrap"><svg viewBox="0 0 140 140" role="img" aria-label="业务分类订单占比"><circle className="donut-track" cx="70" cy="70" r="53" /><g transform="rotate(-90 70 70)">{segments.map(({ row, index, length, offset }) => <circle className="donut-segment" key={row.name} cx="70" cy="70" r="53" stroke={colors[index]} strokeDasharray={`${length} ${circumference - length}`} strokeDashoffset={-offset} />)}</g><text className="donut-total" x="70" y="67" textAnchor="middle">{total.toLocaleString()}</text><text className="donut-label" x="70" y="84" textAnchor="middle">订单总数</text></svg></div><div className="category-list">{rows.map((row, index) => { const percentage = total === 0 ? 0 : (row.value / total) * 100; return <div className="category-item" key={row.name}><div><span className="category-name"><i style={{ background: colors[index] }} />{row.name}</span><strong>{row.value.toLocaleString()}</strong></div><div className="category-meter"><i style={{ width: `${percentage}%`, background: colors[index] }} /></div><small>{percentage.toFixed(1)}%</small></div>; })}</div></div>;
+
+  return <div className="industry-content"><div className="donut"><svg viewBox="0 0 140 140" role="img" aria-label="客户行业分布环形图"><circle className="donut-track" cx="70" cy="70" r="53" />{segments.map(({ industry, length, offset }) => <circle key={industry.name} cx="70" cy="70" r="53" stroke={industry.color} strokeDasharray={`${length} ${circumference - length}`} strokeDashoffset={-offset} />)}<text x="70" y="67" textAnchor="middle">1,268</text><text x="70" y="84" textAnchor="middle">客户总数</text></svg></div><div className="industry-list">{industries.map((industry) => <div className="industry-item" key={industry.name}><i style={{ background: industry.color }} /><span>{industry.name}</span><strong>{industry.value.toFixed(1)}%</strong></div>)}</div></div>;
 }
 
-function EmptyState({ activeRange }: { activeRange: string }) {
-  return <section className="empty-state" role="status"><div className="empty-orb"><span>⌁</span></div><h2>当前范围暂无数据</h2><p>{activeRange} 没有可展示的业务记录，请切换到其他日期范围查看演示。</p><div className="empty-hint"><span>↗</span><strong>固定合成数据</strong><small>切换范围后指标与图表会自动同步</small></div></section>;
-}
+function CustomerTable({ rows }: { rows: CustomerRow[] }) { return <><div className="table-scroll"><table><thead><tr><th className="check-cell"><input type="checkbox" aria-label="全选" /></th><th>客户名称</th><th>行业</th><th>客户等级</th><th>成交金额（元）　↕</th><th>创建时间　↕</th><th>最近活跃</th><th>状态</th><th>操作</th></tr></thead><tbody>{rows.length === 0 ? <tr><td colSpan={9} style={{ color: "#8290a8", padding: "26px", textAlign: "center" }}>当前范围暂无客户数据</td></tr> : rows.map((row) => <tr key={row.company}><td className="check-cell"><input type="checkbox" aria-label={`选择${row.company}`} /></td><td><span className="company-logo">{row.company.slice(0, 1)}</span>{row.company}</td><td>{row.industry}</td><td><span className={`level ${row.level === "黄金客户" ? "gold" : row.level === "重要客户" ? "important" : "normal"}`}>{row.level}</span></td><td>{row.amount}</td><td>{row.created}</td><td>{row.active}</td><td><span className={`status ${row.status === "活跃" ? "online" : "sleep"}`}>{row.status}</span></td><td><button className="view-button" type="button">查看</button>　•••</td></tr>)}</tbody></table></div><div className="table-footer"><span>共 128 条记录</span><div className="pagination"><button type="button">‹</button><button className="active" type="button">1</button><button type="button">2</button><button type="button">3</button><button type="button">4</button><button type="button">5</button><button type="button">›</button><button className="page-size" type="button">10 条/页　⌄</button></div></div></>; }
