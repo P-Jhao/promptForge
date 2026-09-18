@@ -17,7 +17,7 @@ import { runRecordToGeneration } from "@/lib/projectRunHydration";
 import { useProjectBaseline } from "@/hooks/useProjectBaseline";
 import { createDraftFromRuntimeState } from "@/lib/runtimeProjectDraft";
 import type { ProjectRepository, ProjectSnapshot, ProjectStorageStatus, ProjectSummary, VersionMetadata, VersionMetadataSaveMode } from "@/types/project";
-import type { ProjectVersion } from "@/types/store";
+import type { ProjectVersion, SandpackFiles } from "@/types/store";
 
 export interface ProjectPersistenceApi {
   status: ProjectStorageStatus;
@@ -28,6 +28,7 @@ export interface ProjectPersistenceApi {
   listLoading: boolean;
   saveCurrentProject: () => Promise<void>;
   saveAs: (name: string) => Promise<void>;
+  forkFromCase: (name: string, files: SandpackFiles) => Promise<void>;
   openProject: (projectId: string) => Promise<void>;
   restoreVersion: (version: ProjectVersion) => Promise<void>;
   updateVersionMetadata: (versionId: string, metadata: VersionMetadata) => Promise<VersionMetadataSaveMode>;
@@ -51,6 +52,7 @@ export function useProjectPersistence(): ProjectPersistenceApi {
   const getCurrentThreadId = useChatStore((state) => state.getCurrentThreadId);
   const currentFiles = useSandpackStore((state) => state.currentFiles ?? state.generatedFiles);
   const setGeneratedFiles = useSandpackStore((state) => state.setGeneratedFiles);
+  const clearProjectFiles = useSandpackStore((state) => state.clearProjectFiles);
   const repositoryRef = useRef<ProjectRepository | null>(null);
   if (repositoryRef.current === null) repositoryRef.current = new IndexedDbProjectRepository();
   const baseline = useProjectBaseline(projectId, repositoryRef.current);
@@ -148,6 +150,23 @@ export function useProjectPersistence(): ProjectPersistenceApi {
       throw caught;
     }
   }, [projectId, refreshProjects, remember, requestRef, savedDraftRef, setCurrentProject]);
+
+  const forkFromCase = useCallback(async (name: string, files: SandpackFiles): Promise<void> => {
+    const serializedFiles: Record<string, string> = {};
+    for (const [path, file] of Object.entries(files)) {
+      if (typeof file.code !== "string") throw new Error(`案例文件无效：${path}`);
+      serializedFiles[path] = file.code;
+    }
+    if (Object.keys(serializedFiles).length === 0) throw new Error("案例没有可复制的文件");
+
+    setGeneratedFiles(serializedFiles);
+    try {
+      await saveAs(name);
+    } catch (error: unknown) {
+      clearProjectFiles();
+      throw error;
+    }
+  }, [clearProjectFiles, saveAs, setGeneratedFiles]);
 
   const applySnapshot = useCallback((snapshot: ProjectSnapshot): void => {
     const sortedVersions = [...snapshot.versions].sort((first, second) => first.versionNumber - second.versionNumber);
@@ -295,5 +314,5 @@ export function useProjectPersistence(): ProjectPersistenceApi {
     }
   }, [clear, projectId, refreshProjects, requestRef, resolveRevision]);
 
-  return { status: visibleStatus, dirty, error, warning, projects, listLoading, saveCurrentProject, saveAs, openProject, restoreVersion, updateVersionMetadata, renameProject, deleteProject, refreshProjects };
+  return { status: visibleStatus, dirty, error, warning, projects, listLoading, saveCurrentProject, saveAs, forkFromCase, openProject, restoreVersion, updateVersionMetadata, renameProject, deleteProject, refreshProjects };
 }

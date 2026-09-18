@@ -55,15 +55,15 @@ ID 一旦进入实际 descriptor、manifest、首页入口和 `/workspace?case=.
 
 ## 当前注册入口核对
 
-截至 2026-09-17，当前仓库的注册事实如下：
+截至 2026-09-19，当前仓库的注册事实如下：
 
 | 入口 | 代码证据 | 当前注册内容 | 对新案例的结论 |
 | --- | --- | --- | --- |
-| 工作台 URL | [`frontend/src/app/workspace/page.tsx`](../../frontend/src/app/workspace/page.tsx) 与 [`caseRegistry.ts`](../../frontend/src/cases/caseRegistry.ts) | 旧案例和三个新案例按选中 ID 动态加载；未知值保持空白项目 | 三个新 ID 已注册，目标浏览器交互待主代理验收 |
-| 示例空态 | [`ChatPanel.tsx`](../../frontend/src/components/shell/ChatPanel.tsx) | 默认只展示三个新案例入口；旧案例 URL 继续兼容但不占默认展示位 | 三个新案例入口均待浏览器验收；旧数据和路由保留 |
+| 工作台 URL | [`frontend/src/app/workspace/page.tsx`](../../frontend/src/app/workspace/page.tsx) 与 [`caseRegistry.ts`](../../frontend/src/cases/caseRegistry.ts) | 小说和三个新案例按选中 ID 动态加载；未知值保持案例选择页 | 三个新 ID 已注册，目标浏览器交互待主代理验收 |
+| 示例选择页 | [`CaseChooserPanel.tsx`](../../frontend/src/components/shell/CaseChooserPanel.tsx) | 默认展示客户管理后台、数据分析看板、青山博客三个入口，入口带业务图标 | 三个新案例入口均待浏览器验收；历史任务看板不再显示 |
 | 首页 | [`LandingPage.tsx`](../../frontend/src/components/landing/LandingPage.tsx) | 首页首屏与案例区默认只展示三个新案例，来源说明见实施记录 | 旧案例不再占默认展示位；浏览器验收和导出仍待确认 |
 | 小说案例 | [`novelCase.ts`](../../frontend/src/cases/novelCase.ts#L19-L47) | `backend/mock` 组装的静态预置案例，支持 library/notes | 继续保留旧入口和资源边界，不当作新真实案例 |
-| 任务看板 | [`frontend/src/cases/task-board/case.json`](../../frontend/src/cases/task-board/case.json#L1-L11)、[`README.md`](../../frontend/src/cases/task-board/README.md#L1-L19) | `task-board-real-eval` 当前 descriptor 为 `READY`，有真实来源和人工 EVAL-03，但 Sandpack/ZIP/离线边界仍明确未覆盖 | 继续兼容；其 READY 不能外推到三个新案例 |
+| 历史任务看板 | [`frontend/src/cases/task-board/`](../../frontend/src/cases/task-board/) | 历史源文件、评测和证据保留在仓库，但已从 `caseRegistry.ts` 移除，不再作为用户可选案例 | 不再作为工作台入口；历史资料仅供追溯 |
 
 新案例实际注册的最低事实包括：descriptor、manifest、provenance、静态生成文件、工作台 case 分支、可复现的来源/构建检查，以及在工作台示例入口中的直接可达链接。三个案例已达到真实运行和来源记录门槛并从工作台直接打开；案例运行、交互和导出仍按验收文档分别记录，未有现场证据的项目继续标为待验收。
 
@@ -71,6 +71,6 @@ ID 一旦进入实际 descriptor、manifest、首页入口和 `/workspace?case=.
 
 ## 与现有案例和项目的兼容
 
-旧 `novel`、`novel&scene=library/notes` 和 `task-board-real-eval` URL 继续有效；旧 URL 不要求继续占据首页默认展示位。旧案例内部的书库、阅读笔记、看板、筛选和任务表单由各自案例路由处理。重设计不能删除既有 IndexedDB 保存项目、不能把预置案例文件写入当前项目的 `currentFiles`/版本/消息，也不能因为新增案例清理旧项目。
+旧 `novel`、`novel&scene=library/notes` URL 继续有效；任务看板 URL 不再被识别为有效案例，会回到案例选择页。重设计不能删除既有 IndexedDB 保存项目、不能把预置案例文件写入当前项目的 `currentFiles`/版本/消息，也不能因为新增案例清理旧项目。
 
-首页首屏、首页案例区和工作台示例入口已同步为三个新案例的默认展示位。旧案例的 hero、案例卡片和示例链接已从默认展示中移除，但注册、数据、生成文件和旧 URL 保留；能力说明继续区分“预置成果”“真实来源”“人工修正”“未验证导出/离线”。没有为案例增加宿主业务菜单或改变生成后端。
+首页首屏、首页案例区和工作台示例入口已同步为三个新案例的默认展示位。历史任务看板的源文件与评测文档保留，但用户可达注册、案例卡片和入口已移除；能力说明继续区分“预置成果”“真实来源”“人工修正”“未验证导出/离线”。没有为案例增加宿主业务菜单或改变生成后端。

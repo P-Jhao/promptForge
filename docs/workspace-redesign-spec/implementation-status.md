@@ -1,6 +1,21 @@
 # 工作台重设计实施记录
 
-更新时间：2026-09-18
+更新时间：2026-09-19
+
+## 2026-09-18 Fork 重构
+
+- 工作区上下文现在明确区分 `chooser`、`example` 和 `project`；`/workspace` 无 `case` 参数进入案例选择页，`/workspace?case=...` 进入只读案例。
+- 删除用户可见的示例/真实模式 Toggle。示例顶部“开始一个新的项目”返回无参数 chooser；左栏 Fork CTA 和示例状态的第一条 Prompt 会复制案例并完成一次真实项目创建，再发送同一条 Prompt。
+- Fork 复用现有 IndexedDB 项目仓储，不新增后端 API 或持久化 schema；复制案例文件后首次自动保存一次，后续修改仍使用显式保存和 dirty 保护。
+- 真实状态顶部切换为项目名、保存状态、分享、导出和更多菜单；左栏切换为 PromptForge Agent，同时保留现有消息、ThoughtChain、候选和版本历史。
+- 预览工具栏固定为预览/代码、刷新、全屏，移除设备类型、Viewport、缩放和 Sandpack 内置重复刷新按钮。
+
+## 2026-09-19 初始工作台入口与案例导航修正
+
+- 示例顶部“开始一个新的项目”统一回到 `/workspace` chooser；进入 chooser 时清理案例预览、旧消息和临时工作副本，避免与无参数初始页语义不一致。
+- 案例选择页在“查看案例介绍”下方承载三条 Prompt 起始示例；真实项目继续只显示 PromptForge Agent 对话，不重复展示首页起始卡片。
+- “更多示例”通过统一 registry 动态筛选当前案例之外的全部用户可选案例；历史 task-board 源码保持不注册、不展示。
+- 案例图标继续使用现有 Lucide 业务图标，但统一 SVG block/flex 居中、固定尺寸、描边和蓝紫对比度，覆盖选择页、示例主卡片与更多示例行。
 
 ## 已实施
 
@@ -8,9 +23,10 @@
 - 项目切换、保存、另存为、版本历史、重命名、删除继续复用现有 persistence 和 mutation hooks。顶部导出入口通过 `resolveDownloadSource` 显示“当前案例”或“当前工作副本”；候选预览不会改变普通项目导出对象。
 - 顶部项目动作、菜单与导出逻辑已拆到 `ProjectManagerTopActions.tsx`；另存为和未保存切换提示独立为对话组件，`ProjectManager.tsx` 保持在 300 行以内且不复制 persistence 业务逻辑。
 - 右侧工具栏集中提供预览/代码、刷新和全屏。刷新只触发现有 Sandpack `runSandpack`，不创建模型运行记录。
-- 示例案例通过 `frontend/src/cases/caseRegistry.ts` 按选中 case 动态加载。小说、阅读笔记和 `task-board-real-eval` 的注册、数据、生成文件与旧 URL 保留；它们不再占据默认展示位。
-- 默认示例入口（`ChatPanel.tsx`）与首页案例展示当前只包含客户管理后台、数据分析看板、清川的博客三个新案例；清川博客对应 `personal-blog-demo`。三个入口均明确标为“待浏览器验收”，不暗示目标工作台交互已通过。
-- 根目录 `AGENTS.md` 已同步记录新增案例注册表和 `PENDING_BROWSER` 来源边界，因为本轮新增了核心案例能力与目录。
+- 示例案例通过 `frontend/src/cases/caseRegistry.ts` 按选中 case 动态加载。小说、阅读笔记和三个 workspace demo 保留；历史任务看板源文件不再注册为用户可选案例，旧任务看板 URL 不再作为有效案例入口。
+- 默认案例选择页（`CaseChooserPanel.tsx`）和首页案例展示包含客户管理后台、数据分析看板、青山博客；青山博客对应 `personal-blog-demo`。三个案例仍明确标为“待浏览器验收”，不暗示目标工作台交互已通过。
+- 案例选择页的 Prompt 起始示例位于“查看案例介绍”下方；示例项目不再重复显示这组三张起始卡片，真实项目仍由 PromptForge Agent 承接消息与状态。
+- 根目录 `AGENTS.md` 已同步记录案例只读、首次 Fork 自动保存一次和后续显式保存语义，因为本轮改变了核心产品边界。
 
 ## 三个案例来源
 
@@ -48,6 +64,8 @@
 - 本地项目浏览器中的重命名、删除入口可见；案例导出标签可见；预览中央 loading 状态可见。
 - 客户管理后台、数据分析看板、个人博客三个静态案例均可在 Sandpack 挂载；预览/代码切换和全屏/退出全屏可用。
 - 窄屏页面无横向溢出；代码编辑器自身滚动不计入页面溢出。
+
+本轮 Fork 重构新增的浏览器记录见 [`../workspace-fork-flow/README.md`](../workspace-fork-flow/README.md)。当前记录覆盖 1280×720 宿主视觉、案例选择页、示例顶部返回 chooser 和左栏 Fork 语义；Sandpack runtime 超时使 CRM iframe 内部交互仍保持未验证。
 
 ## 未验证项
 

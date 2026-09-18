@@ -2,32 +2,28 @@
 
 import { Bubble, Sender } from "@ant-design/x";
 import { useEffect, useRef, useState } from "react";
-import { ArrowUpRight, RotateCcw } from "lucide-react";
-import Link from "next/link";
+import { RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { CASE_DESCRIPTORS } from "@/cases/caseRegistry";
 import { useChat } from "@/hooks/useChat";
 import type { ProjectPersistenceApi } from "@/hooks/useProjectPersistence";
 import { useChatStore } from "@/store/chatStore";
 import { useSandpackStore } from "@/store/sandpackStore";
 import { evaluateNewProjectDecision } from "@/lib/newProjectGuard";
 import { isNewProjectRequest } from "@/lib/requestIntent";
-import { MockModeToggle } from "./MockModeToggle";
+import { useWorkspaceSession } from "./WorkspaceSessionContext";
+import { CaseChooserPanel } from "./CaseChooserPanel";
+import { ExampleProjectPanel } from "./ExampleProjectPanel";
 import { ThoughtChain } from "./ThoughtChain";
 import { VersionCard } from "./VersionCard";
 import { GenerationStatusPanel } from "./GenerationStatusPanel";
 import { CandidatePanel } from "./CandidatePanel";
-import type { MockConfig } from "@/types/mock";
-
-const REQUEST_SUGGESTIONS = [
-  "做一个支持搜索和状态筛选的客户管理后台",
-  "做一个可按日期查看指标和趋势的数据分析看板",
-  "做一个支持分类搜索和主题切换的个人博客",
-];
 
 export function ChatPanel({ persistence }: { persistence: ProjectPersistenceApi }) {
   const router = useRouter();
   const { messages, isLoading, sendMessage, cancelMessage, retryLastMessage, canRetry, candidate, applyCandidate, repairCandidate, discardCandidate } = useChat();
+  const workspace = useWorkspaceSession();
   const thoughts = useChatStore((state) => state.messageThoughts);
   const versions = useChatStore((state) => state.versions);
   const currentVersion = useChatStore((state) => state.currentVersion);
@@ -38,13 +34,18 @@ export function ChatPanel({ persistence }: { persistence: ProjectPersistenceApi 
   const generation = useChatStore((state) => state.generation);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [inputValue, setInputValue] = useState("");
-  const [mockConfig, setMockConfig] = useState<MockConfig>({ global: true });
   const [confirmingNewProject, setConfirmingNewProject] = useState(false);
   const [newProjectBusy, setNewProjectBusy] = useState(false);
+  const isExample = workspace.surface === "example";
+  const isChooser = workspace.surface === "chooser";
 
   useEffect(() => {
+    if (isExample || isChooser) {
+      scrollRef.current?.scrollTo({ top: 0 });
+      return;
+    }
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, isLoading]);
+  }, [isChooser, isExample, messages, isLoading]);
 
   const checkNewProjectGuards = (ignoreDirty: boolean): boolean => {
     const latest = useChatStore.getState();
@@ -106,7 +107,25 @@ export function ChatPanel({ persistence }: { persistence: ProjectPersistenceApi 
 
   const submit = (value: string) => {
     const content = value.trim();
-    if (!content || isLoading || mockConfig.global || candidate !== null) return;
+    if (!content || isLoading || workspace.isForking || candidate !== null) return;
+    if (isExample) {
+      void (async () => {
+        try {
+          await workspace.forkCase();
+          await sendMessage(content, undefined, { global: false });
+          setInputValue("");
+        } catch {
+          // Fork and persistence errors are already exposed by the workspace layer.
+        }
+      })();
+      return;
+    }
+    if (isChooser) {
+      workspace.startBlankProject();
+      void sendMessage(content, undefined, { global: false });
+      setInputValue("");
+      return;
+    }
     if (isNewProjectRequest(content)) {
       const latest = useChatStore.getState();
       const decision = evaluateNewProjectDecision({
@@ -129,60 +148,38 @@ export function ChatPanel({ persistence }: { persistence: ProjectPersistenceApi 
       setConfirmingNewProject(true);
       return;
     }
-    void sendMessage(content, undefined, mockConfig);
+    void sendMessage(content, undefined, { global: false });
     setInputValue("");
-  };
-
-  const setExampleMode = (enabled: boolean) => {
-    setMockConfig({ global: enabled });
-    if (enabled) {
-      setInputValue("");
-    }
   };
 
   return (
     <div className="flex h-full flex-col bg-white">
-      <div className="chat-panel-intro">
-        <div>
-          <span className="chat-kicker">PROMPTFORGE WORKSPACE</span>
-          <h2>描述你想交付的前端页面</h2>
-          <p>从用户、数据和关键动作开始，生成可预览的 React/TypeScript 原型。</p>
-        </div>
-        <Link href="/#hero-case" className="chat-case-link">看案例 <ArrowUpRight size={14} /></Link>
-      </div>
-
       <GenerationStatusPanel />
       {candidate !== null && (
         <CandidatePanel candidate={candidate} onApply={() => void applyCandidate()} onRepair={() => void repairCandidate()} onDiscard={discardCandidate} disabled={isLoading} />
       )}
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3">
-        {messages.length === 0 ? (
-          <div className="chat-empty">
-            {mockConfig.global ? (
-              <div className="chat-example-empty">
-                <p>当前为示例体验，下面的成果已预置，不会根据新输入伪生成。</p>
-                <div className="chat-case-links">
-                  <Link href="/workspace?case=customer-management-demo">打开客户管理后台案例</Link>
-                  <Link href="/workspace?case=analytics-dashboard-demo">打开数据分析看板案例</Link>
-                  <Link href="/workspace?case=personal-blog-demo">打开清川博客案例</Link>
-                </div>
-                <p className="chat-example-hint">想描述自己的需求，请切换到真实生成。</p>
-              </div>
-            ) : (
-              <>
-                <p>还没有需求，试试：</p>
-                <div className="chat-suggestions">
-                  {REQUEST_SUGGESTIONS.map((suggestion) => (
-                    <button type="button" key={suggestion} onClick={() => setInputValue(suggestion)}>
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
+        {isExample && workspace.caseContext !== undefined && (
+          <ExampleProjectPanel
+            caseContext={workspace.caseContext}
+            descriptors={CASE_DESCRIPTORS}
+            isForking={workspace.isForking}
+            onFork={workspace.forkCase}
+          />
+        )}
+        {isChooser && <CaseChooserPanel descriptors={CASE_DESCRIPTORS} onSuggestionSelect={setInputValue} />}
+        {!isExample && !isChooser && (
+          <div className="chat-agent-intro">
+            <div>
+              <span className="chat-kicker">PROMPTFORGE AGENT</span>
+              <h2>继续描述你的修改</h2>
+              <p>我会基于当前工作副本更新页面，并在右侧同步预览。</p>
+            </div>
+            <span className="chat-agent-status"><span />就绪</span>
           </div>
-        ) : messages.map((message) => {
+        )}
+        {messages.map((message) => {
           const version = versions.find((item) => item.assistantMessageId === message.id);
           const messageThought = thoughts[message.id] ?? [];
           const isEmptyAssistant = message.role === "assistant" && message.content.length === 0 && messageThought.length === 0;
@@ -216,17 +213,16 @@ export function ChatPanel({ persistence }: { persistence: ProjectPersistenceApi 
       </div>
 
       <div className="shrink-0 border-t border-gray-200 p-2">
-        <MockModeToggle enabled={mockConfig.global === true} onChange={setExampleMode} />
-        <p className="chat-boundary">当前为{mockConfig.global ? "示例体验" : "真实体验"}。示例体验只加载预置成果；真实请求会结合当前项目和你的描述处理新页面、现有页面调整或问题讨论，需要补充信息时会先请你澄清。</p>
         <Sender
           value={inputValue}
           onChange={setInputValue}
-          placeholder="例如：做一个带搜索和筛选的内容管理后台"
+          placeholder={isExample ? "描述你想如何修改这个案例…" : isChooser ? "描述你想创建的前端项目…" : "继续描述你的修改…"}
           loading={isLoading}
-          disabled={mockConfig.global || candidate !== null || confirmingNewProject || newProjectBusy}
+          disabled={workspace.isForking || candidate !== null || confirmingNewProject || newProjectBusy}
           onCancel={cancelMessage}
           onSubmit={submit}
         />
+        {isExample && <p className="chat-boundary">发送后将基于此案例创建可编辑项目</p>}
       </div>
 
       {confirmingNewProject && (

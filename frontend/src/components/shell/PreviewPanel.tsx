@@ -29,8 +29,8 @@ export function PreviewPanel({
     <section className="relative h-full w-full overflow-hidden bg-transparent">
       {/* Preview content */}
       <div className="h-full w-full">
-        <div className="flex h-full w-full flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-          <div className="preview-toolbar-slot flex shrink-0 justify-end border-b border-gray-100 bg-white px-3 py-2">
+        <div className="flex h-full w-full flex-col overflow-hidden rounded-[10px] border border-gray-200 bg-white shadow-sm">
+          <div className="preview-toolbar-slot flex shrink-0 border-b border-gray-100 bg-white px-3 py-2">
             <PreviewToolbar
               isFullScreen={isFullScreen}
               onEnterFullScreen={onEnterFullScreen}

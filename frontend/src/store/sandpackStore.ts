@@ -27,6 +27,7 @@ export const useSandpackStore = create<SandpackStore>((set) => ({
   )),
   setPreviewFiles: (files) => set((state) => state.previewFiles === files ? state : { previewFiles: files }),
   setPreviewManifest: (manifest) => set((state) => state.previewManifest === manifest ? state : { previewManifest: manifest }),
+  clearProjectFiles: () => set({ generatedFiles: null, currentFiles: null }),
   clearGeneratedFiles: () => set({ generatedFiles: null, currentFiles: null, previewFiles: null, previewManifest: undefined }),
 
   isAssembling: false,

@@ -34,6 +34,7 @@ export interface SandpackStore {
   /** 预置案例专用的资源清单，不参与项目草稿、版本或消息持久化。 */
   previewManifest: CaseResourceManifest | undefined;
   setPreviewManifest: (manifest: CaseResourceManifest | undefined) => void;
+  clearProjectFiles: () => void;
   clearGeneratedFiles: () => void;
 
   /** 组装状态 */

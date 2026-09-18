@@ -47,7 +47,7 @@ node scripts/checkPhaseA.mjs
 ## 2026-09-16 本地现场 / Mock smoke
 
 - 2026-09-16 Edge 目标工作台打开任务看板入口后，Sandpack iframe 显示三列和 4 条初始任务；关键词“登录”筛选为 1 条并可清除，优先级“高”可选并可恢复。小说 `scene=library` 显示 6 本书，`scene=notes` 显示“星辰之上”详情、阅读进度、笔记和书签。
-- 工作台示例体验与真实模式控件可切换，中心预览加载提示可见。导出按钮可见，但 CUA 未捕获原生 `download` 事件，导出下载仍是未验证项。
+- 该条是 2026-09-16 的历史观察：当时工作台仍有示例/真实模式控件。2026-09-18 Fork 重构后，案例改为只读示例，顶部/左栏 CTA 或首条 Prompt 单向创建真实项目；当前导出下载仍需单独现场验证。
 - 控制台 `MutationObserver.observe` 异常的调用栈指向 `@ant-design/x` 的 `BubbleList/useCompatibleScroll` 依赖路径；项目源码没有对应调用，本轮未修改 `node_modules`。
 
 以上包含一次目标工作台 Edge 现场观察，不等于完整任务板功能通过；导出 ZIP 下载、离线、IndexedDB、移动端/键盘和其他状态仍需单独证据。浏览器控制台中的扩展注入、React Router 和 Tailwind CDN 警告不记录为产品失败。

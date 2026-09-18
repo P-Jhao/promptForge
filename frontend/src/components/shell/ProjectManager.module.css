@@ -2,51 +2,50 @@
   align-items: center;
   display: flex;
   flex: 1 1 auto;
-  gap: 10px;
-  justify-content: flex-end;
+  gap: 12px;
+  justify-content: space-between;
   min-width: 0;
 }
 
+.exampleIdentity { align-items: center; display: flex; gap: 9px; min-width: 0; }
+.chooserIdentity { align-items: center; display: flex; gap: 9px; min-width: 0; }
+.chooserIdentity strong { color: #52617d; font-size: 13px; font-weight: 650; }
+.exampleIdentity strong { color: #273455; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.breadcrumbSlash { color: #a1aabd; font-size: 16px; font-weight: 400; }
+.exampleBadge { background: #f0efff; border: 1px solid #e1defe; border-radius: 999px; color: #6b6ec1; font-size: 10px; padding: 4px 8px; white-space: nowrap; }
+
 .projectButton {
   align-items: center;
-  background: #f8f9fd;
-  border: 1px solid #dfe5f0;
-  border-radius: 8px;
-  color: #354365;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  color: #2f3b5c;
   cursor: pointer;
   display: inline-flex;
-  flex: 0 1 240px;
-  font-size: 12px;
+  flex: 0 1 245px;
+  font-size: 13px;
   font-weight: 700;
   gap: 7px;
   justify-content: space-between;
   min-width: 120px;
-  padding: 8px 10px;
+  padding: 7px 8px;
   text-align: left;
 }
 
-.projectButton:hover { background: #f2f4ff; border-color: #cbd5f4; color: #4f62c0; }
+.projectButton:hover { background: #f5f6fc; color: #5262bf; }
 .projectButton:disabled { cursor: wait; opacity: .6; }
 .projectName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.status {
-  align-items: center;
-  color: #77839a;
-  display: inline-flex;
-  flex: 0 1 auto;
-  font-size: 10px;
-  gap: 5px;
-  min-width: 0;
-  white-space: nowrap;
-}
-
+.status { align-items: center; color: #71809a; display: inline-flex; flex: 0 1 auto; font-size: 10px; min-width: 0; white-space: nowrap; }
 .dirty { color: #a86f2d; font-weight: 700; }
 .actions { align-items: center; display: inline-flex; gap: 6px; }
 .actionButton { align-items: center; background: #fff; border: 1px solid #dce3ef; border-radius: 7px; color: #5d6b86; cursor: pointer; display: inline-flex; font-size: 11px; gap: 5px; padding: 7px 9px; white-space: nowrap; }
 .actionButton:hover { background: #f6f8ff; border-color: #bfcaf0; color: #4f62c0; }
 .actionButton:disabled { cursor: wait; opacity: .52; }
-.exportButton { background: #586bc8; border-color: #586bc8; color: #fff; }
-.exportButton:hover { background: #485aae; border-color: #485aae; color: #fff; }
+.primaryButton { background: #5c5fe8; border-color: #5c5fe8; color: #fff; font-weight: 700; }
+.primaryButton:hover { background: #4e52d0; border-color: #4e52d0; color: #fff; }
+.exportButton { background: #5c5fe8; border-color: #5c5fe8; color: #fff; }
+.exportButton:hover { background: #4e52d0; border-color: #4e52d0; color: #fff; }
 .moreWrap { position: relative; }
 .menu { background: #fff; border: 1px solid #dce3ef; border-radius: 9px; box-shadow: 0 14px 34px #2f467b24; display: grid; gap: 3px; min-width: 170px; padding: 5px; position: absolute; right: 0; top: calc(100% + 8px); z-index: 100; }
 .menu button { align-items: center; background: transparent; border: 0; border-radius: 6px; color: #566580; cursor: pointer; display: flex; font-size: 11px; gap: 8px; padding: 8px 9px; text-align: left; white-space: nowrap; width: 100%; }
@@ -61,7 +60,8 @@
 }
 
 @media (max-width: 700px) {
-  .root { gap: 5px; justify-content: flex-end; }
+  .root { gap: 5px; }
+  .exampleIdentity strong { max-width: 130px; }
   .projectButton { flex: 1 1 auto; min-width: 0; padding: 7px 8px; }
   .actionButton { font-size: 0; padding: 7px; }
   .actionButton svg { height: 15px; width: 15px; }

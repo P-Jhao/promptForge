@@ -22,6 +22,7 @@ import type { SandpackFiles, ViewMode } from "@/types/store";
 import { formatSandpackError, toSandpackFiles, toStoreFiles } from "./sandpackFileUtils";
 import { PREVIEW_REFRESH_EVENT } from "./PreviewToolbar";
 import { PreviewError } from "./PreviewError";
+import { useWorkspaceSession } from "@/components/shell/WorkspaceSessionContext";
 
 const SandpackProvider = dynamic(
   () => import("@codesandbox/sandpack-react").then((mod) => mod.SandpackProvider),
@@ -42,33 +43,36 @@ interface TemplateLoadState {
 }
 
 export function SandpackView({ initialFiles, initialManifest }: SandpackViewProps) {
+  const session = useWorkspaceSession();
   const { viewMode, generatedFiles, currentFiles, setPreviewFiles, setPreviewManifest } = useSandpackStore();
   const candidate = useChatStore((state) => state.candidate);
+  const activeInitialFiles = session.surface === "example" ? initialFiles : undefined;
+  const activeInitialManifest = session.surface === "example" ? initialManifest : undefined;
   const [templateFiles, setTemplateFiles] = useState<SandpackFiles>({});
   const [templateRetryCount, setTemplateRetryCount] = useState(0);
   const caseSignature = useMemo(
-    () => initialFiles === undefined ? null : JSON.stringify(initialFiles),
-    [initialFiles],
+    () => activeInitialFiles === undefined ? null : JSON.stringify(activeInitialFiles),
+    [activeInitialFiles],
   );
-  const templateRequestKey = initialFiles === undefined
+  const templateRequestKey = activeInitialFiles === undefined
     ? `template:${templateRetryCount}`
     : "case";
   const [templateLoad, setTemplateLoad] = useState<TemplateLoadState>(() => ({
     key: templateRequestKey,
-    status: initialFiles === undefined ? "loading" : "ready",
+    status: activeInitialFiles === undefined ? "loading" : "ready",
   }));
   useEffect(() => {
-    setPreviewFiles(initialFiles ?? null);
+    setPreviewFiles(activeInitialFiles ?? null);
     return () => setPreviewFiles(null);
-  }, [initialFiles, setPreviewFiles]);
+  }, [activeInitialFiles, setPreviewFiles]);
 
   useEffect(() => {
-    setPreviewManifest(initialFiles === undefined ? undefined : initialManifest);
+    setPreviewManifest(activeInitialFiles === undefined ? undefined : activeInitialManifest);
     return () => setPreviewManifest(undefined);
-  }, [initialFiles, initialManifest, setPreviewManifest]);
+  }, [activeInitialFiles, activeInitialManifest, setPreviewManifest]);
 
   useEffect(() => {
-    if (initialFiles !== undefined) return;
+    if (activeInitialFiles !== undefined) return;
     let cancelled = false;
     void getReactTS_Template().then((template) => {
       if (cancelled) return;
@@ -84,21 +88,23 @@ export function SandpackView({ initialFiles, initialManifest }: SandpackViewProp
       });
     });
     return () => { cancelled = true; };
-  }, [initialFiles, templateRequestKey]);
+  }, [activeInitialFiles, templateRequestKey]);
 
   useEffect(() => {
     window.__templateFiles = templateFiles;
   }, [templateFiles]);
 
-  const resultFiles = viewMode === "preview" && candidate !== null
+  const resultFiles = viewMode === "preview" && session.surface === "project" && candidate !== null
     ? toSandpackFiles(candidate.files)
-    : initialFiles === undefined
-      ? (currentFiles ?? generatedFiles)
-      : initialFiles;
+    : activeInitialFiles !== undefined
+      ? activeInitialFiles
+      : session.surface === "project"
+        ? (currentFiles ?? generatedFiles)
+        : null;
   const hasResultFiles = resultFiles !== null && resultFiles !== undefined && Object.keys(resultFiles).length > 0;
   const templateStatus = templateLoad.key === templateRequestKey ? templateLoad.status : "loading";
   const templateError = templateStatus === "error" ? templateLoad.error ?? "React 模板加载失败" : null;
-  const blockingTemplate = initialFiles === undefined && templateStatus === "loading" && !hasResultFiles;
+  const blockingTemplate = activeInitialFiles === undefined && templateStatus === "loading" && !hasResultFiles;
   const sourceFiles = useMemo(
     () => ({ ...templateFiles, ...(resultFiles ?? {}) }),
     [resultFiles, templateFiles],
@@ -107,7 +113,7 @@ export function SandpackView({ initialFiles, initialManifest }: SandpackViewProp
     () => viewMode === "preview" ? createPreviewFiles(sourceFiles) : sourceFiles,
     [sourceFiles, viewMode],
   );
-  const candidatePreview = viewMode === "preview" && candidate !== null;
+  const candidatePreview = session.surface === "project" && viewMode === "preview" && candidate !== null;
 
   if (blockingTemplate) {
     return <div className="relative h-full w-full"><BuildingLoadingOverlay message="正在加载 React 模板" detail="正在读取可导出的模板文件…" /></div>;
@@ -141,7 +147,7 @@ export function SandpackView({ initialFiles, initialManifest }: SandpackViewProp
       >
         <div className="relative h-full w-full border-none sandpack-wrapper">
           <SandpackLayout style={{ height: "100%", border: "none", borderRadius: 0 }}>
-            <SandpackContent viewMode={viewMode} syncEditor={initialFiles === undefined && !candidatePreview} templateError={templateError} hasProjectFiles={hasResultFiles} templateFiles={templateFiles} />
+            <SandpackContent viewMode={viewMode} syncEditor={session.surface === "project" && activeInitialFiles === undefined && !candidatePreview} templateError={templateError} hasProjectFiles={hasResultFiles} templateFiles={templateFiles} />
           </SandpackLayout>
         </div>
       </SandpackProvider>
@@ -228,7 +234,7 @@ function PreviewContent({ syncEditor, templateError, hasProjectFiles, templateFi
 
   return (
     <div ref={previewRootRef} className="relative h-full w-full bg-white">
-      <SandpackPreview style={{ height: "100%" }} showOpenInCodeSandbox={false} showRefreshButton={true} showSandpackErrorOverlay={false} />
+      <SandpackPreview style={{ height: "100%" }} showOpenInCodeSandbox={false} showRefreshButton={false} showSandpackErrorOverlay={false} />
       {showCentralLoading && (
         <BuildingLoadingOverlay
           message={diagnostics.buildState === "success" ? "正在等待应用挂载" : "正在启动预览"}

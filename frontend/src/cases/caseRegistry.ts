@@ -4,7 +4,6 @@ import type { NovelCaseScene } from "./novelCase";
 
 export type WorkspaceCaseId =
   | "novel"
-  | "task-board-real-eval"
   | "customer-management-demo"
   | "analytics-dashboard-demo"
   | "personal-blog-demo";
@@ -19,17 +18,62 @@ export interface WorkspaceCaseBundle {
 export interface WorkspaceCaseDescriptor {
   id: WorkspaceCaseId;
   title: string;
+  navigationTitle: string;
+  subtitle: string;
+  description: string;
+  features: readonly string[];
   sourceLabel: string;
   status: "READY" | "PENDING_BROWSER";
 }
 
 export const CASE_DESCRIPTORS: readonly WorkspaceCaseDescriptor[] = [
-  { id: "novel", title: "小说阅读管理", sourceLabel: "backend/mock 组装成果", status: "READY" },
-  { id: "task-board-real-eval", title: "任务看板", sourceLabel: "真实 EVAL 产物与人工修正", status: "READY" },
-  { id: "customer-management-demo", title: "客户管理后台", sourceLabel: "真实生成后由 Luna 修正并固化，浏览器待验收", status: "PENDING_BROWSER" },
-  { id: "analytics-dashboard-demo", title: "数据分析看板", sourceLabel: "真实生成后由 Luna 修正并固化，浏览器待验收", status: "PENDING_BROWSER" },
-  { id: "personal-blog-demo", title: "清川的博客", sourceLabel: "真实生成后由 Luna 修正并固化，浏览器待验收", status: "PENDING_BROWSER" },
+  {
+    id: "novel",
+    title: "小说阅读管理",
+    navigationTitle: "小说阅读管理",
+    subtitle: "Library / Reading",
+    description: "一个带有书库、阅读记录和笔记整理能力的内容管理案例。",
+    features: ["书库浏览", "阅读记录", "笔记整理"],
+    sourceLabel: "backend/mock 组装成果",
+    status: "READY",
+  },
+  {
+    id: "customer-management-demo",
+    title: "客户管理后台",
+    navigationTitle: "客户管理后台",
+    subtitle: "CRM / Dashboard",
+    description: "这是一个客户管理系统示例，用于展示 PromptForge 可以生成什么类型的实际应用。",
+    features: ["客户数据概览", "搜索与多条件筛选", "客户列表", "客户状态管理", "客户详情抽屉", "新增客户流程"],
+    sourceLabel: "真实生成后由 Luna 修正并固化，浏览器待验收",
+    status: "PENDING_BROWSER",
+  },
+  {
+    id: "analytics-dashboard-demo",
+    title: "数据分析看板",
+    navigationTitle: "数据分析看板",
+    subtitle: "Analytics / Dashboard",
+    description: "一个将指标、趋势和分类数据集中到同一视图的数据分析案例。",
+    features: ["指标卡片", "趋势图表", "渠道分析"],
+    sourceLabel: "真实生成后由 Luna 修正并固化，浏览器待验收",
+    status: "PENDING_BROWSER",
+  },
+  {
+    id: "personal-blog-demo",
+    title: "清川的博客",
+    navigationTitle: "青山博客",
+    subtitle: "Content / Blog",
+    description: "一个支持文章浏览、分类和阅读主题切换的个人博客案例。",
+    features: ["文章列表", "分类筛选", "阅读主题"],
+    sourceLabel: "真实生成后由 Luna 修正并固化，浏览器待验收",
+    status: "PENDING_BROWSER",
+  },
 ];
+
+export function getSelectableWorkspaceCaseDescriptors(
+  descriptors: readonly WorkspaceCaseDescriptor[] = CASE_DESCRIPTORS,
+): readonly WorkspaceCaseDescriptor[] {
+  return descriptors.filter((descriptor) => descriptor.id !== "novel");
+}
 
 export function isWorkspaceCaseId(value: string | null): value is WorkspaceCaseId {
   return value !== null && CASE_DESCRIPTORS.some((descriptor) => descriptor.id === value);
@@ -42,10 +86,6 @@ export async function loadWorkspaceCase(
   if (caseId === "novel") {
     const caseModule = await import("./novelCase");
     return { id: caseId, title: "小说阅读管理", files: caseModule.createNovelCaseFiles(scene), manifest: caseModule.NOVEL_CASE_MANIFEST };
-  }
-  if (caseId === "task-board-real-eval") {
-    const caseModule = await import("./task-board/taskBoardCase");
-    return { id: caseId, title: "任务看板", files: caseModule.createTaskBoardCaseFiles(), manifest: caseModule.TASK_BOARD_CASE_MANIFEST };
   }
   if (caseId === "customer-management-demo") {
     const caseModule = await import("./customer-management");

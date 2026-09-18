@@ -23,13 +23,15 @@ export function PreviewToolbar({ isFullScreen, onEnterFullScreen, onExitFullScre
           <Code2 size={14} aria-hidden="true" /> 代码
         </button>
       </div>
-      <button type="button" onClick={refresh} title="重新运行预览" aria-label="重新运行预览">
-        <RefreshCw size={14} aria-hidden="true" /> <span>刷新</span>
-      </button>
-      <button type="button" onClick={isFullScreen ? onExitFullScreen : onEnterFullScreen} title={isFullScreen ? "退出全屏" : "全屏查看"}>
-        {isFullScreen ? <Minimize2 size={14} aria-hidden="true" /> : <Maximize2 size={14} aria-hidden="true" />}
-        <span>{isFullScreen ? "退出全屏" : "全屏"}</span>
-      </button>
+      <div className="preview-toolbar-actions">
+        <button type="button" onClick={refresh} title="重新运行预览" aria-label="重新运行预览">
+          <RefreshCw size={14} aria-hidden="true" /> <span>刷新</span>
+        </button>
+        <button type="button" onClick={isFullScreen ? onExitFullScreen : onEnterFullScreen} title={isFullScreen ? "退出全屏" : "全屏查看"}>
+          {isFullScreen ? <Minimize2 size={14} aria-hidden="true" /> : <Maximize2 size={14} aria-hidden="true" />}
+          <span>{isFullScreen ? "退出全屏" : "全屏"}</span>
+        </button>
+      </div>
     </div>
   );
 }

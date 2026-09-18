@@ -2,6 +2,7 @@
 import type { ReactNode } from "react";
 import type { ThoughtItem, ProjectVersion } from "./store";
 import type { VersionMetadata, VersionMetadataSaveMode } from "./project";
+import type { WorkspaceCaseContext } from "./workspace";
 
 // ============================================================================
 // 布局类型
@@ -17,6 +18,7 @@ export type LayoutMode = "split" | "preview-only";
 /** AppShell Props */
 export interface AppShellProps {
   children: ReactNode;
+  caseContext?: WorkspaceCaseContext;
 }
 
 /** PreviewPanel Props */

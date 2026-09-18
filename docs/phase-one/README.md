@@ -43,7 +43,7 @@ pnpm --dir frontend exec node ../scripts/assembleNovelCase.mjs
 Assembled 48 novel case files from backend/mock
 ```
 
-主代理已完成的检查包括：前端 TypeScript 检查无错误、前端 `pnpm build` 和后端 `pnpm build` 均通过；本轮对 `SandpackView.tsx` 和 `LandingPage.tsx` 的定向 ESLint 通过，前端 `pnpm exec tsc --noEmit` 通过；浏览器已检查工作台直达、模式开关、真实输入可提交；反馈夹具的 success/fail/EOF/chat/429 均已检查；失败重试会发起第二次请求，延迟夹具显示阶段接收间隔，取消后服务端记录 client disconnected 且清理计时器；书库状态筛选、新增 1 本后总数 7 本、笔记新增显示和搜索结果已检查；390px 工作台外层没有横向溢出；手机案例从首页进入工作台、顶部/筛选文字可读，以及预览/代码切换和案例源码可见已检查。成功夹具完成后重新打开代码面板，内容已从案例源码切换为 Feedback fixture，确认完整生成结果不会被 `initialFiles` 遮挡。生产构建运行版在后端不可用时显示“React模板加载失败 HTTP500”，点击“重试模板”会再次请求并失败，期间保留输入内容和真实生成模式且不刷新整页；这只验证模板 API 失败反馈，不代表外部 Sandpack 运行成功。
+主代理已完成的检查包括：前端 TypeScript 检查无错误、前端 `pnpm build` 和后端 `pnpm build` 均通过；本轮对 `SandpackView.tsx` 和 `LandingPage.tsx` 的定向 ESLint 通过，前端 `pnpm exec tsc --noEmit` 通过；历史浏览器检查曾覆盖工作台直达、模式开关、真实输入可提交，当前模式开关已由 2026-09-18 Fork 重构移除；反馈夹具的 success/fail/EOF/chat/429 均已检查；失败重试会发起第二次请求，延迟夹具显示阶段接收间隔，取消后服务端记录 client disconnected 且清理计时器；书库状态筛选、新增 1 本后总数 7 本、笔记新增显示和搜索结果已检查；390px 工作台外层没有横向溢出；手机案例从首页进入工作台、顶部/筛选文字可读，以及预览/代码切换和案例源码可见已检查。成功夹具完成后重新打开代码面板，内容已从案例源码切换为 Feedback fixture，确认完整生成结果不会被 `initialFiles` 遮挡。生产构建运行版在后端不可用时显示“React模板加载失败 HTTP500”，点击“重试模板”会再次请求并失败，期间保留输入内容；这只验证模板 API 失败反馈，不代表外部 Sandpack 运行成功。
 
 全量 `pnpm lint` 曾因长时间无输出按授权中断，不能视为通过。外部 Sandpack 运行时超时也不能视为预览成功。
 

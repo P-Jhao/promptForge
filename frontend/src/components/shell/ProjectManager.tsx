@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -15,7 +14,7 @@ import { useProjectManagerMutations } from "@/hooks/useProjectManagerMutations";
 import { ProjectManagerTopActions } from "./ProjectManagerTopActions";
 import { ProjectManagerSaveAsDialog } from "./ProjectManagerSaveAsDialog";
 import { ProjectManagerPendingDialog, type PendingProjectChoice } from "./ProjectManagerPendingDialog";
-
+import { useWorkspaceSession } from "./WorkspaceSessionContext";
 type PendingAction =
   | { kind: "new" }
   | { kind: "open"; projectId: string }
@@ -23,6 +22,7 @@ type PendingAction =
 
 export function ProjectManager({ persistence }: { persistence: ProjectPersistenceApi }) {
   const router = useRouter();
+  const workspace = useWorkspaceSession();
   const projectId = useChatStore((state) => state.currentProjectId);
   const projectName = useChatStore((state) => state.projectName);
   const versions = useChatStore((state) => state.versions);
@@ -44,11 +44,9 @@ export function ProjectManager({ persistence }: { persistence: ProjectPersistenc
   const [pendingAfterSaveAs, setPendingAfterSaveAs] = useState<PendingAction | null>(null);
   const [busy, setBusy] = useState(false);
   const storageBusy = persistence.status === "saving" || persistence.status === "loading";
-
   useEffect(() => {
     void refreshProjects();
   }, [refreshProjects]);
-
   const execute = async (action: PendingAction): Promise<void> => {
     if (persistence.status === "saving" || persistence.status === "loading") {
       toast.info("当前项目仍在读取或保存，请稍后再操作");
@@ -91,7 +89,6 @@ export function ProjectManager({ persistence }: { persistence: ProjectPersistenc
       setBusy(false);
     }
   };
-
   const requestNewProject = (): void => {
     if (storageBusy) {
       toast.info("当前项目仍在读取或保存，请稍后再新建项目");
@@ -116,7 +113,6 @@ export function ProjectManager({ persistence }: { persistence: ProjectPersistenc
     }
     toast.info(decision === "blocked-loading" ? "当前请求仍在进行，请稍后再新建项目" : "请先应用或放弃当前候选");
   };
-
   const requestAction = (action: PendingAction): void => {
     if (action.kind === "open" && action.projectId === projectId) {
       setShowBrowser(false);
@@ -129,7 +125,6 @@ export function ProjectManager({ persistence }: { persistence: ProjectPersistenc
     if (persistence.dirty) setPending(action);
     else void execute(action);
   };
-
   const mutations = useProjectManagerMutations({
     projectId,
     isLoading,
@@ -148,7 +143,6 @@ export function ProjectManager({ persistence }: { persistence: ProjectPersistenc
       router.replace("/workspace");
     },
   });
-
   const save = (): void => {
     if (storageBusy) {
       toast.info("当前项目仍在读取或保存，请稍后再保存");
@@ -211,15 +205,21 @@ export function ProjectManager({ persistence }: { persistence: ProjectPersistenc
     })();
   };
 
-  const statusText = persistence.dirty ? "未保存" : storageStatusLabel(persistence.status);
+  const statusText = persistence.dirty
+    ? "未保存"
+    : workspace.autoSaved
+      ? "✓ 已自动保存"
+      : storageStatusLabel(persistence.status);
   const candidateBlocksSwitch = candidate !== null;
 
   return (
     <>
       <ProjectManagerTopActions
         projectName={projectName}
-        acceptedVersion={acceptedVersion}
         statusText={statusText}
+        isExample={workspace.surface === "example"}
+        isChooser={workspace.surface === "chooser"}
+        caseTitle={workspace.caseContext?.descriptor.title}
         dirty={persistence.dirty}
         busy={busy}
         storageBusy={storageBusy}
@@ -233,6 +233,7 @@ export function ProjectManager({ persistence }: { persistence: ProjectPersistenc
         onSave={save}
         onNewProject={requestNewProject}
         onSaveAs={beginSaveAs}
+        onOpenCaseChooser={workspace.openCaseChooser}
       />
 
       {persistence.error !== null && <p className="project-storage-error" role="alert">{persistence.error}</p>}

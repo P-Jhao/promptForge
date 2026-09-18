@@ -79,8 +79,6 @@ export function GenerationStatusPanel() {
         <div className="generation-status-title">
           <StatusIcon className={generation.status === "running" ? "animate-spin" : ""} size={15} />
           <strong>{statusCopy}</strong>
-          {generation.mode && <span>{generation.mode === "mock" ? "示例体验" : "真实模型"}</span>}
-          {generation.modeForced && <em>服务端强制</em>}
         </div>
         <span className="generation-time"><Clock3 size={13} />{formatElapsed(elapsed)}</span>
       </div>

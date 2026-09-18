@@ -6,6 +6,7 @@ import { AppShell } from "@/components/shell/AppShell";
 import { SandpackView } from "@/components/preview/SandpackView";
 import { CASE_DESCRIPTORS, isWorkspaceCaseId, loadWorkspaceCase, type WorkspaceCaseBundle } from "@/cases/caseRegistry";
 import type { NovelCaseScene } from "@/cases/novelCase";
+import type { WorkspaceCaseContext } from "@/types/workspace";
 
 function readScene(value: string | null): NovelCaseScene {
   return value === "notes" ? "notes" : "library";
@@ -40,13 +41,16 @@ function WorkspaceContent() {
   const isReady = loaded.key === requestKey;
   const bundle = isReady ? loaded.bundle : null;
   const loadError = isReady ? loaded.error : null;
+  const caseContext: WorkspaceCaseContext | undefined = caseDescriptor === undefined
+    ? undefined
+    : { descriptor: caseDescriptor, files: bundle?.files, manifest: bundle?.manifest };
   const content = caseId !== null && !isReady
     ? <CaseLoading label={caseDescriptor?.title ?? "示例"} />
     : loadError !== null
       ? <div className="flex h-full flex-col items-center justify-center gap-2 bg-gray-50 p-6 text-center"><p className="text-sm font-medium text-red-700">案例加载失败</p><p className="max-w-lg text-xs text-gray-500">{loadError}</p></div>
       : <SandpackView initialFiles={bundle?.files} initialManifest={bundle?.manifest} />;
 
-  return <AppShell>{content}</AppShell>;
+  return <AppShell caseContext={caseContext}>{content}</AppShell>;
 }
 
 export default function WorkspacePage() {
