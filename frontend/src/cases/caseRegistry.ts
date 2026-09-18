@@ -28,7 +28,7 @@ export const CASE_DESCRIPTORS: readonly WorkspaceCaseDescriptor[] = [
   { id: "task-board-real-eval", title: "任务看板", sourceLabel: "真实 EVAL 产物与人工修正", status: "READY" },
   { id: "customer-management-demo", title: "客户管理后台", sourceLabel: "真实生成后由 Luna 修正并固化，浏览器待验收", status: "PENDING_BROWSER" },
   { id: "analytics-dashboard-demo", title: "数据分析看板", sourceLabel: "真实生成后由 Luna 修正并固化，浏览器待验收", status: "PENDING_BROWSER" },
-  { id: "personal-blog-demo", title: "个人博客", sourceLabel: "真实生成后由 Luna 修正并固化，浏览器待验收", status: "PENDING_BROWSER" },
+  { id: "personal-blog-demo", title: "清川的博客", sourceLabel: "真实生成后由 Luna 修正并固化，浏览器待验收", status: "PENDING_BROWSER" },
 ];
 
 export function isWorkspaceCaseId(value: string | null): value is WorkspaceCaseId {
@@ -56,5 +56,5 @@ export async function loadWorkspaceCase(
     return { id: caseId, title: "数据分析看板", files: caseModule.createAnalyticsDashboardCaseFiles(), manifest: caseModule.ANALYTICS_DASHBOARD_CASE_MANIFEST };
   }
   const caseModule = await import("./personal-blog");
-  return { id: caseId, title: "个人博客", files: caseModule.createPersonalBlogCaseFiles(), manifest: caseModule.PERSONAL_BLOG_CASE_MANIFEST };
+  return { id: caseId, title: "清川的博客", files: caseModule.createPersonalBlogCaseFiles(), manifest: caseModule.PERSONAL_BLOG_CASE_MANIFEST };
 }

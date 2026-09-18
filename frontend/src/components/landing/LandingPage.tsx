@@ -51,7 +51,7 @@ export function LandingPage() {
             <span className={styles.visualLabel}>
               <span className={styles.statusDot} aria-hidden="true" />
               案例预览
-              <span className={styles.visualSource}>预生成成果 · 待浏览器验收</span>
+              <span className={styles.visualSource}>预生成成果</span>
             </span>
             <span className={styles.visualFrame}>
               <span className={styles.demoHeroPreview} aria-hidden="true">
@@ -88,22 +88,22 @@ export function LandingPage() {
 
           <div className={styles.demoCaseGrid} aria-label="案例入口">
             <article className={styles.demoCaseCard}>
-              <p className={styles.cardKicker}>案例 01 · 真实生成后固化 · 待浏览器验收</p>
+              <p className={styles.cardKicker}>案例 01 · 真实生成后固化</p>
               <h3>客户管理后台</h3>
               <p>搜索、状态筛选、新增校验、编辑同步与详情抽屉。</p>
               <Link className={styles.cardLink} href="/workspace?case=customer-management-demo">打开客户管理后台 <ArrowRight size={15} aria-hidden="true" /></Link>
             </article>
             <article className={styles.demoCaseCard}>
-              <p className={styles.cardKicker}>案例 02 · 真实生成后固化 · 待浏览器验收</p>
+              <p className={styles.cardKicker}>案例 02 · 真实生成后固化</p>
               <h3>数据分析看板</h3>
               <p>固定演示数据、日期联动指标、趋势与分类图。</p>
               <Link className={styles.cardLink} href="/workspace?case=analytics-dashboard-demo">打开数据分析看板 <ArrowRight size={15} aria-hidden="true" /></Link>
             </article>
             <article className={styles.demoCaseCard}>
-              <p className={styles.cardKicker}>案例 03 · 真实生成后固化 · 待浏览器验收</p>
-              <h3>个人博客</h3>
-              <p>文章列表、分类搜索、详情返回与明暗阅读主题。</p>
-              <Link className={styles.cardLink} href="/workspace?case=personal-blog-demo">打开个人博客 <ArrowRight size={15} aria-hidden="true" /></Link>
+              <p className={styles.cardKicker}>案例 03 · 真实生成后固化</p>
+              <h3>清川的博客</h3>
+              <p>精选文章、分类搜索、文章详情与订阅互动。</p>
+              <Link className={styles.cardLink} href="/workspace?case=personal-blog-demo">打开清川博客案例 <ArrowRight size={15} aria-hidden="true" /></Link>
             </article>
           </div>
         </section>
