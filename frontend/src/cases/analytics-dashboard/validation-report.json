@@ -5,5 +5,5 @@
   "sourceChecks": "PASS",
   "interactionChecks": "NOT_VERIFIED",
   "workspaceChecks": "NOT_VERIFIED",
-  "notes": "本次增量改造已为数据分析侧栏的全部七个入口补齐独立页内页面，并完成本地严格 TypeScript 静态检查（使用当前环境的 tsc 与 React 类型桩）及 generatedFiles.ts 重组。当前材料仍不包含宿主 frontend 工作区和 scripts/assembleWorkspaceDemoCase.mjs，环境也没有可用 pnpm，因此宿主 pnpm tsc/build 与浏览器交互验收未标记为已验证。"
+  "notes": "本次增量改造已为顶部主导航的客户管理、产品中心、团队协作，以及账户菜单中的账户信息、偏好设置补齐真实页面与本地交互，并新增窄屏主导航；数据分析七个页面保持可用。本地严格 TypeScript 静态检查已通过（使用当前环境的 tsc 与 React 类型桩），generatedFiles.ts 已按最终 source/ 重新同步。当前材料仍不包含宿主 frontend 工作区和 scripts/assembleWorkspaceDemoCase.mjs，环境也没有可用 pnpm，因此宿主 assemble、pnpm tsc/build 与浏览器交互验收未标记为已验证。"
 }
