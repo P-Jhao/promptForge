@@ -1,6 +1,6 @@
 # 数据分析看板
 
-`analytics-dashboard-demo` 是一个无后端、无远程资源的 React + TypeScript 合成演示案例，视觉目标为 PromptForge 数据分析看板参考图。源码按多文件项目拆分为 `components/`、`data/`、`hooks/`、`pages/`、`types/` 和 `utils/`，保留 `source/index.tsx`、`source/App.tsx` 与 `source/styles.css` 作为入口。
+`analytics-dashboard-demo` 是一个无后端、无远程资源的 React + TypeScript 合成演示案例，视觉目标为用户提供的数据分析看板参考图。源码按多文件项目拆分为 `components/`、`data/`、`hooks/`、`pages/`、`types/` 和 `utils/`，保留 `source/index.tsx`、`source/App.tsx` 与 `source/styles.css` 作为入口。
 
 本版不仅补齐了“数据分析”左侧导航的七个分析页面，也补齐了顶部主导航和账户菜单：
 

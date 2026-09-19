@@ -1,9 +1,0 @@
-{
-  "schemaVersion": 1,
-  "caseId": "personal-blog-demo",
-  "status": "PENDING_BROWSER",
-  "sourceChecks": "NOT_VERIFIED",
-  "interactionChecks": "NOT_VERIFIED",
-  "workspaceChecks": "NOT_VERIFIED",
-  "notes": "本次源码已按参考图改造；上传材料未包含宿主 scripts/ 与 frontend/ 工作区，因此无法在此包内执行正式 assembleWorkspaceDemoCase、宿主 tsc 或 build 验证。未写入未经正式工作区验证的 PASS 结果。"
-}

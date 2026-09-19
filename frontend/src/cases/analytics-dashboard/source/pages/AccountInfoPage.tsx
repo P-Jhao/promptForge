@@ -4,7 +4,7 @@ import { SuitePageHeading } from "../components/SuitePageHeading";
 
 export function AccountInfoPage({ onFeedback }: { onFeedback: (message: string) => void }) {
   const [name, setName] = useState("张三");
-  const [company, setCompany] = useState("PromptForge 企业工作区");
+  const [company, setCompany] = useState("数据分析工作区");
   const [title, setTitle] = useState("数据分析负责人");
   const save = () => onFeedback(`账户信息已在本地保存：${name} · ${title}。`);
   return <>

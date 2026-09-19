@@ -1,9 +1,0 @@
-{
-  "schemaVersion": 1,
-  "caseId": "customer-management-demo",
-  "status": "PENDING_BROWSER",
-  "sourceChecks": "PASS",
-  "interactionChecks": "NOT_VERIFIED",
-  "workspaceChecks": "NOT_VERIFIED",
-  "notes": "2026-09-19 本次修改实际执行：使用临时最小 React 类型声明对 source 下 37 个 TS/TSX/CSS 文件中的 TS/TSX 部分执行 TypeScript noEmit 检查；对 types/data/utils/hooks 执行 strict TypeScript 检查；单独对 generatedFiles.ts 执行 TypeScript noEmit 检查；重新编译 customer types/data/utils 后用 Node 断言 128 条客户数据、统计总数分区、客户名称/联系人关键词、状态/行业/来源/公司规模筛选和无结果条件；静态断言左侧 9 个导航 key 均存在、8 个非客户页面文件均已创建、新模块显式按钮均绑定 onClick；检查 source TS/TSX 未出现 any；检查未出现 fetch/axios/远程图片/@font-face/远程 CSS url 加载模式；generatedFiles.ts 由 source 当前 37 个文件重新序列化生成并做生成内容一致性自检。未在宿主工作台或真实 React 浏览器预览中执行点击、视觉、CSV 下载和响应式实机验收，因此 interactionChecks 和 workspaceChecks 保持 NOT_VERIFIED。"
-}

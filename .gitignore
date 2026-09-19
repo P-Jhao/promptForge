@@ -5,3 +5,4 @@ promptforge-images*.tar
 promptforge-images*.tar.gz
 promptforge-images*.zip
 artifacts/
+resource/

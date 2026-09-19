@@ -31,9 +31,9 @@ export function Header({ activeSection, onNavigate, onSearch, onFeedback }: Head
   };
 
   return <header className="topbar">
-    <div className="brand" aria-label="PromptForge">
-      <span className="brand-mark"><Icon name="logo" size={22} /></span>
-      <strong>PromptForge</strong>
+    <div className="brand" aria-label="数据分析看板">
+      <span className="brand-mark"><Icon name="barChart" size={22} /></span>
+      <strong>数据看板</strong>
     </div>
     <span className="topbar-divider" />
     <nav className="primary-nav" aria-label="主导航">
