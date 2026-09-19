@@ -90,18 +90,29 @@ export function ProjectManager({ persistence }: { persistence: ProjectPersistenc
     }
   };
   const requestNewProject = (): void => {
+    const latestBeforeCancel = useChatStore.getState();
+    if (latestBeforeCancel.isLoading) {
+      const cancelled = workspace.cancelActiveRequest();
+      const latestAfterCancel = useChatStore.getState();
+      if (!cancelled || latestAfterCancel.isLoading) {
+        toast.info(cancelled ? "正在停止当前请求，请稍后再新建项目" : "当前请求仍在进行，请稍后再新建项目");
+        return;
+      }
+      toast.info("已停止当前请求，正在准备新建项目");
+    }
     if (storageBusy) {
       toast.info("当前项目仍在读取或保存，请稍后再新建项目");
       return;
     }
-    if (isAssembling) {
+    if (useSandpackStore.getState().isAssembling) {
       toast.info("当前项目仍在写入预览，请稍后再新建项目");
       return;
     }
+    const latest = useChatStore.getState();
     const decision = evaluateNewProjectDecision({
       dirty: persistence.dirty,
-      isLoading,
-      candidatePresent: candidate !== null,
+      isLoading: latest.isLoading,
+      candidatePresent: latest.candidate !== null,
     });
     if (decision === "allow") {
       void execute({ kind: "new" });

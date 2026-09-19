@@ -269,6 +269,11 @@ body {
 .chat-agent-intro p { color: #7e899e; font-size: 11px; line-height: 1.55; margin: 5px 0 0; }
 .chat-agent-status { align-items: center; color: #76839b; display: inline-flex; flex-shrink: 0; font-size: 10px; gap: 5px; padding-top: 2px; }
 .chat-agent-status span { background: #28a66b; border-radius: 50%; box-shadow: 0 0 0 3px #28a66b18; height: 6px; width: 6px; }
+.chat-preparing { align-items: center; background: #fbfcff; border-bottom: 1px solid #e7ebf5; color: #5367c3; display: flex; gap: 9px; padding: 12px 14px; }
+.chat-preparing > svg { flex: 0 0 auto; }
+.chat-preparing div { display: grid; gap: 3px; }
+.chat-preparing strong { font-size: 12px; font-weight: 700; }
+.chat-preparing span { color: #8994aa; font-size: 10px; }
 .chat-boundary { color: #969faf; font-size: 10px; line-height: 1.45; margin: 7px 8px 0; }
 
 .example-project-panel { padding: 4px 2px 12px; }
@@ -307,9 +312,11 @@ body {
 .other-case-link > svg { color: #a2aabc; display: block; flex: 0 0 auto; }
 
 .case-chooser-panel { padding: 11px 3px 18px; }
-.case-chooser-icon { align-items: center; background: #efefff; border: 1px solid #e2e1ff; border-radius: 9px; color: #6769e4; display: inline-flex; height: 34px; justify-content: center; width: 34px; }
-.case-chooser-eyebrow { color: #7d86a0; display: block; font-size: 9px; font-weight: 800; letter-spacing: .08em; margin-top: 17px; }
-.case-chooser-panel h2 { color: #273353; font-size: 17px; letter-spacing: -.035em; margin: 7px 0 0; }
+.case-chooser-header { align-items: center; display: flex; gap: 12px; min-width: 0; }
+.case-chooser-icon { align-items: center; background: #efefff; border: 1px solid #e2e1ff; border-radius: 9px; color: #6769e4; display: inline-flex; flex: 0 0 auto; height: 34px; justify-content: center; width: 34px; }
+.case-chooser-heading { min-width: 0; }
+.case-chooser-eyebrow { color: #7d86a0; display: block; font-size: 9px; font-weight: 800; letter-spacing: .08em; line-height: 1.2; }
+.case-chooser-panel h2 { color: #273353; font-size: 17px; letter-spacing: -.035em; line-height: 1.25; margin: 5px 0 0; }
 .case-chooser-panel > p { color: #78849a; font-size: 11px; line-height: 1.65; margin: 8px 0 18px; }
 .case-chooser-list { display: grid; gap: 6px; }
 .case-chooser-item { align-items: center; background: #fafbfe; border: 1px solid #e9ecf3; border-radius: 8px; color: #5a6781; display: flex; gap: 11px; min-height: 60px; padding: 10px 11px; text-decoration: none; }

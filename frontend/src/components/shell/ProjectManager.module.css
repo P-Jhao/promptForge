@@ -44,6 +44,8 @@
 .actionButton:disabled { cursor: wait; opacity: .52; }
 .primaryButton { background: #5c5fe8; border-color: #5c5fe8; color: #fff; font-weight: 700; }
 .primaryButton:hover { background: #4e52d0; border-color: #4e52d0; color: #fff; }
+.newProjectButton { background: #f7f8ff; border-color: #cfd6f5; color: #5665c3; font-weight: 650; }
+.newProjectButton:hover { background: #eef1ff; border-color: #b9c4ef; color: #4858b7; }
 .exportButton { background: #5c5fe8; border-color: #5c5fe8; color: #fff; }
 .exportButton:hover { background: #4e52d0; border-color: #4e52d0; color: #fff; }
 .moreWrap { position: relative; }

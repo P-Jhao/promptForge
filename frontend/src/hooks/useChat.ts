@@ -24,10 +24,11 @@ export function useChat() {
   const lastRequestRef = useRef<RetryableRequest | null>(null);
   const requestIdRef = useRef(0);
 
-  useEffect(() => () => {
+  const cancelActiveRequest = useCallback((message: string): boolean => {
     const activeRequest = activeRequestRef.current;
-    if (activeRequest === null) return;
+    if (activeRequest === null) return false;
     activeRequestRef.current = null;
+    requestIdRef.current += 1;
     activeRequest.controller.abort();
     if (activeRequest.repair !== undefined) {
       finishCandidateRepair(activeRequest.repair.candidateId, "skipped", Date.now() - activeRequest.startedAt);
@@ -36,13 +37,18 @@ export function useChat() {
       markPendingThoughts(activeRequest.assistantMessageId, "已停止接收后续结果");
     }
     setGeneration({
-      status: "cancelled", error: "已停止接收生成结果",
+      status: "cancelled", error: message,
       elapsedMs: Date.now() - activeRequest.startedAt,
       preservedResult: useSandpackStore.getState().generatedFiles !== null,
     });
     setLoading(false);
     setIsAssembling(false);
+    return true;
   }, [finishCandidateRepair, markPendingThoughts, setGeneration, setIsAssembling, setLoading]);
+
+  useEffect(() => () => {
+    cancelActiveRequest("已停止接收生成结果");
+  }, [cancelActiveRequest]);
 
   const runRequest = useCallback((request: RetryableRequest) => runChatRequest(request, {
     activeRequestRef, lastRequestRef, requestIdRef,
@@ -184,25 +190,9 @@ export function useChat() {
 
   const discardCandidate = useCallback(() => useChatStore.getState().clearCandidate(), []);
 
-  const cancelMessage = useCallback(() => {
-    const activeRequest = activeRequestRef.current;
-    if (activeRequest === null) return;
-    activeRequestRef.current = null;
-    activeRequest.controller.abort();
-    if (activeRequest.repair !== undefined) {
-      finishCandidateRepair(activeRequest.repair.candidateId, "skipped", Date.now() - activeRequest.startedAt);
-    }
-    if (activeRequest.assistantMessageId) {
-      markPendingThoughts(activeRequest.assistantMessageId, "已停止接收后续结果");
-    }
-    const preservedResult = useSandpackStore.getState().generatedFiles !== null;
-    setGeneration({
-      status: "cancelled", error: "已取消生成",
-      elapsedMs: Date.now() - activeRequest.startedAt, preservedResult,
-    });
-    setLoading(false);
-    setIsAssembling(false);
-  }, [finishCandidateRepair, markPendingThoughts, setGeneration, setIsAssembling, setLoading]);
+  const cancelMessage = useCallback((): boolean => {
+    return cancelActiveRequest("已取消生成");
+  }, [cancelActiveRequest]);
 
   return {
     messages,

@@ -15,6 +15,8 @@ export interface WorkspaceSession {
   caseContext?: WorkspaceCaseContext;
   isForking: boolean;
   autoSaved: boolean;
+  registerRequestCancellation: (cancel: (() => boolean) | null) => void;
+  cancelActiveRequest: () => boolean;
   forkCase: () => Promise<void>;
   openCaseChooser: () => void;
   startBlankProject: () => void;

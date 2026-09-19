@@ -12,6 +12,8 @@ const defaultSession: WorkspaceSession = {
   },
   openCaseChooser: () => undefined,
   startBlankProject: () => undefined,
+  registerRequestCancellation: () => undefined,
+  cancelActiveRequest: () => false,
 };
 
 export const WorkspaceSessionContext = createContext<WorkspaceSession>(defaultSession);

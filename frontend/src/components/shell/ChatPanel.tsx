@@ -2,7 +2,7 @@
 
 import { Bubble, Sender } from "@ant-design/x";
 import { useEffect, useRef, useState } from "react";
-import { RotateCcw } from "lucide-react";
+import { Loader2, RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { CASE_DESCRIPTORS } from "@/cases/caseRegistry";
@@ -29,15 +29,31 @@ export function ChatPanel({ persistence }: { persistence: ProjectPersistenceApi 
   const currentVersion = useChatStore((state) => state.currentVersion);
   const projectName = useChatStore((state) => state.projectName);
   const createNewProject = useChatStore((state) => state.createNewProject);
+  const resetGeneration = useChatStore((state) => state.resetGeneration);
   const isAssembling = useSandpackStore((state) => state.isAssembling);
   const clearGeneratedFiles = useSandpackStore((state) => state.clearGeneratedFiles);
   const generation = useChatStore((state) => state.generation);
+  const currentProjectId = useChatStore((state) => state.currentProjectId);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const previousProjectIdRef = useRef(currentProjectId);
   const [inputValue, setInputValue] = useState("");
   const [confirmingNewProject, setConfirmingNewProject] = useState(false);
   const [newProjectBusy, setNewProjectBusy] = useState(false);
+  const [preparingPrompt, setPreparingPrompt] = useState(false);
   const isExample = workspace.surface === "example";
   const isChooser = workspace.surface === "chooser";
+  const { registerRequestCancellation } = workspace;
+
+  useEffect(() => {
+    if (previousProjectIdRef.current === currentProjectId) return;
+    previousProjectIdRef.current = currentProjectId;
+    setInputValue("");
+  }, [currentProjectId]);
+
+  useEffect(() => {
+    registerRequestCancellation(cancelMessage);
+    return () => registerRequestCancellation(null);
+  }, [cancelMessage, registerRequestCancellation]);
 
   useEffect(() => {
     if (isExample || isChooser) {
@@ -108,25 +124,7 @@ export function ChatPanel({ persistence }: { persistence: ProjectPersistenceApi 
   const submit = (value: string) => {
     const content = value.trim();
     if (!content || isLoading || workspace.isForking || candidate !== null) return;
-    if (isExample) {
-      void (async () => {
-        try {
-          await workspace.forkCase();
-          await sendMessage(content, undefined, { global: false });
-          setInputValue("");
-        } catch {
-          // Fork and persistence errors are already exposed by the workspace layer.
-        }
-      })();
-      return;
-    }
-    if (isChooser) {
-      workspace.startBlankProject();
-      void sendMessage(content, undefined, { global: false });
-      setInputValue("");
-      return;
-    }
-    if (isNewProjectRequest(content)) {
+    if (!isExample && !isChooser && isNewProjectRequest(content)) {
       const latest = useChatStore.getState();
       const decision = evaluateNewProjectDecision({
         dirty: persistence.dirty,
@@ -148,13 +146,39 @@ export function ChatPanel({ persistence }: { persistence: ProjectPersistenceApi 
       setConfirmingNewProject(true);
       return;
     }
-    void sendMessage(content, undefined, { global: false });
-    setInputValue("");
+
+    resetGeneration();
+    setPreparingPrompt(true);
+    void (async () => {
+      try {
+        if (isExample) {
+          await workspace.forkCase();
+        } else if (isChooser) {
+          workspace.startBlankProject();
+        }
+        await sendMessage(content, undefined, { global: false });
+        setInputValue("");
+      } catch {
+        // Fork and persistence errors are already exposed by the workspace layer.
+      } finally {
+        setPreparingPrompt(false);
+      }
+    })();
   };
+
+  const showPromptPreparation = preparingPrompt && !isLoading && generation.status === "idle";
 
   return (
     <div className="flex h-full flex-col bg-white">
-      <GenerationStatusPanel />
+      {showPromptPreparation ? (
+        <div className="chat-preparing" role="status" aria-live="polite">
+          <Loader2 className="animate-spin" size={15} />
+          <div>
+            <strong>正在理解你的需求…</strong>
+            <span>准备生成流程…</span>
+          </div>
+        </div>
+      ) : <GenerationStatusPanel />}
       {candidate !== null && (
         <CandidatePanel candidate={candidate} onApply={() => void applyCandidate()} onRepair={() => void repairCandidate()} onDiscard={discardCandidate} disabled={isLoading} />
       )}
@@ -218,8 +242,11 @@ export function ChatPanel({ persistence }: { persistence: ProjectPersistenceApi 
           onChange={setInputValue}
           placeholder={isExample ? "描述你想如何修改这个案例…" : isChooser ? "描述你想创建的前端项目…" : "继续描述你的修改…"}
           loading={isLoading}
-          disabled={workspace.isForking || candidate !== null || confirmingNewProject || newProjectBusy}
-          onCancel={cancelMessage}
+          disabled={workspace.isForking || candidate !== null || confirmingNewProject || newProjectBusy || preparingPrompt}
+          onCancel={() => {
+            cancelMessage();
+            setPreparingPrompt(false);
+          }}
           onSubmit={submit}
         />
         {isExample && <p className="chat-boundary">发送后将基于此案例创建可编辑项目</p>}

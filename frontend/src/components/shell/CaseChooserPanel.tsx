@@ -21,9 +21,13 @@ export function CaseChooserPanel({ descriptors, onSuggestionSelect }: CaseChoose
 
   return (
     <div className="case-chooser-panel">
-      <div className="case-chooser-icon"><Sparkles size={17} /></div>
-      <span className="case-chooser-eyebrow">PROMPTFORGE WORKSPACE</span>
-      <h2>从一个真实案例开始</h2>
+      <div className="case-chooser-header">
+        <div className="case-chooser-icon"><Sparkles size={17} /></div>
+        <div className="case-chooser-heading">
+          <span className="case-chooser-eyebrow">PROMPTFORGE WORKSPACE</span>
+          <h2>从一个真实案例开始</h2>
+        </div>
+      </div>
       <p>选择一个示例体验 PromptForge 的生成结果，也可以在下方直接描述你想创建的前端项目。</p>
       <div className="case-chooser-list">
         {visibleCases.map((item) => (

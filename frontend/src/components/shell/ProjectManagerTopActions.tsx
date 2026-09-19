@@ -174,6 +174,7 @@ export function ProjectManagerTopActions({
       </button>
       <span className={`${styles.status} ${dirty ? styles.dirty : ""}`} role="status">{statusText}</span>
       <div className={styles.actions}>
+        <button type="button" className={`${styles.actionButton} ${styles.newProjectButton}`} onClick={onNewProject} disabled={busy} title="进入无参数工作台，开始一个新的空白项目"><Plus size={14} /> <span>开始一个新的项目</span></button>
         <button type="button" className={styles.actionButton} onClick={() => void shareWorkspace()} title="分享当前工作区链接"><Share2 size={14} /> <span>分享</span></button>
         <button type="button" className={`${styles.actionButton} ${styles.exportButton}`} onClick={() => void exportCurrent()} disabled={!downloadSource.hasFiles || isDownloading} title={`导出${downloadSource.label}`}><Download size={14} /> <span>{isDownloading ? "导出中…" : "导出"}</span></button>
         <div className={styles.moreWrap}>

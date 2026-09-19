@@ -18,7 +18,6 @@ import styles from "./AppShell.module.css";
 
 export function AppShell({ children, caseContext }: AppShellProps) {
   const router = useRouter();
-  const projectId = useChatStore((state) => state.currentProjectId);
   const createNewProject = useChatStore((state) => state.createNewProject);
   const clearProjectFiles = useSandpackStore((state) => state.clearProjectFiles);
   const clearGeneratedFiles = useSandpackStore((state) => state.clearGeneratedFiles);
@@ -31,12 +30,22 @@ export function AppShell({ children, caseContext }: AppShellProps) {
   const [layoutMode, setLayoutMode] = useState<LayoutMode>("split");
   const [mobilePanel, setMobilePanel] = useState<"chat" | "preview">("chat");
   const surfaceRef = useRef<WorkspaceSurface>(surface);
+  const requestCancellationRef = useRef<(() => boolean) | null>(null);
   const previousCaseIdRef = useRef<string | null>(caseId);
   const forkSettlementRef = useRef(false);
 
   const setWorkspaceSurface = useCallback((nextSurface: WorkspaceSurface): void => {
     surfaceRef.current = nextSurface;
     setSurface(nextSurface);
+  }, []);
+
+  const registerRequestCancellation = useCallback((cancel: (() => boolean) | null): void => {
+    requestCancellationRef.current = cancel;
+  }, []);
+
+  const cancelActiveRequest = useCallback((): boolean => {
+    const cancel = requestCancellationRef.current;
+    return cancel === null ? false : cancel();
   }, []);
 
   const openCaseChooser = useCallback((): void => {
@@ -118,10 +127,12 @@ export function AppShell({ children, caseContext }: AppShellProps) {
     caseContext,
     isForking,
     autoSaved,
+    registerRequestCancellation,
+    cancelActiveRequest,
     forkCase,
     openCaseChooser,
     startBlankProject,
-  }), [autoSaved, caseContext, forkCase, isForking, openCaseChooser, startBlankProject, surface]);
+  }), [autoSaved, cancelActiveRequest, caseContext, forkCase, isForking, openCaseChooser, registerRequestCancellation, startBlankProject, surface]);
 
   return (
     <WorkspaceSessionContext.Provider value={session}>
@@ -150,7 +161,7 @@ export function AppShell({ children, caseContext }: AppShellProps) {
         <main className={`${styles.body} ${layoutMode === "preview-only" ? styles.previewOnly : ""}`}>
           <section className={`${styles.chatColumn} ${mobilePanel === "chat" ? styles.mobileVisible : styles.mobileHidden}`} aria-label="对话与进度">
             <div className={styles.panel}>
-              <ChatPanel key={`${projectId}-${surface}`} persistence={persistence} />
+              <ChatPanel persistence={persistence} />
             </div>
           </section>
           <section className={`${styles.previewColumn} ${mobilePanel === "preview" ? styles.mobileVisible : styles.mobileHidden}`} aria-label="预览与代码">
