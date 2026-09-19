@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "caseId": "analytics-dashboard-demo",
+  "sourceRun": "artifacts/real-runs/workspace-demos/analytics-dashboard-demo-20260917/record.json",
+  "originalFiles": "artifacts/real-runs/workspace-demos/analytics-dashboard-demo-20260917/attempt-001/files.json",
+  "manualCorrections": "artifacts/real-runs/workspace-demos/analytics-dashboard-demo-20260917/manual-corrections.json",
+  "assembly": "node scripts/assembleWorkspaceDemoCase.mjs --case=analytics-dashboard",
+  "data": "指标、趋势和分类均来自固定合成数据；日期筛选只在浏览器内重新计算。",
+  "resources": "无远程资源"
+}

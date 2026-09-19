@@ -1,5 +1,7 @@
 # 客户管理后台
 
-`customer-management-demo` 由真实 `/api/chat` 运行 `customer-management-demo-20260917` 取得初始文件，随后由 Luna 对生成结果做了交互聚焦修正并通过 `assembleWorkspaceDemoCase.mjs` 固化。原始 SSE、文件和模型配置摘要保留在 `artifacts/real-runs/workspace-demos/`；这里的客户信息全部是合成数据。
+`customer-management-demo` 是一个 React + TypeScript 的客户管理案例。当前版本按参考图重构为多文件结构，所有客户、联系人、电话、邮箱、跟进记录和商机均为合成演示数据，不对应真实自然人或真实商务关系。
 
-预览不调用模型或后端接口。新增与编辑只在当前 Sandpack 运行内存中生效，刷新会恢复固定数据。没有远程图片或离线资源承诺。
+预览不调用后端、数据库、模型接口或远程资源。新增、编辑、删除、跟进记录和销售机会只保存在当前 Sandpack/浏览器运行内存中，刷新或使用右上角“重置演示数据”会恢复固定数据。
+
+核心源码位于 `source/`，并拆分为 `components/`、`data/`、`hooks/`、`types/`、`utils/` 与 `styles/`。`generatedFiles.ts` 由 `source/` 当前内容重新生成，用于宿主工作台装配 Sandpack 文件。
