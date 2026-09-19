@@ -5,5 +5,5 @@
   "sourceChecks": "PASS",
   "interactionChecks": "NOT_VERIFIED",
   "workspaceChecks": "NOT_VERIFIED",
-  "notes": "本次改造后的多文件源码已完成本地严格 TypeScript 静态检查，并重新组装 generatedFiles.ts；上传材料未包含宿主 frontend 工作区及其依赖，且当前执行环境无可用 pnpm 安装，因此未将宿主 pnpm tsc/build 或浏览器交互验收标记为已验证。"
+  "notes": "本次增量改造已为数据分析侧栏的全部七个入口补齐独立页内页面，并完成本地严格 TypeScript 静态检查（使用当前环境的 tsc 与 React 类型桩）及 generatedFiles.ts 重组。当前材料仍不包含宿主 frontend 工作区和 scripts/assembleWorkspaceDemoCase.mjs，环境也没有可用 pnpm，因此宿主 pnpm tsc/build 与浏览器交互验收未标记为已验证。"
 }

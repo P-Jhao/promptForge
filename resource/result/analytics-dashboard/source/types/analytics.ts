@@ -1,5 +1,6 @@
 export type RangeKey = "7" | "30" | "90" | "empty";
 export type TrendKey = "customers" | "revenue" | "orders" | "api";
+export type PageKey = "overview" | "business" | "users" | "products" | "channels" | "finance" | "reports";
 export type CustomerStatus = "活跃" | "沉睡";
 export type CustomerLevel = "黄金客户" | "重要客户" | "普通客户";
 export type StatusFilter = "all" | CustomerStatus;
