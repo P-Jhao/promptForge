@@ -50,52 +50,40 @@ nano backend/.env
 
 若在同一台 ECS 部署 SQLChat，还需添加 `db-genius` 的 A 记录，指向相同公网 IP。SQLChat 前端容器需接入 `promptforge_promptforge` Docker 网络并注册 `sqlchat-frontend` 网络别名；Nginx 使用该别名和 Docker 内置 DNS 转发请求。对应的 TLS 证书 SAN 也必须包含 `db-genius.pjhao.xyz`。
 
-## 4. 推荐：用 GitHub Actions 构建并下载镜像 Artifact
+## 4. 推荐：GitHub Actions 自动发布并部署
 
-GitHub-hosted runner 会负责构建三个 Docker 镜像并导出压缩包，ECS 只负责加载镜像和运行容器，不会执行 `pnpm install` 或本地 Docker 构建。这是当前 2 vCPU、约 2 GiB 内存服务器的推荐方式。
+推送到 GitHub 的 `main` 分支后，`Publish and deploy PromptForge` 会在 GitHub-hosted runner 构建 `linux/amd64` 的后端、前端和 Nginx 镜像，推送到 GHCR，并通过严格校验 SSH 主机密钥的连接，在 ECS 上按该提交的完整 SHA 拉取镜像。ECS 只拉取和运行镜像，不会安装 pnpm 依赖或构建代码，适合当前 2 vCPU、约 2 GiB 内存服务器。按 SHA 部署可准确识别版本；部署失败时脚本会恢复部署前的三个镜像标签并重新启动旧版本。
 
-在 GitHub 仓库中执行：
+首次使用前，在 GitHub 的 PromptForge 仓库打开 `Settings → Secrets and variables → Actions`，新增以下 **Repository secrets**。这些值是仓库专用的；SQLChat 仓库中的 secrets 不会自动共享：
 
-1. 打开 `Actions`。
-2. 选择 `Build Docker images`。
-3. 点击 `Run workflow`，选择目标分支后运行。
-4. 等待 workflow 成功，在运行详情页的 `Artifacts` 区域下载 `promptforge-images-<commit-sha>.zip`。
-5. 解压下载的 artifact zip，得到 `promptforge-images.tar.gz`。
+| Secret 名称 | 内容 |
+| --- | --- |
+| `PROMPTFORGE_ECS_HOST` | ECS 公网 IP 或 SSH 主机名 |
+| `PROMPTFORGE_ECS_USER` | 具备 root 权限的 SSH 用户（当前服务器使用 `root`） |
+| `PROMPTFORGE_ECS_SSH_PRIVATE_KEY` | 对应 ECS `authorized_keys` 公钥的 SSH 私钥全文；必须能在 GitHub Actions 中无交互使用（请使用未设置 passphrase 的部署专用密钥） |
+| `PROMPTFORGE_ECS_KNOWN_HOSTS` | 已核实的 ECS SSH 主机公钥记录全文；不得通过 Action 临时 `ssh-keyscan` 信任未知主机 |
 
-workflow 只使用 `backend/.env.example` 满足 Compose 校验，并使用 `https://registry.npmjs.org` 构建；不会读取或上传真实 API Key。
+可选的 `PROMPTFORGE_ECS_SSH_PORT` 用于非默认 SSH 端口；不设置时使用 `22`。GHCR 登录使用本次 Actions 运行的短期 `GITHUB_TOKEN`，通过 SSH 标准输入传给 ECS，不需要额外的长期 Registry token secret。三个 GHCR packages 必须关联到本仓库并允许 Actions 访问；workflow 为 `GITHUB_TOKEN` 授予 `packages: write`。部署时凭据放在临时 Docker 配置目录，完成或失败都会删除。
 
-在 Windows PowerShell 中进入解压后的文件目录，上传到 ECS：
+确认 `/opt/promptforge/docker-compose.yml` 和服务器专用 `/opt/promptforge/backend/.env` 已存在且可用后，配置上述 secrets。此后每次将变更推送到 `main`，Actions 会自动构建、发布和部署；在 Actions 运行详情中查看三个服务的健康检查结果。部署过程不会覆盖服务器的 `backend/.env`、TLS 证书或 ACME webroot。脚本保留按 SHA 发布的镜像，失败时会把 Compose 使用的 `latest` 标签恢复到原镜像并尝试重新启动原栈。
 
-```powershell
-scp .\promptforge-images.tar.gz root@47.97.98.39:/opt/promptforge/
-```
+工作流也支持在 `main` 上手动 `workflow_dispatch`。旧的 `Build Docker images` 手动 artifact 工作流仍保留为回退方式：选择 `Build Docker images` 并下载 artifact，然后按下一节手动传输和加载。
 
-然后在 ECS 上执行：
+### 手动 Artifact 回退
+
+1. 打开仓库的 `Actions`，选择 `Build Docker images` 并运行。
+2. 下载本次运行的 `promptforge-images-<commit-sha>.zip`，解压得到 `promptforge-images.tar.gz`。
+3. 在 PowerShell 上传：`scp .\promptforge-images.tar.gz root@<ECS_IP>:/opt/promptforge/`。
+4. 在 ECS 执行：
 
 ```bash
 cd /opt/promptforge
-git pull --ff-only origin main
 docker load --input ./promptforge-images.tar.gz
 docker compose up -d --no-build
 docker compose ps
 ```
 
-如果当前 Docker 版本不接受 gzip 输入，使用备用命令：
-
-```bash
-cd /opt/promptforge
-gunzip -c ./promptforge-images.tar.gz | docker load
-docker compose up -d --no-build
-docker compose ps
-```
-
-`docker compose up -d --no-build` 会直接使用已加载的三个同名镜像。确认服务正常后，可以删除服务器上的导出包：
-
-```bash
-rm -- ./promptforge-images.tar.gz
-```
-
-真实 API Key 仍然只放在服务器上的 `/opt/promptforge/backend/.env`，workflow 不包含密钥，也不会覆盖服务器上的 `.env`。
+该 workflow 只使用 `.env.example` 和公共 npm registry 构建，不会读取模型 API Key。
 
 ## 5. 备用：本地构建镜像并上传到 ECS
 
@@ -220,7 +208,20 @@ docker compose up -d --force-recreate nginx
 
 ## 8. 更新版本
 
-推荐的更新流程是重新运行 GitHub Actions 的 `Build Docker images`，下载带有新 commit SHA 的 artifact，上传 `promptforge-images.tar.gz`，然后在 ECS 上执行：
+正常更新只需将代码推送到 `main`，等待 `Publish and deploy PromptForge` 成功。需要人工回退时，在 ECS 上选择之前成功发布的 commit SHA，并运行：
+
+```bash
+cd /opt/promptforge
+read -r -p 'GitHub 用户名: ' GHCR_USERNAME
+read -r -s -p '有 read:packages 权限的 GitHub token: ' GHCR_READ_TOKEN; printf '\n'
+read -r -p '要回退的 40 位 commit SHA: ' PROMPTFORGE_COMMIT_SHA
+printf '%s\n%s\n' "$GHCR_READ_TOKEN" "$GHCR_USERNAME" | sudo bash deploy/deploy-ghcr.sh "$PROMPTFORGE_COMMIT_SHA"
+unset GHCR_READ_TOKEN GHCR_USERNAME PROMPTFORGE_COMMIT_SHA
+```
+
+手动回退时需要 GitHub 用户名和一个有 `read:packages` 权限的 token（可使用单独的最小权限 PAT）。以上 `read -s` 会隐藏 token 输入；脚本会重新拉取指定 SHA 并执行同样的健康检查和失败回滚。旧的手动 artifact 和本地构建流程仍可按第 4、5 节回退。
+
+如果使用旧手动 artifact 流程，重新运行 `Build Docker images`，下载带有新 commit SHA 的 artifact，上传 `promptforge-images.tar.gz`，然后在 ECS 上执行：
 
 ```bash
 cd /opt/promptforge
