@@ -48,6 +48,8 @@ nano backend/.env
 
 解析生效后，`promptforge.pjhao.xyz` 会指向这台 ECS。当前方案不需要 Sites 的 CNAME 或 TXT 记录。
 
+若在同一台 ECS 部署 SQLChat，还需添加 `db-genius` 的 A 记录，指向相同公网 IP。SQLChat 前端容器需接入 `promptforge_promptforge` Docker 网络并注册 `sqlchat-frontend` 网络别名；Nginx 使用该别名和 Docker 内置 DNS 转发请求。对应的 TLS 证书 SAN 也必须包含 `db-genius.pjhao.xyz`。
+
 ## 4. 推荐：用 GitHub Actions 构建并下载镜像 Artifact
 
 GitHub-hosted runner 会负责构建三个 Docker 镜像并导出压缩包，ECS 只负责加载镜像和运行容器，不会执行 `pnpm install` 或本地 Docker 构建。这是当前 2 vCPU、约 2 GiB 内存服务器的推荐方式。
@@ -213,6 +215,8 @@ docker compose up -d --force-recreate nginx
 检测到两个非空证书文件后，Nginx 会自动加载 HTTPS 配置：80 重定向到 443，SSE 的 `/api/chat` 保持 HTTP/1.1、关闭代理缓冲，并允许较长的读取时间。
 
 证书续期后重新执行 `docker compose up -d --force-recreate nginx` 即可加载新证书。
+
+配置包含 `db-genius.pjhao.xyz` 的独立 HTTP/HTTPS 虚拟主机：有证书时 HTTP 会跳转 HTTPS，ACME challenge 路径仍由 webroot 提供；HTTPS 请求转发至 `sqlchat-frontend:80`，最大上传体积为 21 MiB，并关闭代理缓冲、设置长超时以支持 SSE。无证书时使用的 `http.conf` 也包含该域名的 HTTP 代理入口。上游以变量配合 `127.0.0.11` 动态解析，因此 SQLChat 前端尚未启动时 Nginx 仍能启动；此时访问新域名会返回上游连接错误。
 
 ## 8. 更新版本
 
